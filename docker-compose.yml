@@ -1,0 +1,85 @@
+services:
+
+  postgres:
+    image: postgres:9.6
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+
+  lldap:
+    image: osixia/openldap:1.2.2
+    environment:
+      LDAP_ORGANISATION: "My Company"
+      LDAP_DOMAIN: "my-company.com"
+      LDAP_ADMIN_PASSWORD: admin
+    ports:
+      - "389:389"
+      - "636:636"
+    volumes:
+      - ./ldap:/var/lib/ldap
+      - ./ldap:/etc/ldap/slapd.d
+    depends_on:
+      - postgres
+
+  authelia:
+    image: authelia/authelia:4.27.0
+    environment:
+      AUTH_DB_HOST: postgres
+      AUTH_DB_PORT: 5432
+      AUTH_DB_NAME: postgres
+      AUTH_DB_USERNAME: postgres
+      AUTH_DB_PASSWORD: postgres
+      AUTH_LDAP_HOST: lldap
+      AUTH_LDAP_PORT: 389
+      AUTH_LDAP_BIND_DN: "cn=admin,dc=my-company,dc=com"
+      AUTH_LDAP_BIND_PASSWORD: admin
+      AUTH_LDAP_USER_SEARCH_BASE: "ou=users,dc=my-company,dc=com"
+      AUTH_LDAP_USER_SEARCH_FILTER: "(uid=%s)"
+      AUTH_LDAP_GROUP_SEARCH_BASE: "ou=groups,dc=my-company,dc=com"
+      AUTH_LDAP_GROUP_SEARCH_FILTER: "(member=%s)"
+      AUTH_LDAP_GROUP_NAME_ATTRIBUTE: "cn"
+      AUTH_LDAP_GROUP_OBJECT_CLASS: "groupOfNames"
+      AUTH_LDAP_USER_ATTRIBUTE: "uid"
+      AUTH_SESSION_SECRET: "mysecret"
+      AUTH_JWT_SECRET: "mysecret"
+      AUTH_SESSION_DOMAIN: "my-company.com"
+      AUTH_SESSION_NAME: "_authelia"
+      AUTH_SESSION_EXPIRATION: "3600"
+      AUTH_SESSION_INACTIVITY: "300"
+      AUTH_SESSION_REMEMBER_ME_DURATION: "1209600"
+      AUTH_LOG_LEVEL: "info"
+      AUTH_LOG_FORMAT: "text"
+      AUTH_LOG_FILE: "/var/log/authelia.log"
+      AUTH_LOG_FILE_MAX_SIZE: "10"
+      AUTH_LOG_FILE_MAX_BACKUPS: "10"
+      AUTH_LOG_FILE_MAX_AGE: "7"
+      AUTH_SMTP_HOST: "smtp.my-company.com"
+      AUTH_SMTP_PORT: "587"
+      AUTH_SMTP_USERNAME: ""
+      AUTH_SMTP_PASSWORD: ""
+
+  caddy:
+    image: caddy:2.4.5
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    depends_on:
+      - authelia
+
+  postgrest:
+    image: postgrest/postgrest:8.0.0
+    environment:
+      PGRST_DB_URI: "postgres://postgres:postgres@postgres:5432/postgres"
+      PGRST_DB_SCHEMA: "public"
+      PGRST_DB_ANON_ROLE: "postgres"
+      PGRST_SERVER_PORT: "3000"
+
+  openfaas:
+    image: openfaas/faasd:0.13.0

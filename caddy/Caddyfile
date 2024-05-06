@@ -1,0 +1,84 @@
+{
+  debug
+  acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+  servers {
+    log_credentials
+  }
+}
+
+(cors) {
+  @cors_preflight{args.0} method OPTIONS
+  @cors{args.0} header Origin {args.0}
+
+  handle @cors_preflight{args.0} {
+    header {
+      Access-Control-Allow-Origin "{args.0}"
+      Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+      Access-Control-Allow-Headers *
+      Access-Control-Max-Age "3600"
+      defer   #turn on defer on your header directive to make sure the new header values are set after proxying
+    }
+    respond "" 204
+  }
+
+  handle @cors{args.0} {
+    header {
+      Access-Control-Allow-Origin "{args.0}"
+      Access-Control-Expose-Headers *
+      defer
+    }
+  }
+}
+
+http://{$SOCRATIC_DOMAIN} {
+  redir http://www.{host}{uri}
+}
+
+http://www.{$SOCRATIC_DOMAIN} {
+  root * /var/www/www
+  file_server
+}
+
+http://app.{$SOCRATIC_DOMAIN} {
+  root * /var/www/app
+  file_server
+}
+
+http://api.{$SOCRATIC_DOMAIN} {
+  reverse_proxy supabase_kong_socratic:8000
+  import cors {header.origin}
+}
+
+http://mailtrain.{$SOCRATIC_DOMAIN} {
+  reverse_proxy mailtrain:3000
+}
+
+http://collector.{$SOCRATIC_DOMAIN} {
+  reverse_proxy otel-collector 1888
+  reverse_proxy otel-collector 8888
+  reverse_proxy otel-collector 8889
+  reverse_proxy otel-collector 13133
+  reverse_proxy otel-collector 4317
+  reverse_proxy otel-collector 4318
+  reverse_proxy otel-collector 55679
+}
+
+http://openobserve.{$SOCRATIC_DOMAIN} {
+  reverse_proxy openobserve:5080
+}
+
+http://vault.{$SOCRATIC_DOMAIN} {
+  reverse_proxy vault:8200
+}
+
+http://coder.{$SOCRATIC_DOMAIN} {
+  reverse_proxy coder:4000
+}
+
+http://support.{$SOCRATIC_DOMAIN} {
+  reverse_proxy osticket:80
+}
+
+http://ollama.{$SOCRATIC_DOMAIN} {
+  reverse_proxy open-webui:{$OPEN_WEBUI_PORT}
+}
