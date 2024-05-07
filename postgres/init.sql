@@ -1,12 +1,11 @@
-create role socratic with password 'socratic' NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
-grant all on schema public to socratic;
-create role supertokens with password 'supertokens' NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
-grant all on schema public to supertokens;
-create role coder with password 'coder' NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
-grant all on schema public to coder;
-create database socratic_development with owner socratic;
-create database socratic_test with owner socratic;
-create database socratic_production with owner socratic;
-create database supertokens with owner supertokens;
-create database coder with owner coder;
+\set pw `echo $UBERBASE_POSTGRES_PASSWORD`
+
+create role uberbase with password pw NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
+create role authelia with password pw NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
+create role anon NOSUPERUSER LOGIN;
+create database uberbase with owner uberbase;
+create database authelia with owner authelia;
+grant all on schema uberbase.public to uberbase;
+grant all on schema authelia.public to authelia;
+grant read on schema uberbase.public to anon;
 
