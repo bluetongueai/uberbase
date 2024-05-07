@@ -1,6 +1,7 @@
 # .devcontainer/Dockerfile
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG VARIANT=bullseye
 ARG DEVCONTAINER=1
 
 FROM mcr.microsoft.com/devcontainers/universal:2
@@ -18,9 +19,5 @@ RUN sudo mkdir /interpolator
 RUN sudo tar -xf interpolator.1.0.0.tar.gz -C /interpolator
 RUN sudo mv /interpolator/out/* /usr/bin/.
 RUN sudo rm -Rf /interpolator
-
-WORKDIR /uberbase
-
-ADD . .
 
 USER vscode
