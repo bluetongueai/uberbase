@@ -5,8 +5,6 @@ services:
     container_name: redis
     volumes:
       - ./redis:/data
-    networks:
-      - net
     expose:
       - 6379
     restart: unless-stopped
@@ -30,6 +28,8 @@ services:
       - ${UBERBASE_LLDAP_ADMIN_PORT}:17170
     depends_on:
       - postgres
+    volumes:
+      - ./lldap/lldap_config.interpolated.toml:/data/lldap_config.toml
 
   authelia:
     image: authelia/authelia
