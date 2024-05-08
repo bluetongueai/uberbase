@@ -3,5 +3,8 @@
     "dockerfile": "Dockerfile",
     "context": "."
   },
+  "runArgs": [
+    "--platform=linux/amd64"
+  ],
   "features": {}
 }

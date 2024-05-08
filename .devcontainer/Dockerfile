@@ -20,4 +20,13 @@ RUN sudo tar -xf interpolator.1.0.0.tar.gz -C /interpolator
 RUN sudo mv /interpolator/out/* /usr/bin/.
 RUN sudo rm -Rf /interpolator
 
+# install snapd
+RUN sudo apt-get install -y snapd
+
+# use snap to install multipass
+RUN sudo snap install multipass
+
+# start a mutlipass vm
+RUN multipass launch --name uberbase --cpus 2 --mem 4G --disk 20G --cloud-init ./openfass/cloud-config.yaml
+
 USER vscode

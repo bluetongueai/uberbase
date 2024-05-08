@@ -1,0 +1,10 @@
+#! /bin/sh
+
+mkdir -p ./configs/authelia
+interpolator ./authelia/config.template.yml > ./configs/authelia/config.yml
+mkdir -p ./configs/caddy
+interpolator ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
+mkdir -p ./configs/lldap
+interpolator ./lldap/lldap_config.template.yml > ./configs/lldap/config.yml
+mkdir -p ./configs/postgrest
+interpolator ./postgrest/postgrest.template.conf > ./configs/postgrest.conf
