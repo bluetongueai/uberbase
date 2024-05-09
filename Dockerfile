@@ -27,6 +27,9 @@ RUN git checkout v0.6.0
 RUN go mod download
 RUN make build
 
+RUN mkdir -p /var/lib/containerd-dev/snapshotter/devmapper
+RUN mkdir -p /run/containerd-dev/
+
 # install interpolator
 WORKDIR /
 RUN curl -LO https://github.com/tgittos/interpolator/releases/download/v1.0.0/interpolator.1.0.0.tar.gz
@@ -38,6 +41,10 @@ RUN rm -Rf /interpolator
 WORKDIR /uberbase
 
 ADD . .
+
+# set up CRI plugin
+ADD ./config-dev.toml /etc/containerd/config-dev.toml
+RUN alias ctr-dev="sudo ctr --address=/run/containerd-dev/containerd.sock"
 
 EXPOSE ${UBERBASE_HTTP_PORT}
 EXPOSE ${UBERBASE_HTTPS_PORT}

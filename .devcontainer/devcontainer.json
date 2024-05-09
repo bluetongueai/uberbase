@@ -3,13 +3,16 @@
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   "build": {
     "dockerfile": "../Dockerfile",
-    "context": "."
+    "context": ".."
   },
   "features": {},
   // Use this environment variable if you need to bind mount your local source code into a new container.
-  "remoteEnv": {
-    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
-  },
+  // "remoteEnv": {
+  //   "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+  // },
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
   // Use 'postCreateCommand' to run commands after the container is created.
