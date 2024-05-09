@@ -42,6 +42,8 @@ WORKDIR /uberbase
 
 ADD . .
 
+RUN source .env
+
 # set up CRI plugin
 ADD ./config-dev.toml /etc/containerd/config-dev.toml
 RUN alias ctr-dev="sudo ctr --address=/run/containerd-dev/containerd.sock"
