@@ -2,13 +2,10 @@
   "name": "Docker outside of Docker",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   "build": {
-    "dockerfile": "Dockerfile",
+    "dockerfile": "../Dockerfile",
     "context": "."
   },
-  "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
-    // "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
-  },
+  "features": {},
   // Use this environment variable if you need to bind mount your local source code into a new container.
   "remoteEnv": {
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"

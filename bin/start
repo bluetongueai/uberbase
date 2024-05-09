@@ -1,7 +1,17 @@
 #!/bin/bash
 
-# start a mutlipass vm
-# RUN multipass launch --name uberbase --cpus 2 --mem 4G --disk 20G --cloud-init ./openfass/cloud-config.yaml
+cd /uberbase
 
-# start the docker stack
+# start uberbase
+./bin/configure
 docker-compose up -d 
+
+# start 
+
+# start flintlock
+cd /flintlock
+export NET_DEVICE=$(ip route show | awk '/default/ {print $5}')
+./bin/flintlockd run \
+    --containerd-socket=/run/containerd-dev/containerd.sock \
+    --parent-iface="${NET_DEVICE}" \
+    --insecure
