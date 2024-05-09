@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# use snap to install multipass
+# RUN sudo snap install multipass

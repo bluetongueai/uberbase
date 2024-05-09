@@ -4,14 +4,16 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG VARIANT=bullseye
 ARG DEVCONTAINER=1
 
-FROM mcr.microsoft.com/devcontainers/universal:2
+FROM mcr.microsoft.com/vscode/devcontainers/base:${VARIANT}
 
 RUN apt-get update && \
     apt-get -y install --no-install-recommends \
     build-essential gnupg2 tar git zsh libssl-dev zlib1g-dev libyaml-dev curl libreadline-dev \
     postgresql-client libpq-dev \
     tmux \
-    vim
+    vim \
+    snapd
+#squashfuse fuse
 
 # install interpolator
 RUN curl -LO https://github.com/tgittos/interpolator/releases/download/v1.0.0/interpolator.1.0.0.tar.gz
@@ -20,13 +22,11 @@ RUN sudo tar -xf interpolator.1.0.0.tar.gz -C /interpolator
 RUN sudo mv /interpolator/out/* /usr/bin/.
 RUN sudo rm -Rf /interpolator
 
-# install snapd
-RUN sudo apt-get install -y snapd
+# enable snapd
+RUN sudo systemctl enable snapd
 
-# use snap to install multipass
-RUN sudo snap install multipass
-
-# start a mutlipass vm
-RUN multipass launch --name uberbase --cpus 2 --mem 4G --disk 20G --cloud-init ./openfass/cloud-config.yaml
+# configure snap
+ENV PATH /snap/bin:$PATH
+ADD snap /usr/local/bin/snap
 
 USER vscode

@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/bash
 
 mkdir -p ./configs/authelia
 interpolator ./authelia/config.template.yml > ./configs/authelia/config.yml

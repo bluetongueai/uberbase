@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# start a mutlipass vm
+# RUN multipass launch --name uberbase --cpus 2 --mem 4G --disk 20G --cloud-init ./openfass/cloud-config.yaml
+
+# start the docker stack
+docker-compose up -d 

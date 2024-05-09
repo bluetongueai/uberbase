@@ -19,6 +19,8 @@ services:
     ports:
       - ${UBERBASE_REDIS_PORT}:6379
     restart: unless-stopped
+    env_file:
+      - .env
     networks:
       - net
 
@@ -29,12 +31,13 @@ services:
       POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
       POSTGRES_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
       POSTGRES_DB: ${UBERBASE_POSTGRES_DATABASE}
+    env_file:
+      - .env
     ports:
       - ${UBERBASE_POSTGRES_PORT}:5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init:/docker-entrypoint-initdb.d
-      - ./postgres/00_init_ultrabase.sql:/docker-entrypoint-initdb.d/00_init_ultrabase.sql
+      - ./postgres/init/:/docker-entrypoint-initdb.d/
     networks:
       - net
 
@@ -47,6 +50,8 @@ services:
       - postgres
     volumes:
       - ./configs/lldap:/data
+    env_file:
+      - .env
     networks:
       - net
 
@@ -56,6 +61,8 @@ services:
       - ${UBERBASE_AUTHELIA_PORT}:9091
     volumes:
       - ./configs/authelia:/config
+    env_file:
+      - .env
     networks:
       - net
 
@@ -68,6 +75,8 @@ services:
       - ./configs/caddy/Caddyfile:/etc/caddy/Caddyfile
     depends_on:
       - authelia
+    env_file:
+      - .env
     networks:
       - net
 
@@ -81,5 +90,7 @@ services:
       - ./configs/postgrest/postgrest.conf:/etc/postgrest.conf
     ports:
       - ${UBERBASE_POSTGREST_PORT}:3000
+    env_file:
+      - .env
     networks:
       - net
