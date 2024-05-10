@@ -30,21 +30,17 @@
   }
 }
 
-http://{$SOCRATIC_DOMAIN} {
-  redir http://www.{host}{uri}
+http://{$UBERBASE_DOMAIN}/v1/api {
+  reverse_proxy api:8000
+  import cors {header.origin}
 }
 
-http://www.{$SOCRATIC_DOMAIN} {
-  root * /var/www/www
-  file_server
-}
-
-http://app.{$SOCRATIC_DOMAIN} {
+http://app.{$UBERBASE_DOMAIN} {
   root * /var/www/app
   file_server
 }
 
-http://api.{$SOCRATIC_DOMAIN} {
+http://api.{$UBERBASE_DOMAIN} {
   reverse_proxy supabase_kong_socratic:8000
   import cors {header.origin}
 }

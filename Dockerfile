@@ -1,17 +1,42 @@
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DEVCONTAINER=1
 
-FROM alpine:3.19.1 as base
-FROM docker:dind
+FROM --platform=linux/amd64 alpine:3.19.1 as base
+FROM --platform=linux/amd64 docker:dind
 
 RUN apk update && apk add --no-cache \
+    alpine-sdk \
     build-base gnupg tar git zsh openssl-dev zlib-dev yaml-dev curl readline-dev openrc \
     postgresql-client postgresql-dev \
     bash tmux vim \
-    go \
     # qemu-img qemu-system-x86_64 libvirt-daemon py3-libvirt py3-libxml2 bridge-utils virt-install \
     device-mapper bc \
-    docker docker-compose
+    docker docker-compose \
+    go
+
+# grab compatible linux kernels for firecracker/flintlock
+WORKDIR /kernels
+RUN curl -LO https://mirrors.edge.kernel.org/pub/linux/kernel/v5.x/linux-5.10.216.tar.xz
+RUN tar -xf linux-5.10.216.tar.xz
+RUN rm linux-5.10.216.tar.xz
+# compile the kernel so that u don't have 2
+WORKDIR /kernels/linux-5.10.216
+RUN cp ./functions/_image/microvm-kernel-ci-x86_64-5.10.config ./.config
+RUN make -j32
+RUN cp ./arch/x86/boot/bzImage ./
+RUN binwalk --extract bzImage
+RUN file ./_bzImage.extracted/44E9
+RUN cp ./_bzImage.extracted/44E9 /kernels/firecrackervm
+
+# build an alpine linux
+# WORKDIR /alpine
+# RUN git clone https://github.com/alpinelinux/aports
+# RUN cd aports/main/linux-hardened
+# RUN cp ./functions/_image/microvm-kernel-ci-x86_64-5.10.config ./config-virthardened.x86_64
+# RUN apk checksum
+# RUN abuild -r
+# RUN abuild package
+# RUN abuild rootpkg
 
 # fetch firecracker and jailer
 WORKDIR /usr/bin
@@ -37,6 +62,12 @@ RUN mkdir /interpolator
 RUN tar -xf interpolator.1.0.0.tar.gz -C /interpolator
 RUN mv /interpolator/out/* /usr/bin/.
 RUN rm -Rf /interpolator
+
+# install hammertime
+WORKDIR /
+RUN git clone https://github.com/warehouse-13/hammertime.git
+WORKDIR /hammertime
+RUN make build
 
 WORKDIR /uberbase
 
