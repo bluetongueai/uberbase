@@ -19,24 +19,6 @@ WORKDIR /kernels
 RUN curl -LO https://mirrors.edge.kernel.org/pub/linux/kernel/v5.x/linux-5.10.216.tar.xz
 RUN tar -xf linux-5.10.216.tar.xz
 RUN rm linux-5.10.216.tar.xz
-# compile the kernel so that u don't have 2
-WORKDIR /kernels/linux-5.10.216
-RUN cp ./functions/_image/microvm-kernel-ci-x86_64-5.10.config ./.config
-RUN make -j32
-RUN cp ./arch/x86/boot/bzImage ./
-RUN binwalk --extract bzImage
-RUN file ./_bzImage.extracted/44E9
-RUN cp ./_bzImage.extracted/44E9 /kernels/firecrackervm
-
-# build an alpine linux
-# WORKDIR /alpine
-# RUN git clone https://github.com/alpinelinux/aports
-# RUN cd aports/main/linux-hardened
-# RUN cp ./functions/_image/microvm-kernel-ci-x86_64-5.10.config ./config-virthardened.x86_64
-# RUN apk checksum
-# RUN abuild -r
-# RUN abuild package
-# RUN abuild rootpkg
 
 # fetch firecracker and jailer
 WORKDIR /usr/bin
@@ -73,7 +55,7 @@ WORKDIR /uberbase
 
 ADD . .
 
-RUN source .env
+# RUN source .env
 
 # set up CRI plugin
 ADD ./config-dev.toml /etc/containerd/config-dev.toml

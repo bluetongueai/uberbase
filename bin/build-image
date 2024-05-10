@@ -1,0 +1,20 @@
+#! /bin/bash
+
+# compile the kernel so that u don't have 2
+#WORKDIR /kernels/linux-5.10.216
+#RUN cp ./functions/_image/microvm-kernel-ci-x86_64-5.10.config ./.config
+#RUN make -j32
+#RUN cp ./arch/x86/boot/bzImage ./
+#RUN binwalk --extract bzImage
+#RUN file ./_bzImage.extracted/44E9
+#RUN cp ./_bzImage.extracted/44E9 /kernels/firecrackervm
+
+# build an alpine linux
+# WORKDIR /alpine
+# RUN git clone https://github.com/alpinelinux/aports
+# RUN cd aports/main/linux-hardened
+# RUN cp ./functions/_image/microvm-kernel-ci-x86_64-5.10.config ./config-virthardened.x86_64
+# RUN apk checksum
+# RUN abuild -r
+# RUN abuild package
+# RUN abuild rootpkg
