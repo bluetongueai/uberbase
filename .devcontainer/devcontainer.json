@@ -25,7 +25,8 @@
         "ms-azuretools.vscode-docker",
         "GitHub.copilot",
         "GitHub.copilot-chat",
-        "eamodio.gitlens"
+        "eamodio.gitlens",
+        "golang.go"
       ]
     }
   }

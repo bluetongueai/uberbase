@@ -1,20 +1,84 @@
 #! /bin/bash
 
-# compile the kernel so that u don't have 2
-#WORKDIR /kernels/linux-5.10.216
-#RUN cp ./functions/_image/microvm-kernel-ci-x86_64-5.10.config ./.config
-#RUN make -j32
-#RUN cp ./arch/x86/boot/bzImage ./
-#RUN binwalk --extract bzImage
-#RUN file ./_bzImage.extracted/44E9
-#RUN cp ./_bzImage.extracted/44E9 /kernels/firecrackervm
+source .env
 
-# build an alpine linux
-# WORKDIR /alpine
-# RUN git clone https://github.com/alpinelinux/aports
-# RUN cd aports/main/linux-hardened
-# RUN cp ./functions/_image/microvm-kernel-ci-x86_64-5.10.config ./config-virthardened.x86_64
-# RUN apk checksum
-# RUN abuild -r
-# RUN abuild package
-# RUN abuild rootpkg
+# colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m'
+
+# multiline string
+remote_cmd=$(cat <<EOF
+# Set up a login terminal on the serial console (ttyS0):
+ln -s agetty /etc/init.d/agetty.ttyS0
+echo ttyS0 > /etc/securetty
+rc-update add agetty.ttyS0 default
+
+# Make sure special file systems are mounted on boot:
+rc-update add devfs boot
+rc-update add procfs boot
+rc-update add sysfs boot
+
+# Then, copy the newly configured system to the rootfs image:
+for d in bin etc lib root sbin usr; do tar c "/$d" | tar x -C /rootfs; done
+
+# The above command may trigger the following message:
+# tar: Removing leading "/" from member names
+# However, this is just a warning, so you should be able to
+# proceed with the setup process.
+
+for dir in dev proc run sys var; do mkdir /rootfs/${dir}; done
+EOF
+)
+
+# build gcc-11 (cause it takes forever to do in the docker image)
+cd /gcc-11/gcc-11.4.0
+echo -e "${YELLOW}Building gcc-11. This will take a long time.$NC"
+./contrib/download_prerequisites
+cd ..
+mkdir objdir
+cd objdir
+./../gcc-11.4.0/configure --prefix=$HOME/GCC-11.4.0 --disable-multilib
+make all-gcc
+make all-target-libgcc
+make install-gcc
+make install-target-libgcc
+
+# fetch a flintlockd compatible kernel
+cd /kernels
+echo -e "${YELLOW}Fetching kernel.$NC"
+if [ ! -d linux.git ]; then
+  git clone --depth 1 --branch v5.10 https://github.com/torvalds/linux.git linux.git
+fi
+
+# compile the kernel
+if ! command -v gcc-11 &> /dev/null; then
+  echo -e "${RED}gcc-11 not found. Please install gcc-11.$NC"
+  exit 1
+fi
+cd /kernels/linux.git
+git pull
+echo -e "${YELLOW}Copying config.$NC"
+cp /uberbase/functions/_image/microvm-kernel-ci-x86_64-5.10.config ./include/config/auto.config
+echo -e "${YELLOW}Compiling kernel.$NC"
+HOSTCC=gcc-11 CC=gcc-11 make vmlinux
+
+exit 1
+# build a filesystem
+cd /filesystems
+echo -e "${YELLOW}Building filesystem.$NC"
+dd if=/dev/zero of=rootfs.ext4 bs=1M count=${UBERBASE_VM_STORAGE_MB}
+mkfs.ext4 rootfs.ext4
+mkdir -p /tmp/rootfs
+mount -o loop rootfs.ext4 ./tmp/rootfs
+docker run --rm -v /tmp/rootfs:/rootfs alpine sh -c "apk add openrc util-linux"
+docker run --rm -v /tmp/rootfs:/rootfs alpine sh -c "$remote_cmd"
+
+# create the final docker image
+echo -e "${YELLOW}Creating docker image.$NC"
+tar -C /tmp/rootfs -c . | docker import - tgittos/firecracker-microvm-x86_64-5.10-alpine:latest
+
+umount /tmp/rootfs
+
+echo -e "${GREEN}Done.$NC"

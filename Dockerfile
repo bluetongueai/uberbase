@@ -5,20 +5,24 @@ FROM --platform=linux/amd64 alpine:3.19.1 as base
 FROM --platform=linux/amd64 docker:dind
 
 RUN apk update && apk add --no-cache \
-    alpine-sdk \
+    alpine-sdk linux-headers libelf elfutils-dev flex bison \
     build-base gnupg tar git zsh openssl-dev zlib-dev yaml-dev curl readline-dev openrc \
     postgresql-client postgresql-dev \
     bash tmux vim \
     # qemu-img qemu-system-x86_64 libvirt-daemon py3-libvirt py3-libxml2 bridge-utils virt-install \
     device-mapper bc \
     docker docker-compose \
-    go
+    go nodejs npm
 
-# grab compatible linux kernels for firecracker/flintlock
-WORKDIR /kernels
-RUN curl -LO https://mirrors.edge.kernel.org/pub/linux/kernel/v5.x/linux-5.10.216.tar.xz
-RUN tar -xf linux-5.10.216.tar.xz
-RUN rm linux-5.10.216.tar.xz
+# install gcc-11 to allow compiling 5.10 kernels
+WORKDIR /gcc-11
+# RUN curl -LO https://ftp.gnu.org/gnu/gcc/gcc-11.4.0/gcc-11.4.0.tar.gz
+RUN curl -LO https://mirrors.ibiblio.org/gnu/gcc/gcc-11.4.0/gcc-11.4.0.tar.gz
+RUN tar -xvf gcc-11.4.0.tar.gz
+
+# setup required fires
+RUN mkdir /kernels
+RUN mkdir /filesystems
 
 # fetch firecracker and jailer
 WORKDIR /usr/bin
