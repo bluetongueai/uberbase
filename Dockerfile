@@ -5,7 +5,7 @@ FROM --platform=linux/amd64 alpine:3.19.1 as base
 FROM --platform=linux/amd64 docker:dind
 
 RUN apk update && apk add --no-cache \
-    bash tmux vim sed tar git curl openssh \
+    build-base bash tmux vim sed tar git curl openssh \
     postgresql-client postgresql-dev \
     docker docker-compose \
     go nodejs npm
