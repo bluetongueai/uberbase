@@ -85,7 +85,7 @@ POST a request to the functions API:
 curl \
   -X POST \
   -H ApiKey=your-api-key \
-  http://localhost:6000/api/v1/functions/whalesay?vm=small&args="Hello world!"
+  http://localhost:6000/api/v1/functions/docker/whalesay?vm=small&args="Hello world!"
 ```
 
 When interacting with the services in the platform, everything is secured through either the API key for anonymous
@@ -98,7 +98,7 @@ curl \
   -X POST \
   -H ApiKey=your-api-key \
   -H Authorization=Bearer your-jwt-token \
-  http://localhost:6000/api/v1/functions/whalesay?vm=small&args="Hello world!"
+  http://localhost:6000/api/v1/functions/docker/whalesay?vm=small&args="Hello world!"
 ```
 
 ## Integrating

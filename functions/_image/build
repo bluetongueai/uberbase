@@ -1,0 +1,16 @@
+#! /bin/bash
+
+IMG_ID=$(docker build -q .)
+CONTAINER_ID=$(docker run -td $IMG_ID /bin/bash)
+
+# fetch kernel
+curl -L https://s3.amazonaws.com/spec.ccfc.min/img/quickstart_guide/x86_64/kernels/vmlinux.bin /kernels/vmlinux.bin
+
+# build alpine fs
+cd /filesystems
+mkdir -p ./mnt
+qemu-img create -f raw alpine.ext4 800M
+mkfs.ext4 alpine.ext4
+mount alpine.ext4 ./mnt
+docker cp $CONTAINER_ID:/ ./mnt
+umount ./mnt

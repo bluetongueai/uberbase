@@ -30,26 +30,26 @@
   }
 }
 
-http://{$UBERBASE_DOMAIN}/v1/api {
+http://${UBERBASE_DOMAIN}/v1/api {
   reverse_proxy api:8000
   import cors {header.origin}
 }
 
-http://app.{$UBERBASE_DOMAIN} {
+http://app.${UBERBASE_DOMAIN} {
   root * /var/www/app
   file_server
 }
 
-http://api.{$UBERBASE_DOMAIN} {
+http://api.${UBERBASE_DOMAIN} {
   reverse_proxy supabase_kong_socratic:8000
   import cors {header.origin}
 }
 
-http://mailtrain.{$SOCRATIC_DOMAIN} {
+http://mailtrain.${SOCRATIC_DOMAIN} {
   reverse_proxy mailtrain:3000
 }
 
-http://collector.{$SOCRATIC_DOMAIN} {
+http://collector.${SOCRATIC_DOMAIN} {
   reverse_proxy otel-collector 1888
   reverse_proxy otel-collector 8888
   reverse_proxy otel-collector 8889
@@ -59,22 +59,22 @@ http://collector.{$SOCRATIC_DOMAIN} {
   reverse_proxy otel-collector 55679
 }
 
-http://openobserve.{$SOCRATIC_DOMAIN} {
+http://openobserve.${SOCRATIC_DOMAIN} {
   reverse_proxy openobserve:5080
 }
 
-http://vault.{$SOCRATIC_DOMAIN} {
+http://vault.${SOCRATIC_DOMAIN} {
   reverse_proxy vault:8200
 }
 
-http://coder.{$SOCRATIC_DOMAIN} {
+http://coder.${SOCRATIC_DOMAIN} {
   reverse_proxy coder:4000
 }
 
-http://support.{$SOCRATIC_DOMAIN} {
+http://support.${SOCRATIC_DOMAIN} {
   reverse_proxy osticket:80
 }
 
-http://ollama.{$SOCRATIC_DOMAIN} {
+http://ollama.${SOCRATIC_DOMAIN} {
   reverse_proxy open-webui:{$OPEN_WEBUI_PORT}
 }

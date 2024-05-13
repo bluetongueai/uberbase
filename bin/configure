@@ -7,4 +7,4 @@ interpolator ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
 mkdir -p ./configs/lldap
 interpolator ./lldap/lldap_config.template.toml > ./configs/lldap/config.toml
 mkdir -p ./configs/postgrest
-interpolator ./postgrest/postgrest.template.conf > ./configs/postgrest.conf
+interpolator ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf

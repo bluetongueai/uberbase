@@ -5,7 +5,8 @@ source .env
 # colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
+YELLOW='\033[1;33m'
+ORANGE='\033[0;33m]'
 NC='\033[0m'
 
 # multiline string
@@ -32,39 +33,7 @@ for dir in dev proc run sys var; do mkdir /rootfs/${dir}; done
 EOF
 )
 
-# build gcc-11 (cause it takes forever to do in the docker image)
-cd /gcc-11/gcc-11.4.0
-echo -e "${YELLOW}Building gcc-11. This will take a long time.$NC"
-./contrib/download_prerequisites
-cd ..
-mkdir objdir
-cd objdir
-./../gcc-11.4.0/configure --prefix=$HOME/GCC-11.4.0 --disable-multilib
-make all-gcc
-make all-target-libgcc
-make install-gcc
-make install-target-libgcc
 
-# fetch a flintlockd compatible kernel
-cd /kernels
-echo -e "${YELLOW}Fetching kernel.$NC"
-if [ ! -d linux.git ]; then
-  git clone --depth 1 --branch v5.10 https://github.com/torvalds/linux.git linux.git
-fi
-
-# compile the kernel
-if ! command -v gcc-11 &> /dev/null; then
-  echo -e "${RED}gcc-11 not found. Please install gcc-11.$NC"
-  exit 1
-fi
-cd /kernels/linux.git
-git pull
-echo -e "${YELLOW}Copying config.$NC"
-cp /uberbase/functions/_image/microvm-kernel-ci-x86_64-5.10.config ./include/config/auto.config
-echo -e "${YELLOW}Compiling kernel.$NC"
-HOSTCC=gcc-11 CC=gcc-11 make vmlinux
-
-exit 1
 # build a filesystem
 cd /filesystems
 echo -e "${YELLOW}Building filesystem.$NC"
@@ -75,7 +44,7 @@ mount -o loop rootfs.ext4 ./tmp/rootfs
 docker run --rm -v /tmp/rootfs:/rootfs alpine sh -c "apk add openrc util-linux"
 docker run --rm -v /tmp/rootfs:/rootfs alpine sh -c "$remote_cmd"
 
-# create the final docker image
+# create the base alpine docker image
 echo -e "${YELLOW}Creating docker image.$NC"
 tar -C /tmp/rootfs -c . | docker import - tgittos/firecracker-microvm-x86_64-5.10-alpine:latest
 
