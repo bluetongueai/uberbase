@@ -4,13 +4,14 @@
 ./bin/configure
 
 # start uberbase
-docker-compose up -d 
+# docker-compose up -d 
 
 # use tmux to start containerd and flintlock
-export NET_DEVICE=$(ip route show | awk '/default/ {print $5}')
+# export NET_DEVICE=$(ip route show | awk '/default/ {print $5}')
 
-tmux new -d -s uberbase \;
-tmux send-keys -t uberbase "containerd --config /etc/containerd/config-dev.toml" ENTER
+#tmux new -d -s uberbase \;
+#tmux send-keys -t uberbase "containerd --config /etc/containerd/config-dev.toml" ENTER
+containerd --config /etc/containerd/config-dev.toml
 
 # attach to tmux session
 # alias attach="tmux a -t uberbase"
