@@ -1,16 +1,88 @@
-#! /bin/bash
+#!/bin/bash
 
-IMG_ID=$(docker build -q .)
-CONTAINER_ID=$(docker run -td $IMG_ID /bin/bash)
+set -eu
 
-# fetch kernel
-curl -L https://s3.amazonaws.com/spec.ccfc.min/img/quickstart_guide/x86_64/kernels/vmlinux.bin /kernels/vmlinux.bin
+PRE_BUILD_DIR="${PWD}/functions/_image"
+BUILD_DIR="${PWD}/functions/_image/tmp"
+DOCKERFILE="${PWD}/functions/_image/Dockerfile"
+FILESYSTEM_TARGET="/filesystems/alpine.ext4"
+KEY_FILE="alpine"
+IMAGE_TAG="uberbase/alpine:latest"
 
-# build alpine fs
-cd /filesystems
-mkdir -p ./mnt
-qemu-img create -f raw alpine.ext4 800M
-mkfs.ext4 alpine.ext4
-mount alpine.ext4 ./mnt
-docker cp $CONTAINER_ID:/ ./mnt
-umount ./mnt
+echo "Generating a keypair..."
+if [ ! -f "${HOME}/.ssh/${KEY_FILE}" ]; then
+        set +e
+        ssh-keygen -t rsa -b 4096 -C "alpine@firecracker" -f "${HOME}/.ssh/${KEY_FILE}"
+        set -e
+fi
+
+echo "Creating build directory..."
+rm -rf "${BUILD_DIR}"
+mkdir -p "${BUILD_DIR}" && cd "${BUILD_DIR}"
+
+echo "Copying public key to the build directory..."
+cp "${HOME}/.ssh/${KEY_FILE}.pub" "${BUILD_DIR}/key.pub"
+
+cd "${PRE_BUILD_DIR}"
+
+echo "Building Docker image..."
+cp "${DOCKERFILE}" "${BUILD_DIR}/Dockerfile"
+docker build -t "${IMAGE_TAG}" "${BUILD_DIR}"
+retVal=$?
+
+if [ $retVal -ne 0 ]; then
+        echo " ==> build failed with status $?"
+        exit $retVal
+fi
+
+echo "Creating file system..."
+qemu-img create -f raw "${BUILD_DIR}/alpine-base.ext4" 800M
+mkfs.ext4 "${BUILD_DIR}/alpine-base.ext4"
+mkdir -p "${BUILD_DIR}/fsmnt"
+mount "${BUILD_DIR}/alpine-base.ext4" ${BUILD_DIR}/fsmnt
+
+echo "Starting container from new image ${IMAGE_TAG}..."
+CONTAINER_ID=$(docker run --rm -v ${BUILD_DIR}/fsmnt:/export-rootfs -td ${IMAGE_TAG} /bin/sh)
+
+echo "Setting up networking inside the container..."
+# set up the kernel boot args
+TAP_DEV="fc-88-tap0"
+MASK_LONG="255.255.255.252"
+MASK_SHORT="/30"
+FC_IP="172.20.0.1"
+TAP_IP="172.20.0.2"
+FC_MAC="02:FC:00:00:00:05"
+
+KERNEL_BOOT_ARGS="ro console=ttyS0 noapic reboot=k panic=1 pci=off nomodules random.trust_cpu=on"
+KERNEL_BOOT_ARGS="${KERNEL_BOOT_ARGS} ip=${FC_IP}::${TAP_IP}:${MASK_LONG}::eth0:off"
+
+# set up a tap network interface for the Firecracker VM to user
+ip link del "$TAP_DEV" 2> /dev/null || true
+ip tuntap add dev "$TAP_DEV" mode tap
+sysctl -w net.ipv4.conf.${TAP_DEV}.proxy_arp=1 > /dev/null
+sysctl -w net.ipv6.conf.${TAP_DEV}.disable_ipv6=1 > /dev/null
+ip addr add "${TAP_IP}${MASK_SHORT}" dev "$TAP_DEV"
+ip link set dev "$TAP_DEV" up
+
+# docker run --rm -v ${BUILD_DIR}/fsmnt:/export-rootfs -td ${IMAGE_TAG} bin/sh -C ifconfig eth0 up && ip addr add dev eth0 ${TAP_IP}/16 && ip route 
+# docker run --rm -v ${BUILD_DIR}/fsmnt:/export-rootfs -td ${IMAGE_TAG} bin/sh -C add default via ${FC_IP} && echo "nameserver 8.8.8.8" > /etc/resolv.conf
+
+echo "Copying Docker file system..."
+docker cp $CONTAINER_ID:/ ${BUILD_DIR}/fsmnt
+
+echo "Unmounting file system..."
+umount "${BUILD_DIR}/fsmnt"
+
+echo "Removing docker container..."
+docker stop $CONTAINER_ID
+
+echo "Moving file system..."
+mv "${BUILD_DIR}/alpine-base.ext4" "${FILESYSTEM_TARGET}"
+
+echo "Cleaning up build directory..."
+rm -r "${BUILD_DIR}"
+
+echo "Removing Docker image..."
+docker rmi ${IMAGE_TAG}
+
+echo " \\o/ File system written to ${FILESYSTEM_TARGET}."

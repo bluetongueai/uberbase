@@ -9,10 +9,9 @@ docker-compose up -d
 # use tmux to start containerd and flintlock
 export NET_DEVICE=$(ip route show | awk '/default/ {print $5}')
 
-tmux new -d -s uberbase \; split-window -h ; 
-tmux send-keys -t uberbase.0 "containerd --config /etc/containerd/config-dev.toml" ENTER
-tmux send-keys -t uberbase.1 "/flintlock/bin/flintlockd run --containerd-socket=/run/containerd-dev/containerd.sock --parent-iface="${NET_DEVICE}" --insecure" ENTER
+tmux new -d -s uberbase \;
+tmux send-keys -t uberbase "containerd --config /etc/containerd/config-dev.toml" ENTER
 
 # attach to tmux session
-alias attach="tmux a -t uberbase"
+# alias attach="tmux a -t uberbase"
 
