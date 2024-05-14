@@ -5,39 +5,12 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG DEVCONTAINER=1
 
 RUN apk update && apk add --no-cache \
-    build-base bash tmux vim sed tar git curl openssh-keygen \
-    qemu-img qemu-system-x86_64 \
-    bridge-utils iproute2 ncurses jq sudo \
-    postgresql-client postgresql-dev \
-    docker docker-compose \
-    go nodejs npm
-
-# get the runq and runc source code
-WORKDIR /
-RUN git clone --depth=1 --recurse-submodules https://github.com/gotoz/runq.git
-WORKDIR /runq
-RUN make release
-# install runq to `/var/lib/runq`
-RUN make release-install
-ENV PATH $PATH:/var/lib
-
-# set docker to run runq
-RUN echo <<EOS
-{
-  "runtimes": {
-    "runq": {
-      "path": "/var/lib/runq/runq",
-      "runtimeArgs": [
-        "--cpu", "1",
-        "--mem", "256",
-        "--dns", "8.8.8.8,8.8.4.4",
-        "--tmpfs", "/tmp",
-        "--nestedvm"
-      ]
-    }
-  }
-} > /etc/docker/daemon.json
-EOS
+  build-base bash tmux vim sed tar git curl openssh openssh-keygen iptables iproute2 \
+  qemu-img qemu-system-x86_64 \
+  bridge-utils iproute2 ncurses jq sudo \
+  postgresql-client postgresql-dev \
+  docker docker-compose \
+  go nodejs npm
 
 # install interpolator
 WORKDIR /
