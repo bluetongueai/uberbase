@@ -1,5 +1,4 @@
 FROM --platform=linux/amd64 alpine:3.19.1
-#FROM --platform=linux/amd64 docker:dind-rootless
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DEVCONTAINER=1
@@ -11,6 +10,34 @@ RUN apk update && apk add --no-cache \
   postgresql-client postgresql-dev \
   docker docker-compose \
   go nodejs npm
+
+# make dirs
+RUN mkdir -p /kernels
+RUN mkdir -p /filesystems
+
+# install firecracker
+RUN git clone --depth=1 --branch=v1.7.0 https://github.com/firecracker-microvm/firecracker.git /firecracker
+RUN curl -L https://github.com/firecracker-microvm/firecracker/releases/download/v1.7.0/firecracker-v1.7.0-x86_64.tgz -o /firecracker-v1.7.0-x86_64.tgz
+RUN tar -xf /firecracker-v1.7.0-x86_64.tgz
+RUN mv /release-v1.7.0-x86_64/firecracker-v1.7.0-x86_64 /usr/bin/firecracker
+RUN mv /release-v1.7.0-x86_64/jailer-v1.7.0-x86_64 /usr/bin/jailer
+RUN chmod +x /usr/bin/firecracker
+RUN chmod +x /usr/bin/jailer
+RUN rm -Rf /release-v1.7.0-x86_64
+RUN rm /firecracker-v1.7.0-x86_64.tgz
+
+# install firecracker deps
+RUN curl -L https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.8/x86_64/vmlinux-5.10.210 -o /kernels/vmlinux-5.10.210
+RUN curl -L https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.8/x86_64/ubuntu-22.04.ext4 -o /filesystems/ubuntu-22.04.ext4
+RUN curl -L https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.8/x86_64/ubuntu-22.04.id_rsa -o /filesystems/ubuntu-22.04.id_rsa
+RUN chmod 400 /filesystems/ubuntu-22.04.id_rsa
+
+# install firectl
+RUN git clone https://github.com/firecracker-microvm/firectl.git /firectl
+WORKDIR /firectl
+RUN make
+RUN chmod +x firectl
+RUN mv firectl /usr/bin/.
 
 # install interpolator
 WORKDIR /
