@@ -2,7 +2,7 @@
   "name": "Docker outside of Docker",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   "build": {
-    "dockerfile": "../Dockerfile",
+    "dockerfile": "Dockerfile",
     "context": ".."
   },
   "features": {},
@@ -10,13 +10,9 @@
   "remoteEnv": {
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
   },
-  "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-    "source=/lib/modules,target=/lib/modules,type=bind"
-  ],
   "runArgs": [
     "--privileged",
-    "--cap-add=NET_ADMIN"
+    "--cap-add=ALL"
   ],
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
@@ -34,9 +30,9 @@
         "golang.go"
       ]
     }
-  }
+  },
   // Configure tool-specific properties.
   // "customizations": {},
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-  // "remoteUser": "root"
+  "remoteUser": "root"
 }

@@ -10,7 +10,7 @@ FIRECRACKER_API_SOCKET="/run/firecracker.socket"
 # docker-compose up -d 
 
 echo "Starting containerd"
-tmux new -d -s uberbase-containerd "containerd --config /etc/containerd/config-dev.toml"
+tmux new -d -s uberbase-containerd "containerd --config /etc/containerd/config.toml"
 
 echo "Starting Firecracker"
 rm -f $API_SOCKET

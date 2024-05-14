@@ -1,0 +1,13 @@
+version = 2
+
+root = "/var/lib/containerd-dev"
+state = "/run/containerd"
+
+[grpc]
+  address = "/run/containerd.sock"
+
+[metrics]
+  address = "127.0.0.1:1338"
+
+[debug]
+  level = "trace"
