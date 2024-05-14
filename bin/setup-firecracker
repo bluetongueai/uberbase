@@ -21,3 +21,8 @@ curl -L ${release_url}/download/${latest}/firecracker-${latest}-${ARCH}.tgz \
 
 # Rename the binary to "firecracker"
 mv release-${latest}-$(uname -m)/firecracker-${latest}-${ARCH} /usr/bin/firecracker
+
+git clone https://github.com/firecracker-microvm/firectl.git /firectl
+cd /firectl
+make
+
