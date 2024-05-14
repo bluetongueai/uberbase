@@ -1,18 +1,18 @@
 #!/bin/bash
 
+ARCH="$(uname -m)"
+FIRECRACKER_API_SOCKET="/run/firecracker.socket"
+
 # dynamically configure services
 ./bin/configure
 
 # start uberbase
 # docker-compose up -d 
 
-# use tmux to start containerd and flintlock
-# export NET_DEVICE=$(ip route show | awk '/default/ {print $5}')
+echo "Starting containerd"
+tmux new -d -s uberbase-containerd "containerd --config /etc/containerd/config-dev.toml"
 
-#tmux new -d -s uberbase \;
-#tmux send-keys -t uberbase "containerd --config /etc/containerd/config-dev.toml" ENTER
-containerd --config /etc/containerd/config-dev.toml
-
-# attach to tmux session
-# alias attach="tmux a -t uberbase"
+echo "Starting Firecracker"
+rm -f $API_SOCKET
+tmux new -d -s uberbase-firecracker "firecracker --api-sock ${API_SOCKET}"
 
