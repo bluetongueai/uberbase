@@ -3,6 +3,8 @@ FROM --platform=linux/amd64 alpine:3.19.1
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DEVCONTAINER=1
 
+ENV FIRECRACKER_SOCKET_DIR=/run/firecracker
+
 RUN apk update && apk add --no-cache \
   build-base sed tar git curl openssh openssh-keygen iptables-legacy iproute2 openrc supervisor \
   qemu-img qemu-system-x86_64 bridge-utils iproute2 ncurses jq sudo docker docker-compose \
@@ -19,6 +21,7 @@ RUN ln -s /sbin/iptables-legacy /usr/bin/iptables
 # make dirs
 RUN mkdir -p /kernels
 RUN mkdir -p /filesystems
+RUN mkdir -p /run/firecracker
 
 # install firecracker
 RUN git clone --depth=1 --branch=v1.7.0 https://github.com/firecracker-microvm/firecracker.git /firecracker
@@ -53,14 +56,12 @@ RUN mv /interpolator/out/* /usr/bin/.
 RUN rm interpolator.1.0.0.tar.gz
 RUN rm -Rf /interpolator
 
-# install supervisord and configure firecracker to run
+# install supervisord and configure ...nothing to run (for now)
 WORKDIR /supervisord
 RUN cat <<EOF > supervisord.conf
 [supervisord]
 pidfile = /var/run/supervisord.pid
 logfile = /var/log/supervisord.log
-[program:firecracker]
-command=firecracker --api-sock /run/firecracker.socket
 EOF
 
 # lastly, uberbase
