@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -59,9 +58,9 @@ func shutDown(running RunningFirecracker) {
 func makeIso(cloudInitPath string) (string, error) {
 	image := "/tmp/cloud-init.iso"
 	metaDataPath := "/tmp/my-meta-data.yml"
-	err := ioutil.WriteFile(metaDataPath, []byte("instance-id: i-litchi12345"), 0644)
+	err := os.WriteFile(metaDataPath, []byte("instance-id: i-litchi12345"), 0644)
 	if err != nil {
-		return "", fmt.Errorf("Failed to create metadata file: %s", err)
+		return "", fmt.Errorf("failed to create metadata file: %s", err)
 	}
 	if err := exec.Command("cloud-localds", image, cloudInitPath, metaDataPath).Run(); err != nil {
 		return "", fmt.Errorf("cloud-localds failed: %s", err)
@@ -70,7 +69,7 @@ func makeIso(cloudInitPath string) (string, error) {
 }
 
 func deleteRequestHandler(w http.ResponseWriter, r *http.Request) {
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Fatalf("failed to read body, %s", err)
 	}
@@ -87,7 +86,7 @@ func deleteRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 func createRequestHandler(w http.ResponseWriter, r *http.Request) {
 	ipByte += 1
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Fatalf("failed to read body, %s", err)
 	}
@@ -163,7 +162,7 @@ func (opts *options) createVMM(ctx context.Context) (*RunningFirecracker, error)
 	rootImagePath, err := copyImage(opts.Request.RootDrivePath)
 	opts.Request.RootDrivePath = rootImagePath
 	if err != nil {
-		return nil, fmt.Errorf("Failed copying root path: %s", err)
+		return nil, fmt.Errorf("failed copying root path: %s", err)
 	}
 	fcCfg, err := opts.getConfig()
 	if err != nil {
@@ -183,29 +182,29 @@ func (opts *options) createVMM(ctx context.Context) (*RunningFirecracker, error)
 	}
 	exec.Command("ip", "link", "del", opts.TapDev).Run()
 	if err := exec.Command("ip", "tuntap", "add", "dev", opts.TapDev, "mode", "tap").Run(); err != nil {
-		return nil, fmt.Errorf("Failed creating ip link: %s", err)
+		return nil, fmt.Errorf("failed creating ip link: %s", err)
 	}
 	if err := exec.Command("rm", "-f", opts.FcSocketPath).Run(); err != nil {
-		return nil, fmt.Errorf("Failed to delete old socket path: %s", err)
+		return nil, fmt.Errorf("failed to delete old socket path: %s", err)
 	}
 	if err := exec.Command("ip", "link", "set", opts.TapDev, "master", "firecracker0").Run(); err != nil {
-		return nil, fmt.Errorf("Failed adding tap device to bridge: %s", err)
+		return nil, fmt.Errorf("failed adding tap device to bridge: %s", err)
 	}
 	if err := exec.Command("ip", "link", "set", opts.TapDev, "up").Run(); err != nil {
-		return nil, fmt.Errorf("Failed creating ip link: %s", err)
+		return nil, fmt.Errorf("failed creating ip link: %s", err)
 	}
 	if err := exec.Command("sysctl", "-w", fmt.Sprintf("net.ipv4.conf.%s.proxy_arp=1", opts.TapDev)).Run(); err != nil {
-		return nil, fmt.Errorf("Failed doing first sysctl: %s", err)
+		return nil, fmt.Errorf("failed doing first sysctl: %s", err)
 	}
 	if err := exec.Command("sysctl", "-w", fmt.Sprintf("net.ipv6.conf.%s.disable_ipv6=1", opts.TapDev)).Run(); err != nil {
-		return nil, fmt.Errorf("Failed doing second sysctl: %s", err)
+		return nil, fmt.Errorf("failed doing second sysctl: %s", err)
 	}
 	m, err := firecracker.NewMachine(vmmCtx, *fcCfg, machineOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("Failed creating machine: %s", err)
+		return nil, fmt.Errorf("failed creating machine: %s", err)
 	}
 	if err := m.Start(vmmCtx); err != nil {
-		return nil, fmt.Errorf("Failed to start machine: %v", err)
+		return nil, fmt.Errorf("failed to start machine: %v", err)
 	}
 	installSignalHandlers(vmmCtx, m)
 	return &RunningFirecracker{
@@ -243,7 +242,7 @@ func (opts *options) getConfig() (*firecracker.Config, error) {
 	if opts.Request.CloudInitPath != "" {
 		isoPath, err := makeIso(opts.Request.CloudInitPath)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to create iso: %s", err)
+			return nil, fmt.Errorf("failed to create iso: %s", err)
 		}
 		drives = append(drives, models.Drive{
 			DriveID:      firecracker.String("2"),
@@ -298,7 +297,7 @@ func copyImage(src string) (string, error) {
 	}
 	defer source.Close()
 
-	destination, err := ioutil.TempFile("/images", "image")
+	destination, err := os.CreateTemp("/images", "image")
 	if err != nil {
 		return "", err
 	}

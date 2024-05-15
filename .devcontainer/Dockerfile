@@ -55,14 +55,12 @@ RUN rm -Rf /interpolator
 
 # install supervisord and configure firecracker to run
 WORKDIR /supervisord
-ENV API_SOCKET=/run/firecracker.socket
 RUN cat <<EOF > supervisord.conf
 [supervisord]
 pidfile = /var/run/supervisord.pid
 logfile = /var/log/supervisord.log
-environment = API_SOCKET="${API_SOCKET}"
 [program:firecracker]
-command=rm /run/firecracker.socket && firecracker
+command=firecracker --api-sock /run/firecracker.socket
 EOF
 
 # lastly, uberbase

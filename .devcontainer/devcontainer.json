@@ -11,8 +11,7 @@
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
   },
   "runArgs": [
-    "--privileged",
-    "--device /dev/kvm"
+    "--privileged"
   ],
   "postStartCommand": "/usr/bin/supervisord -c /supervisord/supervisord.conf",
   "mounts": [
