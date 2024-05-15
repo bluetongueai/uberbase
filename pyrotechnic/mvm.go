@@ -2,11 +2,19 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"os/exec"
+	"os/signal"
+	"syscall"
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
+	"github.com/firecracker-microvm/firecracker-go-sdk/client/models"
 )
 
-func Create(opts FirecrackerOptions, ctx context.Context) (nil, error) {
+func CreateVMM(opts FirecrackerOptions, ctx context.Context) (*RunningFirecracker, error) {
 	vmmCtx, vmmCancel := context.WithCancel(ctx)
 	rootImagePath, err := copyImage(opts.Request.RootDrivePath)
 	opts.Request.RootDrivePath = rootImagePath
@@ -112,7 +120,7 @@ func installSignalHandlers(ctx context.Context, m *firecracker.Machine) {
 
 func getConfig(opts *FirecrackerOptions) (*firecracker.Config, error) {
 	drives := []models.Drive{
-		models.Drive{
+		{
 			DriveID:      firecracker.String("1"),
 			PathOnHost:   &opts.Request.RootDrivePath,
 			IsRootDevice: firecracker.Bool(true),
@@ -139,7 +147,7 @@ func getConfig(opts *FirecrackerOptions) (*firecracker.Config, error) {
 		KernelArgs:      opts.FcKernelCmdLine,
 		Drives:          drives,
 		NetworkInterfaces: []firecracker.NetworkInterface{
-			firecracker.NetworkInterface{
+			{
 				StaticConfiguration: &firecracker.StaticNetworkConfiguration{
 					MacAddress:  opts.TapMacAddr,
 					HostDevName: opts.TapDev,

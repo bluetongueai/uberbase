@@ -1,5 +1,11 @@
 package main
 
+import (
+	"crypto/rand"
+	"fmt"
+	"log"
+)
+
 // create something random that looks like a uuid
 func Pseudo_uuid() string {
 
