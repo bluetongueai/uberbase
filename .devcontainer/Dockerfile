@@ -4,12 +4,17 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG DEVCONTAINER=1
 
 RUN apk update && apk add --no-cache \
-  build-base bash tmux vim sed tar git curl openssh openssh-keygen iptables iproute2 \
-  qemu-img qemu-system-x86_64 \
-  bridge-utils iproute2 ncurses jq sudo \
+  build-base sed tar git curl openssh openssh-keygen iptables-legacy iproute2 openrc supervisor \
+  qemu-img qemu-system-x86_64 bridge-utils iproute2 ncurses jq sudo docker docker-compose \
+  # local tooling that's useful
+  vim bash \
+  # local SQL dev/debugging
   postgresql-client postgresql-dev \
-  docker docker-compose \
+  # API/studio dev
   go nodejs npm
+
+# fix iptables
+RUN ln -s /sbin/iptables-legacy /usr/bin/iptables
 
 # make dirs
 RUN mkdir -p /kernels
@@ -48,6 +53,18 @@ RUN mv /interpolator/out/* /usr/bin/.
 RUN rm interpolator.1.0.0.tar.gz
 RUN rm -Rf /interpolator
 
+# install supervisord and configure firecracker to run
+WORKDIR /supervisord
+ENV API_SOCKET=/run/firecracker.socket
+RUN cat <<EOF > supervisord.conf
+[supervisord]
+pidfile = /var/run/supervisord.pid
+logfile = /var/log/supervisord.log
+environment = API_SOCKET="${API_SOCKET}"
+[program:firecracker]
+command=rm /run/firecracker.socket && firecracker
+EOF
+
 # lastly, uberbase
 WORKDIR /uberbase
 ADD . .
@@ -56,4 +73,4 @@ ADD . .
 EXPOSE ${UBERBASE_HTTP_PORT}
 EXPOSE ${UBERBASE_HTTPS_PORT}
 
-ENTRYPOINT ["/bin/bash -C /uberbase/bin/start"]
+CMD ["/usr/bin/supervisord", "-c", "/supervisord/supervisord.conf"]

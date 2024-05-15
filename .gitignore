@@ -1,5 +1,4 @@
 .env
 configs/*
 */**/node_modules
-functions/_image/out
 out

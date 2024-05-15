@@ -11,8 +11,10 @@
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
   },
   "runArgs": [
-    "--privileged"
+    "--privileged",
+    "--device /dev/kvm"
   ],
+  "postStartCommand": "/usr/bin/supervisord -c /supervisord/supervisord.conf",
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
   ],

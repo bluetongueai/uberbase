@@ -24,8 +24,7 @@ iptables -t nat -A POSTROUTING -o "$HOST_IFACE" -j MASQUERADE
 iptables -I FORWARD 1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 iptables -I FORWARD 1 -i tap0 -o "$HOST_IFACE" -j ACCEPT
 
-API_SOCKET="/run/firecracker.socket"
-LOGFILE="./firecracker.log"
+LOGFILE="/var/log/firecracker.log"
 
 # Create log file
 touch $LOGFILE
