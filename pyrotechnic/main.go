@@ -8,10 +8,6 @@ import (
 	"os"
 )
 
-var Manager = FirecrackerMVMManager{
-	RunningVMs: make(map[string]RunningFirecracker),
-}
-
 // start an API server at port 8080
 // and offer two urls: create, delete
 func main() {
@@ -25,7 +21,7 @@ func main() {
 	http.HandleFunc("/create", CreateRequestHandler)
 	http.HandleFunc("/delete", DeleteRequestHandler)
 
-	defer Manager.ShutdownAll()
+	defer Cleanup()
 
 	log.Printf("pyrotechnic server starting at %s", exposed)
 	log.Fatal(http.ListenAndServe(exposed, nil))

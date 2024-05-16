@@ -7,7 +7,7 @@ ENV FIRECRACKER_SOCKET_DIR=/run/firecracker
 
 RUN apk update && apk add --no-cache \
   build-base sed tar git curl openssh openssh-keygen iptables-legacy iproute2 openrc supervisor \
-  qemu-img qemu-system-x86_64 bridge-utils iproute2 ncurses jq sudo docker docker-compose \
+  qemu-img qemu-system-x86_64 bridge-utils iproute2 ncurses jq sudo docker docker-compose e2fsprogs \
   # local tooling that's useful
   vim bash \
   # local SQL dev/debugging

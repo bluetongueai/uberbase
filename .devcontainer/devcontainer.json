@@ -21,19 +21,6 @@
   // "forwardPorts": [],
   // Use 'postCreateCommand' to run commands after the container is created.
   // "postCreateCommand": ".devcontainer/dockerd-entrypoint.sh",
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "GitHub.codespaces",
-        "vscodevim.vim",
-        "ms-azuretools.vscode-docker",
-        "GitHub.copilot",
-        "GitHub.copilot-chat",
-        "eamodio.gitlens",
-        "golang.go"
-      ]
-    }
-  },
   // Configure tool-specific properties.
   // "customizations": {},
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
