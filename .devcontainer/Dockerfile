@@ -6,8 +6,9 @@ ARG DEVCONTAINER=1
 ENV FIRECRACKER_SOCKET_DIR=/run/firecracker
 
 RUN apk update && apk add --no-cache \
-  build-base sed tar git curl openssh openssh-keygen iptables-legacy iproute2 openrc supervisor \
-  qemu-img qemu-system-x86_64 bridge-utils iproute2 ncurses jq sudo docker docker-compose e2fsprogs \
+  build-base sed tar git curl openssh openssh-keygen iptables-legacy iproute2 openrc supervisor e2fsprogs-extra \
+  qemu-img qemu-system-x86_64 bridge-utils iproute2 ncurses jq sudo docker docker-compose e2fsprogs containerd \
+  device-mapper bc cni-plugins \
   # local tooling that's useful
   vim bash \
   # local SQL dev/debugging
@@ -34,7 +35,7 @@ RUN chmod +x /usr/bin/jailer
 RUN rm -Rf /release-v1.7.0-x86_64
 RUN rm /firecracker-v1.7.0-x86_64.tgz
 
-# install firecracker deps
+# install firecracker deps (TODO - remove)
 RUN curl -L https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.8/x86_64/vmlinux-5.10.210 -o /kernels/vmlinux-5.10.210
 RUN curl -L https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.8/x86_64/ubuntu-22.04.ext4 -o /filesystems/ubuntu-22.04.ext4
 RUN curl -L https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.8/x86_64/ubuntu-22.04.id_rsa -o /filesystems/ubuntu-22.04.id_rsa
@@ -46,6 +47,14 @@ WORKDIR /firectl
 RUN make
 RUN chmod +x firectl
 RUN mv firectl /usr/bin/.
+
+# install ignite
+RUN curl -sfLo ignite https://github.com/weaveworks/ignite/releases/download/v0.10.0/ignite-amd64
+RUN curl -sfLo ignited https://github.com/weaveworks/ignite/releases/download/v0.10.0/ignited-amd64
+RUN chmod +x ignite
+RUN chmod +x ignited
+RUN mv ignite /usr/local/bin
+RUN mv ignited /usr/local/bin
 
 # install interpolator
 WORKDIR /
@@ -62,6 +71,36 @@ RUN cat <<EOF > supervisord.conf
 [supervisord]
 pidfile = /var/run/supervisord.pid
 logfile = /var/log/supervisord.log
+[program:containerd]
+command=containerd
+user=root
+redirect_stderr=false
+stdout_logfile=/var/log/containerd.log
+stdout_logfile_maxbytes=1MB
+stdout_logfile_backups=10
+stdout_capture_maxbytes=1MB
+stdout_events_enabled=true
+stderr_logfile=/var/log/containerd.error
+stderr_logfile_maxbytes=1MB
+stderr_logfile_backups=10
+stderr_capture_maxbytes=1MB
+stderr_events_enabled=true
+[program:ignited]
+command=ignited daemon --log-level debug
+user=root
+startsecs=2
+startretries=5
+redirect_stderr=false
+stdout_logfile=/var/log/ignited.log
+stdout_logfile_maxbytes=1MB
+stdout_logfile_backups=10
+stdout_capture_maxbytes=1MB
+stdout_events_enabled=true
+stderr_logfile=/var/log/ignited.error
+stderr_logfile_maxbytes=1MB
+stderr_logfile_backups=10
+stderr_capture_maxbytes=1MB
+stderr_events_enabled=true
 EOF
 
 # lastly, uberbase

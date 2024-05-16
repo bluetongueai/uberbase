@@ -3,7 +3,7 @@
 set -eu
 
 PRE_BUILD_DIR="${PWD}/functions/_image"
-BUILD_DIR="${PWD}/functions/_image/tmp"
+BUILD_DIR="${PWD}/functions/_image/out"
 DOCKERFILE="${PWD}/functions/_image/Dockerfile"
 FILESYSTEM_TARGET="/filesystems/alpine.ext4"
 KEY_FILE="alpine"

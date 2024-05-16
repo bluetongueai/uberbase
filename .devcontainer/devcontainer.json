@@ -15,7 +15,9 @@
   ],
   "postStartCommand": "/usr/bin/supervisord -c /supervisord/supervisord.conf",
   "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+    "source=/lib/modules,target=/lib/modules,type=bind",
+    "source=/dev,target=/dev,type=bind"
   ],
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
