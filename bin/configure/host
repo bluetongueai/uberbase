@@ -1,0 +1,36 @@
+#! /bin/bash
+
+USER=uberbase
+PASSWORD=socratic1!
+VM_HOST=192.168.66.4
+
+if [ ! -f ./keys/supabase-dev ]; then
+  echo ""
+  echo -e "\033[1;33mCreating new ssh key for $USER@$VM_HOST...\033[0m"
+  ssh-keygen -f ./keys/supabase-dev
+fi
+ssh-copy-id -i ./keys/supabase-dev.pub $USER@$VM_HOST
+
+echo -e "\033[1;33mConfiguring shared drive...\033[0m"
+
+# append a line to /etc/fstab
+ssh -i ./keys/supabase-dev $USER@$VM_HOST <<EOF
+echo "$PASSWORD" | sudo -S su root
+sudo mkdir -p /mnt/host
+echo "share	/mnt/host	virtiofs	rw,nofail	0	0" | sudo tee -a /etc/fstab > /dev/null
+sudo chown -R uberbase:uberbase /mnt/host/src/uberbase
+sudo mount -a
+EOF
+
+# allow root to log in with password in sshd
+ssh -i ./keys/supabase-dev $USER@$VM_HOST <<EOF
+echo "$PASSWORD" | sudo -S su root
+sudo sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+sudo systemctl restart sshd
+EOF
+
+if [ $? -eq 0 ]; then
+  echo -e "\033[1;32mShared drive configured successfully!\033[0m"
+else
+  echo -e "\033[1;31mFailed to configure shared drive.\033[0m"
+fi

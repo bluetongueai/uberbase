@@ -1,24 +1,24 @@
 {
-  "name": "Docker outside of Docker",
+  "name": "uberbase devcontainer",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   "build": {
     "dockerfile": "Dockerfile",
     "context": ".."
   },
-  "features": {},
+  "runArgs": [
+    "--privileged"
+  ],
+  "mounts": [
+    "source=/dev,target=/dev,readonly,type=bind",
+    "source=/sys/fs/cgroup,target=/sys/fs/cgroup,readonly,type=bind",
+    "source=/proc,target=/proc,type=bind",
+    "source=/lib/modules,target=/lib/modules,readonly,type=bind"
+  ],
   // Use this environment variable if you need to bind mount your local source code into a new container.
   "remoteEnv": {
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
   },
-  "runArgs": [
-    "--privileged"
-  ],
   "postStartCommand": "/usr/bin/supervisord -c /supervisord/supervisord.conf",
-  "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-    "source=/lib/modules,target=/lib/modules,type=bind",
-    "source=/dev,target=/dev,type=bind"
-  ],
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
   // Use 'postCreateCommand' to run commands after the container is created.

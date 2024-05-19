@@ -3,3 +3,5 @@ configs/*
 */**/node_modules
 out
 pyrotechnic/pyrotechnic
+keys/*
+isos/*

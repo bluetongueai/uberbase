@@ -63,4 +63,4 @@ cat <<EOF > vmconfig.json
 EOF
 
 # start the firecracker image (this may autoterminate?)
-firecracker --api-sock /run/containerd-dev/containerd.sock --no-api --config-file vmconfig.json
+firecracker --api-sock /run/containerd/containerd.sock --no-api --config-file vmconfig.json
