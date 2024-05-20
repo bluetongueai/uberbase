@@ -2,7 +2,7 @@
 
 USER=uberbase
 PASSWORD=socratic1!
-VM_HOST=192.168.66.4
+VM_HOST=192.168.65.13
 
 if [ ! -f ./keys/supabase-dev ]; then
   echo ""
@@ -17,8 +17,8 @@ echo -e "\033[1;33mConfiguring shared drive...\033[0m"
 ssh -i ./keys/supabase-dev $USER@$VM_HOST <<EOF
 echo "$PASSWORD" | sudo -S su root
 sudo mkdir -p /mnt/host
-echo "share	/mnt/host	virtiofs	rw,nofail	0	0" | sudo tee -a /etc/fstab > /dev/null
-sudo chown -R uberbase:uberbase /mnt/host/src/uberbase
+echo "share	/mnt/host	9p	trans=virtio,version=9p2000.L,rw,_netdev,nofail	0	0" | sudo tee -a /etc/fstab > /dev/null
+sudo chown -R uberbase:uberbase /mnt/host/uberbase
 sudo mount -a
 EOF
 

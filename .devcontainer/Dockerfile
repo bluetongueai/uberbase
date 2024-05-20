@@ -15,44 +15,25 @@ RUN echo \
 
 RUN apt update && apt upgrade -y && apt install -y \
   apt-transport-https ca-certificates curl gnupg gpg lsb-release iptables nftables fuse-overlayfs supervisor \
-  docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
-  git 
+  docker-ce docker-ce-cli containerd.io \
+  git wget 
 
-# Force Docker to use iptables
-RUN mkdir -p /etc/docker && echo '{ "iptables": false }' > /etc/docker/daemon.json
-
-# install gvisor
+# install firecracker
 WORKDIR /
-
-# configure /supervisord/supervisord.conf to run Docker
-# it should log to /var/log/docker for both stderr and stdout logs
-RUN mkdir -p /var/log/docker
-RUN mkdir /supervisord
-# do the below but cat a docstring in one command to avoid creating a new layer for each
-RUN echo <<EOF > /supervisord/supervisord.conf \
-  [supervisord] \
-  logfile=/var/log/supervisord.log \
-  logfile_maxbytes=0 \
-  loglevel=info \
-  pidfile=/var/run/supervisord.pid \
-  childlogdir=/var/log \
-  \
-  [program:docker] \
-  command=dockerd \
-  autostart=true \
-  autorestart=true \
-  stderr_logfile=/var/log/docker/docker.err.log \
-  stdout_logfile=/var/log/docker/docker.out.log \
-  EOF
+RUN git clone --depth=1 --branch=v1.7.0 https://github.com/firecracker-microvm/firecracker.git /firecracker
+RUN git clone https://github.com/tgittos/ignite.git
 
 # install interpolator
-WORKDIR /
 RUN curl -LO https://github.com/tgittos/interpolator/releases/download/v1.0.0/interpolator.1.0.0.tar.gz
 RUN mkdir /interpolator
 RUN tar -xf interpolator.1.0.0.tar.gz -C /interpolator
 RUN mv /interpolator/out/* /usr/bin/.
 RUN rm interpolator.1.0.0.tar.gz
 RUN rm -Rf /interpolator
+
+# install supervisord and configure containerd, ignited
+WORKDIR /supervisord
+ADD supervisord.conf /supervisord/supervisord.conf
 
 # uberbase
 WORKDIR /uberbase
