@@ -63,14 +63,14 @@ Type=simple
 Restart=always
 RestartSec=1
 User=uberbase
-ExecStart=/usr/bin/code tunnel
+ExecStart=/usr/bin/code serve-local
 [Install]
 WantedBy=multi-user.target
 EOF
 
-sudo systemctl daemon-reload
-sudo systemctl enable vscode-server
+#sudo systemctl daemon-reload
+#sudo systemctl enable vscode-server
 
-sudo systemctl start vscode-server
+#sudo systemctl start vscode-server
 sudo systemctl start docker
 sudo systemctl start containerd

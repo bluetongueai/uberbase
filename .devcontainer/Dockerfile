@@ -16,14 +16,22 @@ RUN echo \
 RUN apt update && apt upgrade -y && apt install -y \
   apt-transport-https ca-certificates curl gnupg gpg lsb-release iptables nftables fuse-overlayfs supervisor \
   docker-ce docker-ce-cli containerd.io \
-  git wget 
+  git wget sudo tar
 
 # install firecracker
 WORKDIR /
 RUN git clone --depth=1 --branch=v1.7.0 https://github.com/firecracker-microvm/firecracker.git /firecracker
 RUN git clone https://github.com/tgittos/ignite.git
 
+# install CNI
+WORKDIR /cni
+RUN export CNI_VERSION=v0.9.1
+RUN export ARCH=amd64
+RUN curl -LO https://github.com/containernetworking/plugins/releases/download/v0.9.1/cni-plugins-linux-amd64-v0.9.1.tgz
+RUN tar -xzf cni-plugins-linux-amd64-v0.9.1.tgz -C /usr/local/bin
+
 # install interpolator
+WORKDIR /
 RUN curl -LO https://github.com/tgittos/interpolator/releases/download/v1.0.0/interpolator.1.0.0.tar.gz
 RUN mkdir /interpolator
 RUN tar -xf interpolator.1.0.0.tar.gz -C /interpolator
