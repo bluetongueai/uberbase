@@ -1,55 +1,150 @@
 package main
 
-using (
-	"net/http"
+import (
+	"log"
+	"os"
+	"time"
 
-  "github.com/gin-gonic/gin"
-	"github.com/lestrrat-go/jwx/v2/jwk"
-  "github.com/lestrrat-go/jwx/v2/jws"
-  "github.com/lestrrat-go/jwx/v2/jwt"
+	jwt "github.com/appleboy/gin-jwt/v2"
+	"github.com/gin-gonic/gin"
 )
 
-const jwkCache = jwk.NewCache(context.Background())
-
-func newJWKSet(jwkUrl string) jwk.Set {
-
-	// register a minimum refresh interval for this URL. 
-	// when not specified, defaults to Cache-Control and similar resp headers
-	err := jwkCache.Register(jwkUrl, jwk.WithMinRefreshInterval(10*time.Minute))
-	if err != nil {
-			panic("failed to register jwk location")
-	}
-	
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// fetch once on application startup
-	_, err = jwkCache.Refresh(ctx, jwkUrl)
-	if err != nil {
-			panic("failed to fetch on startup")
-	}
-	// create the cached key set
-	return jwk.NewCachedSet(jwkCache, jwkUrl)
+type login struct {
+	Username string `form:"username" json:"username" binding:"required"`
+	Password string `form:"password" json:"password" binding:"required"`
 }
 
-const keySet := NewJWKSet("https://www.googleapis.com/oauth2/v3/certs")
+var (
+	identityKey = "id"
+	port        string
+)
 
-func verifyToken(token) {
-	verifiedToken, err := jwt.Parse(token, jws.WithKeySet(keySet, jws.WithInferAlgorithmFromKey(true)))
-	if err != nil {
-		fmt.Printf("failed to verify JWS: %s\n", err)
+// User demo
+type User struct {
+	UserName  string
+	FirstName string
+	LastName  string
+}
+
+func init() {
+	port = os.Getenv("PORT")
+	if port == "" {
+		port = "8000"
+	}
+}
+
+func registerRoute(r *gin.Engine, handle *jwt.GinJWTMiddleware) {
+	r.POST("/login", handle.LoginHandler)
+	r.NoRoute(handle.MiddlewareFunc(), handleNoRoute())
+
+	auth := r.Group("/auth", handle.MiddlewareFunc())
+	auth.GET("/refresh_token", handle.RefreshHandler)
+	auth.GET("/hello", helloHandler)
+}
+
+func handlerMiddleWare(authMiddleware *jwt.GinJWTMiddleware) gin.HandlerFunc {
+	return func(context *gin.Context) {
+		errInit := authMiddleware.MiddlewareInit()
+		if errInit != nil {
+			log.Fatal("authMiddleware.MiddlewareInit() Error:" + errInit.Error())
+		}
+	}
+}
+
+func initParams() *jwt.GinJWTMiddleware {
+
+	return &jwt.GinJWTMiddleware{
+		Realm:       "test zone",
+		Key:         []byte("secret key"),
+		Timeout:     time.Hour,
+		MaxRefresh:  time.Hour,
+		IdentityKey: identityKey,
+		PayloadFunc: payloadFunc(),
+
+		IdentityHandler: identityHandler(),
+		Authenticator:   authenticator(),
+		Authorizator:    authorizator(),
+		Unauthorized:    unauthorized(),
+		TokenLookup:     "header: Authorization, query: token, cookie: jwt",
+		// TokenLookup: "query:token",
+		// TokenLookup: "cookie:token",
+		TokenHeadName: "Bearer",
+		TimeFunc:      time.Now,
+	}
+}
+
+func payloadFunc() func(data interface{}) jwt.MapClaims {
+	return func(data interface{}) jwt.MapClaims {
+		if v, ok := data.(*User); ok {
+			return jwt.MapClaims{
+				identityKey: v.UserName,
+			}
+		}
+		return jwt.MapClaims{}
+	}
+}
+
+func identityHandler() func(c *gin.Context) interface{} {
+	return func(c *gin.Context) interface{} {
+		claims := jwt.ExtractClaims(c)
+		return &User{
+			UserName: claims[identityKey].(string),
+		}
+	}
+}
+
+func authenticator() func(c *gin.Context) (interface{}, error) {
+	return func(c *gin.Context) (interface{}, error) {
+		var loginVals login
+		if err := c.ShouldBind(&loginVals); err != nil {
+			return "", jwt.ErrMissingLoginValues
+		}
+		userID := loginVals.Username
+		password := loginVals.Password
+
+		if (userID == "admin" && password == "admin") || (userID == "test" && password == "test") {
+			return &User{
+				UserName:  userID,
+				LastName:  "Bo-Yi",
+				FirstName: "Wu",
+			}, nil
+		}
+		return nil, jwt.ErrFailedAuthentication
+	}
+}
+
+func authorizator() func(data interface{}, c *gin.Context) bool {
+	return func(data interface{}, c *gin.Context) bool {
+		if v, ok := data.(*User); ok && v.UserName == "admin" {
+			return true
+		}
 		return false
 	}
-	return true
 }
 
-func Auth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if !verifyToken(token) {
-			c.JSON(http.StatusUnauthorized)	
-			return
-		}
-
-		c.Next()
+func unauthorized() func(c *gin.Context, code int, message string) {
+	return func(c *gin.Context, code int, message string) {
+		c.JSON(code, gin.H{
+			"code":    code,
+			"message": message,
+		})
 	}
+}
+
+func handleNoRoute() func(c *gin.Context) {
+	return func(c *gin.Context) {
+		claims := jwt.ExtractClaims(c)
+		log.Printf("NoRoute claims: %#v\n", claims)
+		c.JSON(404, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
+	}
+}
+
+func helloHandler(c *gin.Context) {
+	claims := jwt.ExtractClaims(c)
+	user, _ := c.Get(identityKey)
+	c.JSON(200, gin.H{
+		"userID":   claims[identityKey],
+		"userName": user.(*User).UserName,
+		"text":     "Hello World.",
+	})
 }

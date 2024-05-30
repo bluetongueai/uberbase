@@ -13,7 +13,7 @@ help: ## This help.
 
 .PHONY: build
 build: ## Build the api
-	go build main.go
+	go build .
 
 .PHONY: test
 test: ## Test the api
