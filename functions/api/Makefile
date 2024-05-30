@@ -18,3 +18,7 @@ build: ## Build the api
 .PHONY: test
 test: ## Test the api
 	go test -v ./...
+
+.PHONY: image
+image: ## Build the base containerd image
+	docker build -t bluetongueai/functions-hello-world:latest -f ../base/Dockerfile .

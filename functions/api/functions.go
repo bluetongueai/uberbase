@@ -6,9 +6,34 @@ import (
 	"strings"
 )
 
+func Nerdctl(params ...string) (string, error) {
+	// if the platform is linux, use nerdctl
+	// if the platform is macos, use lima nerdctl
+	command := "nerdctl"
+	_, err := exec.LookPath("lima")
+	if err == nil {
+		command = "lima"
+	}
+	param_str := strings.Join(params, " ")
+	if command == "lima" {
+		param_str = strings.Join(append([]string{"nerdctl"}, params...), " ")
+	}
+	param_arr := strings.Split(param_str, " ")
+	println("running", command, param_str)
+	cmd := exec.Command(command, param_arr...)
+	out, err := cmd.Output()
+	if err != nil {
+		println("output:", string(out))
+		println("got err", err.Error())
+		log.Fatal(err)
+		return "", err
+	}
+	return string(out), nil
+}
+
 func PullImage(image string) error {
-	cmd := exec.Command("nerdctl", "pull", image)
-	if err := cmd.Run(); err != nil {
+	_, err := Nerdctl("pull", image)
+	if err != nil {
 		log.Fatal(err)
 		return err
 	}
@@ -17,22 +42,20 @@ func PullImage(image string) error {
 
 func RunImage(image string, params ...string) (string, error) {
 	param_str := strings.Join(params, " ")
-	cmd := exec.Command("nerdctl", "run", "--rm", image, param_str)
-	out, err := cmd.Output()
+	out, err := Nerdctl("run", "--rm", image, param_str)
 	if err != nil {
 		log.Fatal(err)
 		return "", err
 	}
-	return string(out), nil
+	return out, nil
 }
 
 func ImageStatus(image string) (string, error) {
 	// run nerdctl inspect image and capture the output
-	cmd := exec.Command("nerdctl", "inspect", image)
-	out, err := cmd.Output()
+	out, err := Nerdctl("inspect", image)
 	if err != nil {
 		log.Fatal(err)
 		return "", err
 	}
-	return string(out), nil
+	return out, nil
 }
