@@ -15,8 +15,6 @@
   "remoteEnv": {
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
   },
-  "postCreateCommand": "./.devcontainer/post-create.sh",
-  "postStartCommand": "/usr/bin/supervisord -c /supervisord/supervisord.conf",
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
   // Use 'postCreateCommand' to run commands after the container is created.
