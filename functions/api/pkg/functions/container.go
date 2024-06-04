@@ -21,9 +21,9 @@ const (
 type container struct {
 	ImageName     string
 	ContainerName string
-	Pool          *containerPool
 	StartedAt     time.Time
 	Status        containerStatus
+	c             client
 }
 
 func newContainer(client client, imageName string) (container, error) {
@@ -31,6 +31,7 @@ func newContainer(client client, imageName string) (container, error) {
 	c := container{
 		ImageName: imageName,
 		Status:    containerStatusIdle,
+		c:         client,
 	}
 	containerName, err := client.NewContainer(containerContext, c.ImageName)
 	if err != nil {
@@ -44,7 +45,7 @@ func newContainer(client client, imageName string) (container, error) {
 }
 
 func (c container) client() client {
-	return c.Pool.Client
+	return c.c
 }
 
 func (c container) ID() string {

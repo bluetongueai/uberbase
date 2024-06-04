@@ -64,6 +64,15 @@ func (p containerPool) Run(imageName string, params ...string) (string, error) {
 	return output, nil
 }
 
+func (p containerPool) Shutdown() {
+	log.Println("shutting down container pool")
+	for _, containerItem := range p.Containers {
+		(*containerItem.Container).Stop()
+		(*containerItem.Container).Remove()
+	}
+	log.Printf("container pool shutdown")
+}
+
 func (p containerPool) loadImages() error {
 	log.Printf("pulling images %v\n", p.Config.Images)
 	for i := 0; i < len(p.Config.Images); i++ {

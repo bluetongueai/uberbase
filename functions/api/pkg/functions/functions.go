@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 type FunctionsConfig struct {
@@ -33,6 +35,17 @@ func Init(config FunctionsConfig) error {
 	}
 	pool = p
 	initialized = true
+
+	// capture sigs
+	log.Printf("hooking into OS signals to gracefully shutdown")
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		p.Shutdown()
+		os.Exit(0)
+	}()
+
 	log.Println("container pool initialized")
 	return nil
 }

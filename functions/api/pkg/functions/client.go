@@ -91,7 +91,7 @@ func (c client) NewContainer(ctx context.Context, imageName string) (string, err
 func (c client) Exec(containerName string, params ...string) (string, string, error) {
 	log.Printf("executing command %v in container %s", params, containerName)
 	ctx := context.Background()
-	params = append([]string{"exec", "--rm", containerName}, params...)
+	params = append([]string{"exec", containerName}, params...)
 	err := c.command(ctx, params...)
 	if err != nil {
 		log.Printf("failed to execute command in container %s: %v", containerName, err)
