@@ -19,6 +19,10 @@ build: ## Build the api
 test: ## Test the api
 	go test -v ./...
 
+.PHONY: run
+run: ## Run the api
+	UBERBASE_IMAGE_PATH=./images go run .
+
 .PHONY: image
 image: ## Build the base containerd image
-	docker build -t bluetongueai/functions-hello-world:latest -f ../base/Dockerfile .
+	docker build -t bluetongueai/functions-hello-world:latest -f ../images/hello-world/Dockerfile .

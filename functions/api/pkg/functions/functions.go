@@ -56,3 +56,7 @@ func Run(imageName string, params ...string) (string, error) {
 	}
 	return pool.Run(imageName, params...)
 }
+
+func functionNameToImageUrl(name string) string {
+	return "docker.io/bluetongueai/functions-" + name + ":latest"
+}

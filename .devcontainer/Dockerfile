@@ -3,7 +3,10 @@ FROM golang:1.22.3-bookworm
 RUN apt update && apt upgrade -y && apt install -y \
   apt-transport-https ca-certificates curl gnupg gpg lsb-release iptables nftables fuse-overlayfs supervisor \
   containerd \
-  git wget sudo tar
+  bridge-utils iproute2 jq sudo \
+  postgresql-client postgresql \
+  nodejs npm \
+  git wget tar
 
 # install nerdctl
 WORKDIR /nerdctl

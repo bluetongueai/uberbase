@@ -76,6 +76,17 @@ func (c client) Pull(ctx context.Context, imageName string) error {
 	return nil
 }
 
+func (c client) Build(ctx context.Context, imageName, dockerfile string, context string) error {
+	log.Printf("building containerd image %s", imageName)
+	err := c.command(ctx, "build", "-t", imageName, "-f", dockerfile, context)
+	if err != nil {
+		log.Printf("failed to build image %s: %v", imageName, err)
+		return err
+	}
+	log.Printf("successfully built image %s", imageName)
+	return nil
+}
+
 func (c client) NewContainer(ctx context.Context, imageName string) (string, error) {
 	log.Printf("creating container for image %s", imageName)
 	name := nameGenerator.Generate()

@@ -3,6 +3,7 @@ package functions
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	images "github.com/containerd/containerd/v2/core/images"
@@ -34,6 +35,11 @@ func newContainerPool(poolConfig containerPoolConfig) (containerPool, error) {
 	if err != nil {
 		panic("failed to initialize containerd client")
 	}
+
+	log.Printf("pre-building images")
+	buildImages(client, builderConfig{
+		ImageDirPath: os.Getenv("UBERBASE_IMAGE_PATH"),
+	})
 
 	pool := containerPool{
 		Containers: make(map[string]containerPoolItem),
