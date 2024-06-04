@@ -9,7 +9,7 @@
     "--privileged"
   ],
   "mounts": [
-    "source=/dev/kvm,target=/dev/kvm,type=bind"
+    //  "source=/dev/kvm,target=/dev/kvm,type=bind"
   ],
   // Use this environment variable if you need to bind mount your local source code into a new container.
   "remoteEnv": {
