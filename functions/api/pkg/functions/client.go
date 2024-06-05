@@ -14,6 +14,7 @@ import (
 
 var seed = time.Now().UTC().UnixNano()
 var nameGenerator = namegenerator.NewNameGenerator(seed)
+var nameCounts = make(map[string]int)
 
 type client struct {
 	bin              string
@@ -93,6 +94,8 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 func (c client) NewContainer(imageName string) (string, error) {
 	log.Printf("creating container for image %s", imageName)
 	name := nameGenerator.Generate()
+	if 
+	nameCounts[name]++
 	_, _, err := c.command("create", "--name", name, imageName)
 	if err != nil {
 		log.Printf("failed to create container: %v", err)

@@ -91,11 +91,12 @@ func (p containerPool) loadImages() error {
 			if err != nil {
 				return err
 			}
-
-			// p.Images[imageName] = image
 			log.Printf("successfully pulled and registered image %s\n", imageName)
 		}
+	}
 
+	for i := 0; i < len(p.Config.Images); i++ {
+		imageName := p.Config.Images[i]
 		log.Printf("initializing %d containers for image %s\n", p.Config.InitialSize, imageName)
 		for j := 0; j < p.Config.InitialSize; j++ {
 			log.Printf("initializing container %d for image %s\n", j, imageName)

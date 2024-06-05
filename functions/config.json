@@ -1,0 +1,6 @@
+{
+  "pull": [
+    "docker/whalesay",
+    "bluetongueai/functions-hello-world"
+  ]
+}
