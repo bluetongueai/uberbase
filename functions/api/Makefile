@@ -21,7 +21,7 @@ test: ## Test the api
 
 .PHONY: run
 run: ## Run the api
-	UBERBASE_IMAGE_PATH=./images go run .
+	UBERBASE_IMAGE_PATH=../images go run .
 
 .PHONY: image
 image: ## Build the base containerd image

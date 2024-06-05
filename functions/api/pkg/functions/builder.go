@@ -1,7 +1,6 @@
 package functions
 
 import (
-	"context"
 	"log"
 	"os"
 	"strings"
@@ -45,10 +44,9 @@ func imageNameFromDockerfile(dockerfile string) string {
 }
 
 func buildImage(client client, basePath string, imageName string) error {
-	ctx := context.Background()
 	image := basePath + "/" + imageName + "/Dockerfile"
 	buildContext := basePath + "/" + imageName + "/"
-	err := client.Build(ctx, imageName+":latest", image, buildContext)
+	err := client.Build(imageName+":latest", image, buildContext)
 	if err != nil {
 		return err
 	}

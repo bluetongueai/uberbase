@@ -1,7 +1,6 @@
 package functions
 
 import (
-	"context"
 	"errors"
 	"log"
 	"os"
@@ -15,7 +14,6 @@ type FunctionsConfig struct {
 	Images      []string
 }
 
-var containerContext context.Context
 var pool containerPool
 var initialized bool
 

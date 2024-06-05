@@ -43,7 +43,8 @@ func newClient() (client, error) {
 	return client, fmt.Errorf("container runtime not found")
 }
 
-func (c client) command(ctx context.Context, args ...string) error {
+func (c client) command(args ...string) (string, string, error) {
+	ctx := context.Background()
 	log.Printf("running command %s %v", c.bin, args)
 	var cmd *exec.Cmd
 	if c.isLima {
@@ -57,17 +58,15 @@ func (c client) command(ctx context.Context, args ...string) error {
 	cmd.Stdout = stdoutBuffer
 	cmd.Stderr = stderrBuffer
 	err := cmd.Run()
-	ctx = context.WithValue(ctx, "stdout", stdoutBuffer.String())
-	ctx = context.WithValue(ctx, "stderr", stderrBuffer.String())
 	if err != nil {
-		return err
+		return "", "", err
 	}
-	return nil
+	return stdoutBuffer.String(), stderrBuffer.String(), nil
 }
 
-func (c client) Pull(ctx context.Context, imageName string) error {
+func (c client) Pull(imageName string) error {
 	log.Printf("fetching containerd image %s", imageName)
-	err := c.command(ctx, "pull", imageName)
+	_, _, err := c.command("pull", imageName)
 	if err != nil {
 		log.Printf("failed to pull image %s: %v", imageName, err)
 		return err
@@ -76,9 +75,9 @@ func (c client) Pull(ctx context.Context, imageName string) error {
 	return nil
 }
 
-func (c client) Build(ctx context.Context, imageName, dockerfile string, context string) error {
+func (c client) Build(imageName, dockerfile string, context string) error {
 	log.Printf("building containerd image %s", imageName)
-	err := c.command(ctx, "build", "-t", imageName, "-f", dockerfile, context)
+	_, _, err := c.command("build", "-t", imageName, "-f", dockerfile, context)
 	if err != nil {
 		log.Printf("failed to build image %s: %v", imageName, err)
 		return err
@@ -87,10 +86,10 @@ func (c client) Build(ctx context.Context, imageName, dockerfile string, context
 	return nil
 }
 
-func (c client) NewContainer(ctx context.Context, imageName string) (string, error) {
+func (c client) NewContainer(imageName string) (string, error) {
 	log.Printf("creating container for image %s", imageName)
 	name := nameGenerator.Generate()
-	err := c.command(ctx, "create", "--name", name, imageName)
+	_, _, err := c.command("create", "--name", name, imageName)
 	if err != nil {
 		log.Printf("failed to create container: %v", err)
 		return "", err
@@ -99,24 +98,32 @@ func (c client) NewContainer(ctx context.Context, imageName string) (string, err
 	return name, nil
 }
 
+func (c client) Run(containerName string) (string, string, error) {
+	log.Printf("running container %s", containerName)
+	stdout, stderr, err := c.command("start", "-a", containerName)
+	if err != nil {
+		log.Printf("failed to start container %s: %v", containerName, err)
+		return "", "", err
+	}
+	log.Printf("successfully ran container %s", containerName)
+	return stdout, stderr, nil
+}
+
 func (c client) Exec(containerName string, params ...string) (string, string, error) {
 	log.Printf("executing command %v in container %s", params, containerName)
-	ctx := context.Background()
 	params = append([]string{"exec", containerName}, params...)
-	err := c.command(ctx, params...)
+	stdout, stderr, err := c.command(params...)
 	if err != nil {
 		log.Printf("failed to execute command in container %s: %v", containerName, err)
 		return "", "", err
 	}
-	stdout := ctx.Value("stdout").(string)
-	stderr := ctx.Value("stderr").(string)
 	log.Printf("successfully executed command in container %s", containerName)
 	return stdout, stderr, nil
 }
 
-func (c client) Stop(ctx context.Context, containerName string) error {
+func (c client) Stop(containerName string) error {
 	log.Printf("stopping container %s", containerName)
-	err := c.command(ctx, "stop", containerName)
+	_, _, err := c.command("stop", containerName)
 	if err != nil {
 		log.Printf("failed to stop container %s: %v", containerName, err)
 		return err
@@ -125,9 +132,9 @@ func (c client) Stop(ctx context.Context, containerName string) error {
 	return nil
 }
 
-func (c client) Remove(ctx context.Context, containerName string) error {
+func (c client) Remove(containerName string) error {
 	log.Printf("removing container %s", containerName)
-	err := c.command(ctx, "rm", containerName)
+	_, _, err := c.command("rm", containerName)
 	if err != nil {
 		log.Printf("failed to remove container %s: %v", containerName, err)
 		return err

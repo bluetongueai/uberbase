@@ -1,7 +1,6 @@
 package functions
 
 import (
-	"context"
 	"log"
 	"os"
 	"time"
@@ -48,7 +47,6 @@ func newContainerPool(poolConfig containerPoolConfig) (containerPool, error) {
 		Client:     client,
 	}
 
-	containerContext = context.Background()
 	log.Println("loading images")
 	err = pool.loadImages()
 	return pool, nil
@@ -60,7 +58,12 @@ func (p containerPool) Run(imageName string, params ...string) (string, error) {
 		return "", err
 	}
 
-	output, err := (*container).Exec(params...)
+	var output string
+	if len(params) == 0 {
+		output, err = (*container).Run()
+	} else {
+		output, err = (*container).Exec(params...)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -117,7 +120,7 @@ func (p containerPool) loadImages() error {
 func (p containerPool) pullImage(image_url string) error {
 	log.Printf("pulling image %s\n", image_url)
 	log.Printf("client: %v\n", p.Client)
-	err := p.Client.Pull(containerContext, image_url)
+	err := p.Client.Pull(image_url)
 	if err != nil {
 		return err
 	}
@@ -127,8 +130,11 @@ func (p containerPool) pullImage(image_url string) error {
 
 func (p containerPool) getNextContainer(imageName string) (*container, error) {
 	log.Printf("finding next available container for image %s\n", imageName)
+
+	image_url := "docker.io/bluetongueai/functions-" + imageName + ":latest"
+
 	for _, containerItem := range p.Containers {
-		if containerItem.ImageName != imageName {
+		if containerItem.ImageName != image_url {
 			continue
 		}
 

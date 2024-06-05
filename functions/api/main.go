@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -13,7 +14,7 @@ func main() {
 	f.Init(f.FunctionsConfig{
 		MinPoolSize: 60,
 		MaxPoolSize: 300,
-		Images: 		 []string{"docker.io/bluetongueai/functions-hello-world:latest"},
+		Images:      []string{"docker.io/bluetongueai/functions-hello-world:latest"},
 	})
 
 	s := h.NewServer()
@@ -25,12 +26,13 @@ func functionHandler(c *gin.Context) {
 	name := c.Param("name")
 
 	var http_params map[string]string
-	if err := c.BindJSON(&http_params); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+
+	image_params := []string{}
+	if http_params["params"] != "" {
+		image_params = strings.Split(http_params["params"], " ")
 	}
 
-	image_params := strings.Split(http_params["params"], " ")
+	log.Printf("running function %s with params %v", name, image_params)
 
 	output, err := f.Run(name, image_params...)
 	if err != nil {
