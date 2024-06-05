@@ -29,13 +29,15 @@ func newClient() (client, error) {
 	if err == nil {
 		client.bin = path
 		client.isLima = true
-		log.Printf("using `%s` as the container runtime", client.bin)
+		log.Printf("using `%s nerdctl` as the container runtime", client.bin)
+		log.Printf("isLima: %v", client.isLima)
 		return client, nil
 	}
 	path, err = exec.LookPath("nerdctl")
 	if err == nil {
 		client.bin = path
 		log.Printf("using `%s` as the container runtime", client.bin)
+		log.Printf("isLima: %v", client.isLima)
 		return client, nil
 	}
 
@@ -45,12 +47,13 @@ func newClient() (client, error) {
 
 func (c client) command(args ...string) (string, string, error) {
 	ctx := context.Background()
-	log.Printf("running command %s %v", c.bin, args)
 	var cmd *exec.Cmd
 	if c.isLima {
 		args = append([]string{"nerdctl"}, args...)
+		log.Printf("running command %s %v", c.bin, args)
 		cmd = exec.CommandContext(ctx, c.bin, args...)
 	} else {
+		log.Printf("running command %s %v", c.bin, args)
 		cmd = exec.CommandContext(ctx, c.bin, args...)
 	}
 	stdoutBuffer := &bytes.Buffer{}
@@ -80,6 +83,7 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 	_, _, err := c.command("build", "-t", imageName, "-f", dockerfile, context)
 	if err != nil {
 		log.Printf("failed to build image %s: %v", imageName, err)
+		panic(err)
 		return err
 	}
 	log.Printf("successfully built image %s", imageName)
