@@ -1,4 +1,5 @@
 .env
 configs/*
 */**/node_modules
-functions/_image/firecracker_id_rsa*
+pyrotechnic/pyrotechnic
+keys/*

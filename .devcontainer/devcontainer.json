@@ -1,42 +1,26 @@
 {
-  "name": "Docker outside of Docker",
+  "name": "uberbase devcontainer",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   "build": {
-    "dockerfile": "../Dockerfile",
+    "dockerfile": "Dockerfile",
     "context": ".."
   },
-  "features": {},
+  "runArgs": [
+    "--privileged"
+  ],
+  "mounts": [
+    //  "source=/dev/kvm,target=/dev/kvm,type=bind"
+  ],
   // Use this environment variable if you need to bind mount your local source code into a new container.
   "remoteEnv": {
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
   },
-  "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-    "source=/lib/modules,target=/lib/modules,type=bind"
-  ],
-  "runArgs": [
-    "--privileged",
-    "--cap-add=NET_ADMIN"
-  ],
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
   // Use 'postCreateCommand' to run commands after the container is created.
   // "postCreateCommand": ".devcontainer/dockerd-entrypoint.sh",
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "GitHub.codespaces",
-        "vscodevim.vim",
-        "ms-azuretools.vscode-docker",
-        "GitHub.copilot",
-        "GitHub.copilot-chat",
-        "eamodio.gitlens",
-        "golang.go"
-      ]
-    }
-  }
   // Configure tool-specific properties.
   // "customizations": {},
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-  // "remoteUser": "root"
+  "remoteUser": "root"
 }

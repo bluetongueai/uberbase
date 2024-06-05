@@ -13,8 +13,16 @@ help: ## This help.
 
 .PHONY: build
 build: ## Build the api
-	go build main.go
+	go build .
 
 .PHONY: test
 test: ## Test the api
 	go test -v ./...
+
+.PHONY: run
+run: ## Run the api
+	UBERBASE_IMAGE_PATH=../images go run .
+
+.PHONY: image
+image: ## Build the base containerd image
+	docker build -t bluetongueai/functions-hello-world:latest -f ../images/hello-world/Dockerfile .

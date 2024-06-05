@@ -1,14 +1,12 @@
-ARG DEVCONTAINER=1
+FROM golang:1.22.3-bookworm
 
-FROM --platform=linux/amd64 alpine:3.19.1
-
-RUN apk update && apk add --no-cache \
-    build-base bash tmux vim sed tar git curl openssh-keygen \
-    # qemu-img qemu-system-x86_64 \
-    bridge-utils iproute2 ncurses jq sudo \
-    containerd \
-    postgresql-client postgresql-dev \
-    go nodejs npm
+RUN apt update && apt upgrade -y && apt install -y \
+  apt-transport-https ca-certificates curl gnupg gpg lsb-release iptables nftables fuse-overlayfs supervisor \
+  containerd \
+  bridge-utils iproute2 jq sudo \
+  postgresql-client postgresql \
+  nodejs npm \
+  git wget tar
 
 # install nerdctl
 WORKDIR /nerdctl
@@ -24,6 +22,7 @@ RUN curl -LO https://github.com/containernetworking/plugins/releases/download/v0
 RUN tar -xzf cni-plugins-linux-amd64-v0.9.1.tgz -C /usr/local/bin
 RUN rm -rf /cni
 
+# uberbase
 WORKDIR /uberbase
 ADD . .
 # RUN source .env
@@ -31,4 +30,4 @@ ADD . .
 EXPOSE ${UBERBASE_HTTP_PORT}
 EXPOSE ${UBERBASE_HTTPS_PORT}
 
-ENTRYPOINT ["/bin/bash -C /uberbase/bin/start"]
+ENTRYPOINT ["/bin/bash"]

@@ -1,18 +1,21 @@
-#!/bin/bash
+#! /bin/bash
 
-# dynamically configure services
-./bin/configure
+# define a supervisord conf file that starts
+# containerd and buildkitd at /supervisord/supervisord.conf
+mkdir -p /supervisord
+nodaemon=$(if [ -z "$BACKGROUND" ]; then echo "true"; else echo "false"; fi)
+cat <<EOF > /supervisord/supervisord.conf
+[supervisord]
+nodaemon=$nodaemon
+pidfile=/tmp/supervisord.pid
+logfile=/var/log/supervisord.log
+[program:containerd]
+command=containerd
+logfile=/var/log/containerd.log
+[program:buildkitd]
+command=buildkitd
+logfile=/var/log/buildkitd.log
+EOF
 
-# start uberbase
-# docker-compose up -d 
-
-# use tmux to start containerd and flintlock
-# export NET_DEVICE=$(ip route show | awk '/default/ {print $5}')
-
-#tmux new -d -s uberbase \;
-#tmux send-keys -t uberbase "containerd --config /etc/containerd/config-dev.toml" ENTER
-containerd --config /etc/containerd/config-dev.toml
-
-# attach to tmux session
-# alias attach="tmux a -t uberbase"
-
+# run supervisord with the conf
+supervisord -c /supervisord/supervisord.conf
