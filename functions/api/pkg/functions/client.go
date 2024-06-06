@@ -68,15 +68,26 @@ func (c client) command(args ...string) (string, string, error) {
 	return stdoutBuffer.String(), stderrBuffer.String(), nil
 }
 
-func (c client) Pull(imageName string) error {
-	log.Printf("fetching containerd image %s", imageName)
-	_, _, err := c.command("pull", imageName)
-	if err != nil {
-		log.Printf("failed to pull image %s: %v", imageName, err)
-		return err
+func (c client) Pull(imageName string, force bool) error {
+	if force || !c.imageExists(imageName) {
+		log.Printf("fetching containerd image %s", imageName)
+		_, _, err := c.command("pull", imageName)
+		if err != nil {
+			log.Printf("failed to pull image %s: %v", imageName, err)
+			return err
+		}
+		log.Printf("successfully pulled image %s", imageName)
+		return nil
 	}
-	log.Printf("successfully pulled image %s", imageName)
 	return nil
+}
+
+func (c client) imageExists(imageName string) bool {
+	_, _, err := c.command("inspect", imageName)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func (c client) Build(imageName, dockerfile string, context string) error {
@@ -84,7 +95,6 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 	_, _, err := c.command("build", "-t", imageName, "-f", dockerfile, context)
 	if err != nil {
 		log.Printf("failed to build image %s: %v", imageName, err)
-		panic(err)
 		return err
 	}
 	log.Printf("successfully built image %s", imageName)
@@ -94,8 +104,8 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 func (c client) NewContainer(imageName string) (string, error) {
 	log.Printf("creating container for image %s", imageName)
 	name := nameGenerator.Generate()
-	if 
 	nameCounts[name]++
+	name = fmt.Sprintf("%s-%d", name, nameCounts[name])
 	_, _, err := c.command("create", "--name", name, imageName)
 	if err != nil {
 		log.Printf("failed to create container: %v", err)
@@ -105,7 +115,7 @@ func (c client) NewContainer(imageName string) (string, error) {
 	return name, nil
 }
 
-func (c client) Run(containerName string) (string, string, error) {
+func (c client) Start(containerName string) (string, string, error) {
 	log.Printf("running container %s", containerName)
 	stdout, stderr, err := c.command("start", "-a", containerName)
 	if err != nil {
@@ -148,4 +158,14 @@ func (c client) Remove(containerName string) error {
 	}
 	log.Printf("successfully removed container %s", containerName)
 	return nil
+}
+
+func (c client) Run(imageName string, params ...string) (string, string, error) {
+	imageParams := append([]string{"run", imageName}, params...)
+	stdout, stderr, err := c.command(imageParams...)
+	if err != nil {
+		log.Printf("failed to run image %s: %v", imageName, err)
+		return "", "", err
+	}
+	return stdout, stderr, nil
 }

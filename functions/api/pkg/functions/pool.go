@@ -60,9 +60,9 @@ func (p containerPool) Run(imageName string, params ...string) (string, error) {
 
 	var output string
 	if len(params) == 0 {
-		output, err = (*container).Run()
+		output, err = (*container).Start()
 	} else {
-		output, err = (*container).Exec(params...)
+		output, err = (*container).Run(params...)
 	}
 	if err != nil {
 		return "", err
@@ -121,7 +121,7 @@ func (p containerPool) loadImages() error {
 func (p containerPool) pullImage(image_url string) error {
 	log.Printf("pulling image %s\n", image_url)
 	log.Printf("client: %v\n", p.Client)
-	err := p.Client.Pull(image_url)
+	err := p.Client.Pull(image_url, false)
 	if err != nil {
 		return err
 	}
@@ -132,10 +132,8 @@ func (p containerPool) pullImage(image_url string) error {
 func (p containerPool) getNextContainer(imageName string) (*container, error) {
 	log.Printf("finding next available container for image %s\n", imageName)
 
-	image_url := "docker.io/bluetongueai/functions-" + imageName + ":latest"
-
 	for _, containerItem := range p.Containers {
-		if containerItem.ImageName != image_url {
+		if containerItem.ImageName != imageName {
 			continue
 		}
 

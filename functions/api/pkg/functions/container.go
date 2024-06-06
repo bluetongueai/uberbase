@@ -50,10 +50,10 @@ func (c container) ID() string {
 	return c.ContainerName
 }
 
-func (c container) Run() (string, error) {
+func (c container) Start() (string, error) {
 	c.StartedAt = time.Now()
 	c.Status = containerStatusRunning
-	stdout, stderr, err := c.client().Run(c.ContainerName)
+	stdout, stderr, err := c.client().Start(c.ContainerName)
 	if err != nil {
 		return "", err
 	}
@@ -65,8 +65,8 @@ func (c container) Run() (string, error) {
 	return stdout, nil
 }
 
-func (c container) Exec(params ...string) (string, error) {
-	stdout, stderr, err := c.client().Exec(c.ContainerName, params...)
+func (c container) Run(params ...string) (string, error) {
+	stdout, stderr, err := c.client().Run(c.ImageName, params...)
 	if err != nil {
 		return stderr, err
 	}

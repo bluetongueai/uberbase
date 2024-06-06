@@ -23,13 +23,13 @@ func main() {
 	}
 
 	f.Init(f.FunctionsConfig{
-		MinPoolSize: 60,
-		MaxPoolSize: 300,
+		MinPoolSize: 5,
+		MaxPoolSize: 60,
 		Images:      apiConfig.Pull,
 	})
 
 	s := h.NewServer()
-	s.AddRoute("POST", "/api/v1/functions/:name", functionHandler)
+	s.AddRoute("POST", "/api/v1/functions/*name", functionHandler)
 	s.Start()
 }
 
@@ -47,13 +47,13 @@ func readConfigFile() (ApiConfig, error) {
 }
 
 func functionHandler(c *gin.Context) {
-	name := c.Param("name")
+	name := strings.TrimPrefix(c.Param("name"), "/")
 
-	var http_params map[string]string
+	params := c.PostForm("params")
 
 	image_params := []string{}
-	if http_params["params"] != "" {
-		image_params = strings.Split(http_params["params"], " ")
+	if params != "" {
+		image_params = strings.Split(params, " ")
 	}
 
 	log.Printf("running function %s with params %v", name, image_params)
