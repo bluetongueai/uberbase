@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -10,26 +12,53 @@ import (
 	h "github.com/tgittos/uberbase/functions/api/pkg/http"
 )
 
+type ApiConfig struct {
+	Port        int      `json:"port"`
+	MinPoolSize int      `json:"minPoolSize"`
+	MaxPoolSize int      `json:"maxPoolSize"`
+	Pull        []string `json:"pull"`
+}
+
 func main() {
+	apiConfig, err := readConfigFile()
+	if err != nil {
+		log.Fatalf("failed to read config file: %v", err)
+	}
+
 	f.Init(f.FunctionsConfig{
-		MinPoolSize: 60,
-		MaxPoolSize: 300,
-		Images:      []string{"docker.io/bluetongueai/functions-hello-world:latest"},
+		MinPoolSize: apiConfig.MinPoolSize,
+		MaxPoolSize: apiConfig.MaxPoolSize,
+		Images:      apiConfig.Pull,
 	})
 
-	s := h.NewServer()
-	s.AddRoute("POST", "/api/v1/functions/:name", functionHandler)
+	s := h.NewServer(h.ServerConfig{
+		Port: apiConfig.Port,
+	})
+	s.AddRoute("POST", "/api/v1/functions/*name", functionHandler)
 	s.Start()
 }
 
-func functionHandler(c *gin.Context) {
-	name := c.Param("name")
+func readConfigFile() (ApiConfig, error) {
+	// read file at ./config.json
+	configFileBytes, _ := os.ReadFile("../config.json")
+	log.Printf("config file: %s", string(configFileBytes))
+	var data ApiConfig
+	err := json.Unmarshal(configFileBytes, &data)
+	if err != nil {
+		log.Printf("reading config file failed: %v", err)
+		return data, err
+	}
+	return data, nil
+}
 
-	var http_params map[string]string
+func functionHandler(c *gin.Context) {
+	name := strings.TrimPrefix(c.Param("name"), "/")
+
+	params := c.PostForm("params")
 
 	image_params := []string{}
-	if http_params["params"] != "" {
-		image_params = strings.Split(http_params["params"], " ")
+	if params != "" {
+		image_params = strings.Split(params, " ")
 	}
 
 	log.Printf("running function %s with params %v", name, image_params)

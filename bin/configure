@@ -8,3 +8,5 @@ mkdir -p ./configs/lldap
 interpolator ./lldap/lldap_config.template.toml > ./configs/lldap/config.toml
 mkdir -p ./configs/postgrest
 interpolator ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
+mkdir -p ./configs/functions
+interpolator ./functions/functions.template.json > ./configs/functions/config.json

@@ -1,0 +1,9 @@
+{
+  "port": 6000,
+  "minPoolSize": 1,
+  "maxPoolSize": 5,
+  "pull": [
+    "bluetongueai/functions-cowsay",
+    "bluetongueai/functions-hello-world"
+  ]
+}

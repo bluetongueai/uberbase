@@ -14,6 +14,7 @@ import (
 
 var seed = time.Now().UTC().UnixNano()
 var nameGenerator = namegenerator.NewNameGenerator(seed)
+var nameCounts = make(map[string]int)
 
 type client struct {
 	bin              string
@@ -29,13 +30,15 @@ func newClient() (client, error) {
 	if err == nil {
 		client.bin = path
 		client.isLima = true
-		log.Printf("using `%s` as the container runtime", client.bin)
+		log.Printf("using `%s nerdctl` as the container runtime", client.bin)
+		log.Printf("isLima: %v", client.isLima)
 		return client, nil
 	}
 	path, err = exec.LookPath("nerdctl")
 	if err == nil {
 		client.bin = path
 		log.Printf("using `%s` as the container runtime", client.bin)
+		log.Printf("isLima: %v", client.isLima)
 		return client, nil
 	}
 
@@ -45,12 +48,13 @@ func newClient() (client, error) {
 
 func (c client) command(args ...string) (string, string, error) {
 	ctx := context.Background()
-	log.Printf("running command %s %v", c.bin, args)
 	var cmd *exec.Cmd
 	if c.isLima {
 		args = append([]string{"nerdctl"}, args...)
+		log.Printf("running command %s %v", c.bin, args)
 		cmd = exec.CommandContext(ctx, c.bin, args...)
 	} else {
+		log.Printf("running command %s %v", c.bin, args)
 		cmd = exec.CommandContext(ctx, c.bin, args...)
 	}
 	stdoutBuffer := &bytes.Buffer{}
@@ -64,15 +68,26 @@ func (c client) command(args ...string) (string, string, error) {
 	return stdoutBuffer.String(), stderrBuffer.String(), nil
 }
 
-func (c client) Pull(imageName string) error {
-	log.Printf("fetching containerd image %s", imageName)
-	_, _, err := c.command("pull", imageName)
-	if err != nil {
-		log.Printf("failed to pull image %s: %v", imageName, err)
-		return err
+func (c client) Pull(imageName string, force bool) error {
+	if force || !c.imageExists(imageName) {
+		log.Printf("fetching containerd image %s", imageName)
+		_, _, err := c.command("pull", imageName)
+		if err != nil {
+			log.Printf("failed to pull image %s: %v", imageName, err)
+			return err
+		}
+		log.Printf("successfully pulled image %s", imageName)
+		return nil
 	}
-	log.Printf("successfully pulled image %s", imageName)
 	return nil
+}
+
+func (c client) imageExists(imageName string) bool {
+	_, _, err := c.command("inspect", imageName)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func (c client) Build(imageName, dockerfile string, context string) error {
@@ -89,6 +104,8 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 func (c client) NewContainer(imageName string) (string, error) {
 	log.Printf("creating container for image %s", imageName)
 	name := nameGenerator.Generate()
+	nameCounts[name]++
+	name = fmt.Sprintf("%s-%d", name, nameCounts[name])
 	_, _, err := c.command("create", "--name", name, imageName)
 	if err != nil {
 		log.Printf("failed to create container: %v", err)
@@ -98,7 +115,7 @@ func (c client) NewContainer(imageName string) (string, error) {
 	return name, nil
 }
 
-func (c client) Run(containerName string) (string, string, error) {
+func (c client) Start(containerName string) (string, string, error) {
 	log.Printf("running container %s", containerName)
 	stdout, stderr, err := c.command("start", "-a", containerName)
 	if err != nil {
@@ -141,4 +158,14 @@ func (c client) Remove(containerName string) error {
 	}
 	log.Printf("successfully removed container %s", containerName)
 	return nil
+}
+
+func (c client) Run(imageName string, params ...string) (string, string, error) {
+	imageParams := append([]string{"run", imageName}, params...)
+	stdout, stderr, err := c.command(imageParams...)
+	if err != nil {
+		log.Printf("failed to run image %s: %v", imageName, err)
+		return "", "", err
+	}
+	return stdout, stderr, nil
 }

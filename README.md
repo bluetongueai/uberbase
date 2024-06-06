@@ -10,14 +10,13 @@
   - [x] **[LLDAP]()** - LDAP authentication and authorization
   - [x] **[Authelia]()** - Two-factor authentication and single sign-on
   - [x] **[Caddy]()** - A powerful web server with automatic HTTPS
-  - [x] **[Firecracker]()/[Flintlock]()** - A serverless platform for running functions with support for any language
-  - [x] **[Hammertime]()** - A CLI tool for interacting with Flintlock
+  - [x] **[containerd]()** - A container runtime that is compatible with Docker
   - [x] **[Supabase]()(studio)** - A web-based UI to interact with the Uberbase platform (adapted from Supabase's studio)
 
 ## Getting Started
 
-To get started with `uberbase`, you'll need to have Docker and Docker Compose installed. You can install Docker from
-[https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/).
+To get started with `uberbase`, you'll need to have an OCI compatible runtime such as Docker or Podman. Docker is probably
+the most beginner-friendly option. This guide assumes Docker and uses Docker Compose to manage the services.
 
 `uberbase` can be integrated either as a single Docker-outside-Docker container, or integrated piecemeal into an existing
 Docker Compose project.
