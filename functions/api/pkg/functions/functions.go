@@ -40,12 +40,16 @@ func Init(config FunctionsConfig) error {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		p.Shutdown()
+		Shutdown()
 		os.Exit(0)
 	}()
 
 	log.Println("container pool initialized")
 	return nil
+}
+
+func Shutdown() {
+	pool.Shutdown()
 }
 
 func Run(imageName string, params ...string) (string, error) {
