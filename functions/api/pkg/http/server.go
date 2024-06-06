@@ -1,10 +1,19 @@
 package http
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 )
 
-func NewServer() Server {
+type ServerConfig struct {
+	Port int `json:"port"`
+}
+
+var config ServerConfig
+
+func NewServer(c ServerConfig) Server {
+	config = c
 	server := Server{
 		gin: gin.Default(),
 	}
@@ -24,7 +33,7 @@ func (s Server) AddRoute(method string, path string, handler func(c *gin.Context
 }
 
 func (s Server) Start() {
-	s.gin.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	s.gin.Run(fmt.Sprintf("0.0.0.0:%d", config.Port))
 }
 
 func (s Server) RegisterGlobalMiddleware(middleware ...gin.HandlerFunc) {

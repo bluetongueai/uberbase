@@ -13,7 +13,10 @@ import (
 )
 
 type ApiConfig struct {
-	Pull []string `json:"pull"`
+	Port        int      `json:"port"`
+	MinPoolSize int      `json:"minPoolSize"`
+	MaxPoolSize int      `json:"maxPoolSize"`
+	Pull        []string `json:"pull"`
 }
 
 func main() {
@@ -23,12 +26,14 @@ func main() {
 	}
 
 	f.Init(f.FunctionsConfig{
-		MinPoolSize: 5,
-		MaxPoolSize: 60,
+		MinPoolSize: apiConfig.MinPoolSize,
+		MaxPoolSize: apiConfig.MaxPoolSize,
 		Images:      apiConfig.Pull,
 	})
 
-	s := h.NewServer()
+	s := h.NewServer(h.ServerConfig{
+		Port: apiConfig.Port,
+	})
 	s.AddRoute("POST", "/api/v1/functions/*name", functionHandler)
 	s.Start()
 }
