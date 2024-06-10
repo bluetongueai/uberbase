@@ -1,14 +1,20 @@
-ARG DEVCONTAINER=1
+FROM alpine:3.19.1
 
-FROM --platform=linux/amd64 alpine:3.19.1
+ARG DEVCONTAINER=1
+ARG USERNAME=uberbase
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
 
 RUN apk update && apk add --no-cache \
-    build-base bash tmux vim sed tar git curl openssh-keygen \
+    build-base bash tmux vim sed tar git curl openssh-keygen envsubst supervisor \
     # qemu-img qemu-system-x86_64 \
     bridge-utils iproute2 ncurses jq sudo \
     containerd \
     postgresql-client postgresql-dev \
-    go nodejs npm
+    nodejs npm
+
+COPY --from=golang:1.22.3-alpine /usr/local/go/ /usr/local/go/
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 # install nerdctl
 WORKDIR /nerdctl
@@ -25,10 +31,17 @@ RUN tar -xzf cni-plugins-linux-amd64-v0.9.1.tgz -C /usr/local/bin
 RUN rm -rf /cni
 
 WORKDIR /uberbase
+
 ADD . .
-# RUN source .env
+ADD buildkitd.toml /etc/buildkitd/buildkitd.toml
+ADD supervisord.conf /etc/supervisord.conf
+
+RUN ./bin/configure
+RUN ./bin/build
 
 EXPOSE ${UBERBASE_HTTP_PORT}
 EXPOSE ${UBERBASE_HTTPS_PORT}
+
+RUN source .env
 
 ENTRYPOINT ["/bin/bash -C /uberbase/bin/start"]

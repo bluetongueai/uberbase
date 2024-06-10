@@ -1,12 +1,9 @@
 #!/bin/bash
 
-mkdir -p ./configs/authelia
-interpolator ./authelia/config.template.yml > ./configs/authelia/config.yml
-mkdir -p ./configs/caddy
-interpolator ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
-mkdir -p ./configs/lldap
-interpolator ./lldap/lldap_config.template.toml > ./configs/lldap/config.toml
-mkdir -p ./configs/postgrest
-interpolator ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
-mkdir -p ./configs/functions
-interpolator ./functions/functions.template.json > ./configs/functions/config.json
+source .env
+
+envsubst < ./authelia/configuration.template.yml > ./configs/authelia/configuration.yml
+envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
+envsubst < ./functions/config.template.json > ./configs/functions/config.json
+envsubst < ./lldap/config.template.toml > ./configs/lldap/config.toml
+envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf

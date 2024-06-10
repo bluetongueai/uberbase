@@ -30,51 +30,34 @@
   }
 }
 
-http://${UBERBASE_DOMAIN}/v1/api {
-  reverse_proxy api:8000
+http://${UBERBASE_DOMAIN}/auth {
+	reverse_proxy authelia:9091
   import cors {header.origin}
 }
 
-http://app.${UBERBASE_DOMAIN} {
-  root * /var/www/app
-  file_server
-}
-
-http://api.${UBERBASE_DOMAIN} {
-  reverse_proxy supabase_kong_socratic:8000
+http://${UBERBASE_DOMAIN}/api/v1/functions {
+  forward_auth authelia:9091 {
+		uri /api/verify?rd=https://${UBERBASE_DOMAIN}/auth
+		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+	}
+  reverse_proxy 0.0.0.0:6000/api/v1/functions
   import cors {header.origin}
 }
 
-http://mailtrain.${SOCRATIC_DOMAIN} {
-  reverse_proxy mailtrain:3000
+http://${UBERBASE_DOMAIN}/api/v1 {
+  forward_auth authelia:9091 {
+		uri /api/verify?rd=https://${UBERBASE_DOMAIN}/auth
+		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+	}
+  reverse_proxy 0.0.0.0:3000
+  import cors {header.origin}
 }
 
-http://collector.${SOCRATIC_DOMAIN} {
-  reverse_proxy otel-collector 1888
-  reverse_proxy otel-collector 8888
-  reverse_proxy otel-collector 8889
-  reverse_proxy otel-collector 13133
-  reverse_proxy otel-collector 4317
-  reverse_proxy otel-collector 4318
-  reverse_proxy otel-collector 55679
-}
-
-http://openobserve.${SOCRATIC_DOMAIN} {
-  reverse_proxy openobserve:5080
-}
-
-http://vault.${SOCRATIC_DOMAIN} {
-  reverse_proxy vault:8200
-}
-
-http://coder.${SOCRATIC_DOMAIN} {
-  reverse_proxy coder:4000
-}
-
-http://support.${SOCRATIC_DOMAIN} {
-  reverse_proxy osticket:80
-}
-
-http://ollama.${SOCRATIC_DOMAIN} {
-  reverse_proxy open-webui:{$OPEN_WEBUI_PORT}
+http://${UBERBASE_DOMAIN}/studio {
+  forward_auth authelia:9091 {
+		uri /api/verify?rd=https://${UBERBASE_DOMAIN}/auth
+		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+	}
+  reverse_proxy 0.0.0.0:3001
+  import cors {header.origin}
 }

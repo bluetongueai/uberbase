@@ -13,7 +13,13 @@ help: ## This help.
 
 .PHONY: build
 build: ## Build the api
-	go build .
+	mkdir -p bin
+	go build -o bin/api .
+	chmod +x bin/api
+
+.PHONY: install
+install: ## Install the api
+	cp bin/api /usr/bin/.
 
 .PHONY: test
 test: ## Test the api
@@ -21,7 +27,7 @@ test: ## Test the api
 
 .PHONY: run
 run: ## Run the api
-	UBERBASE_IMAGE_PATH=../images go run .
+	UBERBASE_IMAGE_PATH=../images go run . ../../configs/functions/config.json
 
 .PHONY: image
 image: ## Build the base containerd image

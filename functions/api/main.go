@@ -20,7 +20,12 @@ type ApiConfig struct {
 }
 
 func main() {
-	apiConfig, err := readConfigFile()
+	args := os.Args
+	if len(args) < 2 {
+		log.Fatalf("config file path not provided")
+	}
+	configPath := args[1]
+	apiConfig, err := readConfigFile(configPath)
 	if err != nil {
 		log.Fatalf("failed to read config file: %v", err)
 	}
@@ -38,9 +43,9 @@ func main() {
 	s.Start()
 }
 
-func readConfigFile() (ApiConfig, error) {
+func readConfigFile(configPath string) (ApiConfig, error) {
 	// read file at ./config.json
-	configFileBytes, _ := os.ReadFile("../config.json")
+	configFileBytes, _ := os.ReadFile(configPath)
 	log.Printf("config file: %s", string(configFileBytes))
 	var data ApiConfig
 	err := json.Unmarshal(configFileBytes, &data)

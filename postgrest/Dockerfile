@@ -1,8 +1,8 @@
-FROM alpine:3.19.1
+FROM ubuntu:24.10
 
 ARG POSTGREST_VERSION=12.0.2
 
-RUN apk add --no-cache bash curl postgresql-client libpq
+RUN apt update && apt install -y bash curl postgresql-client libpq-dev
 
 WORKDIR /app
 

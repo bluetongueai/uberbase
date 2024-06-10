@@ -1,0 +1,72 @@
+theme: auto
+default_redirection_url: https://${UBERBASE_DOMAIN}
+
+totp:
+  issuer: ${UBERBASE_DOMAIN}
+
+access_control:
+  default_policy: one_factor
+
+server:
+  buffers:
+    read: 1000000
+    write: 1000000
+
+session:
+  domain: ${UBERBASE_DOMAIN}
+
+  redis:
+    host: ${UBERBASE_REDIS_HOST}
+    port: 6379
+
+storage:
+  postgres:
+    host: ${UBERBASE_POSTGRES_HOST}
+    database: ${UBERBASE_POSTGRES_DATABASE}
+    username: ${UBERBASE_POSTGRES_USER}
+    password: ${UBERBASE_POSTGRES_PASSWORD}
+
+notifier:
+  smtp:
+    host: ${UBERBASE_SMTP_HOST}
+    port: ${UBERBASE_SMTP_PORT}
+    username: ${UBERBASE_SMTP_USERNAME}
+    sender: ${UBERBASE_SMTP_SENDER}
+
+authentication_backend:
+  password_reset:
+    disable: false
+  refresh_interval: 1m
+  ldap:
+    implementation: custom
+    url: ldap://${UBERBASE_LLDAP_HOST}:${UBERBASE_LLDAP_PORT}
+    timeout: 5s
+    start_tls: false
+    base_dn: dc=company,dc=com
+    username_attribute: uid
+    additional_users_dn: ou=people
+    users_filter: (&(|({username_attribute}={input})({mail_attribute}={input}))(objectClass=person))
+    additional_groups_dn: ou=groups
+    groups_filter: "(member={dn})"
+    group_name_attribute: cn
+    mail_attribute: mail
+    display_name_attribute: displayName
+    user: uid=admin,ou=people,dc=company,dc=com
+
+identity_providers:
+  oidc:
+    access_token_lifespan: 1h
+    authorize_code_lifespan: 1m
+    id_token_lifespan: 1h
+    refresh_token_lifespan: 90m
+    enable_client_debug_messages: false
+    enforce_pkce: never
+    cors:
+      endpoints:
+        - authorization
+        - token
+        - revocation
+        - introspection
+      allowed_origins:
+        - "https://${UBERBASE_DOMAIN}"
+      allowed_origins_from_client_redirect_uris: false

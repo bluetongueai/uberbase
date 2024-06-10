@@ -1,0 +1,6 @@
+#! /bin/bash
+
+pushd ./functions/api
+make build
+sudo make install
+popd
