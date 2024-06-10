@@ -42,6 +42,6 @@ RUN ./bin/build
 EXPOSE ${UBERBASE_HTTP_PORT}
 EXPOSE ${UBERBASE_HTTPS_PORT}
 
-RUN source .env
+# RUN source .env
 
 ENTRYPOINT ["/bin/bash -C /uberbase/bin/start"]
