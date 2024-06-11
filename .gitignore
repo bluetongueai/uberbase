@@ -1,7 +1,5 @@
-.env
 configs/*
 */**/node_modules
 pyrotechnic/pyrotechnic
 keys/*
-log/*
 functions/config.json
