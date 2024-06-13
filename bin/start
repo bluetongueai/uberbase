@@ -1,8 +1,5 @@
 #! /bin/bash
-
 sudo chmod 666 /dev/kvm
-
 sudo /uberbase/bin/configure
-
-echo -e "\033[33mStarting uberbase API...\033[0m"
-/uberbase/bin/functions/api/bin/api /uberbase/configs/functions/config.json
+echo -e "\033[33mStarting uberbase...\033[0m"
+nerdctl.lima compose up -d
