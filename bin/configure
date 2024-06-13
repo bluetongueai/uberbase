@@ -1,12 +1,14 @@
 #!/bin/bash
 
+source .env
+
 mkdir -p configs/authelia
-sudo envsubst < ./authelia/configuration.template.yml > ./configs/authelia/configuration.yml
+envsubst < ./authelia/configuration.template.yml > ./configs/authelia/configuration.yml
 mkdir -p configs/caddy
-sudo envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
+envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
 mkdir -p configs/functions
-sudo envsubst < ./functions/config.template.json > ./configs/functions/config.json
+envsubst < ./functions/config.template.json > ./configs/functions/config.json
 mkdir -p configs/lldap
-sudo envsubst < ./lldap/config.template.toml > ./configs/lldap/config.toml
+envsubst < ./lldap/config.template.toml > ./configs/lldap/config.toml
 mkdir -p configs/postgrest
-sudo envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
+envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf

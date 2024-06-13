@@ -14,34 +14,27 @@ type FunctionsConfig struct {
 	Images      []string
 }
 
-var pool containerPool
+var fClient client
 var initialized bool
 
 func Init(config FunctionsConfig) error {
 	log.SetOutput(os.Stdout)
 
 	initLima()
-
-	poolConfig := containerPoolConfig{
-		InitialSize: config.MinPoolSize,
-		MaxSize:     config.MaxPoolSize,
-		Images:      config.Images,
-	}
-
-	log.Printf("initializing container pool with min size %d and max size %d", config.MinPoolSize, config.MaxPoolSize)
-	p, err := newContainerPool(poolConfig)
-	if err != nil {
-		return err
-	}
-	pool = p
 	initialized = true
+
+	var err error
+	fClient, err = newClient()	
+	if err != nil {
+		log.Fatalf("could not get lima/containerd client")
+	}
 
 	// capture sigs
 	log.Printf("hooking into OS signals to gracefully shutdown")
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		<-c
+		<-sigChan
 		Shutdown()
 		os.Exit(0)
 	}()
@@ -51,14 +44,23 @@ func Init(config FunctionsConfig) error {
 }
 
 func Shutdown() {
-	pool.Shutdown()
 }
 
 func Run(imageName string, params ...string) (string, error) {
 	if !initialized {
 		return "", errors.New("functions not initialized")
 	}
-	return pool.Run(imageName, params...)
+
+	stdOut, stdErr, err := fClient.Run(imageName, params...)
+	if err != nil {
+		return "", err
+	}
+
+	if stdErr != "" {
+		return stdErr, nil
+	}
+
+	return stdOut, nil
 }
 
 func functionNameToImageUrl(name string) string {

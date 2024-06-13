@@ -14,6 +14,7 @@ import (
 var seed = time.Now().UTC().UnixNano()
 var nameGenerator = namegenerator.NewNameGenerator(seed)
 var nameCounts = make(map[string]int)
+var c client
 
 type client struct {
 	limaPath    string
@@ -23,6 +24,10 @@ type client struct {
 
 func newClient() (client, error) {
 	client := client{}
+
+	if c != client {
+		return c, nil
+	}
 
 	log.Println("detecting container runtime")
 
@@ -48,6 +53,8 @@ func newClient() (client, error) {
 	client.nerdctlPath = path
 
 	log.Printf("using paths: lima=%s limactl=%s nerdctl=%s", client.limaPath, client.limactlPath, client.nerdctlPath)
+
+	c = client
 
 	return client, nil
 }
@@ -111,20 +118,6 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 	}
 	log.Printf("successfully built image %s", imageName)
 	return nil
-}
-
-func (c client) NewContainer(imageName string) (string, error) {
-	log.Printf("creating container for image %s", imageName)
-	name := nameGenerator.Generate()
-	nameCounts[name]++
-	name = fmt.Sprintf("%s-%d", name, nameCounts[name])
-	_, _, err := c.nerdctl("create", "--name", name, imageName)
-	if err != nil {
-		log.Printf("failed to create container: %v", err)
-		return "", err
-	}
-	log.Printf("successfully created container with ID %s for image %s", name, imageName)
-	return name, nil
 }
 
 func (c client) Start(containerName string) (string, string, error) {

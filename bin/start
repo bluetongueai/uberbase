@@ -1,8 +1,6 @@
 #! /bin/bash
 
-echo -e "\033[33mStarting lima VM, this may take some time...\033[0m"
-limactl create default
-limactl start default
+sudo chmod 666 /dev/kvm
 
 echo -e "\033[33mStarting uberbase API...\033[0m"
 sudo supervisord -c /etc/supervisord.conf

@@ -19,7 +19,7 @@ func initLima() {
 
 	if stdOut == "" {
 		log.Println("no lima containers found, creating one")
-		stdOut, stdErr, err = client.limactl("create", "--tty", "false", "default")
+		stdOut, stdErr, err = client.limactl("--tty=false", "create", "default")
 		if err != nil {
 			log.Fatalf("failed to create lima VM: %v\n%s\n%s", err, stdOut, stdErr)
 		}
