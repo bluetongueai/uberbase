@@ -22,12 +22,8 @@ WORKDIR /lima
 RUN make
 RUN make install
 
-RUN groupadd kvm
-ADD 40.permissions.rules /etc/udev/rules.d/40.permissions.rules
-
 RUN groupadd $USERNAME
 RUN useradd -s /bin/bash  -g $USERNAME -m $USERNAME
-RUN usermod -a -G kvm $USERNAME
 RUN echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME
 
 USER $USERNAME
@@ -35,12 +31,14 @@ WORKDIR /uberbase
 
 ADD . .
 
-RUN sudo ./bin/configure
 RUN ./bin/build
+RUN sudo chmod +x bin/start
+
+RUN sudo chown -R uberbase:uberbase .
 
 EXPOSE ${UBERBASE_HTTP_PORT}
 EXPOSE ${UBERBASE_HTTPS_PORT}
 
 # RUN source .env
 
-ENTRYPOINT ["/bin/bash -C /uberbase/bin/start"]
+ENTRYPOINT ["/uberbase/bin/start"]

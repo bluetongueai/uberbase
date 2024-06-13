@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source .env
-
 mkdir -p configs/authelia
 envsubst < ./authelia/configuration.template.yml > ./configs/authelia/configuration.yml
 mkdir -p configs/caddy
