@@ -95,17 +95,6 @@ services:
     networks:
       - net
 
-  api:
-    image: uberbase/uberbase:latest
-    build:
-      context: ./functions
-    ports:
-      - ${UBERBASE_FUNCTIONS_PORT}:${UBERBASE_FUNCTIONS_PORT}
-    env_file:
-      - .env
-    networks:
-      - net
-
   studio:
     image: uberbase/studio:latest
     build:

@@ -51,6 +51,10 @@ func Init(config FunctionsConfig) error {
 		}
 	}
 
+	// start the docker compose stack
+	log.Printf("booting compose stack")
+	fClient.nerdctl("compose", "up", "-d")
+
 	// capture sigs
 	log.Printf("hooking into OS signals to gracefully shutdown")
 	sigChan := make(chan os.Signal, 1)
@@ -66,6 +70,7 @@ func Init(config FunctionsConfig) error {
 }
 
 func Shutdown() {
+	fClient.nerdctl("compose", "down")
 }
 
 func Run(imageName string, params ...string) (string, error) {

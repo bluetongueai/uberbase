@@ -1,5 +1,6 @@
 #! /bin/bash
 sudo chmod 666 /dev/kvm
-sudo /uberbase/bin/configure
+source .env
+/uberbase/bin/configure
 echo -e "\033[33mStarting uberbase...\033[0m"
-nerdctl.lima compose up -d
+api ./configs/functions/config.json
