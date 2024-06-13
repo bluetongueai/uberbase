@@ -120,51 +120,6 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 	return nil
 }
 
-func (c client) Start(containerName string) (string, string, error) {
-	log.Printf("running container %s", containerName)
-	stdout, stderr, err := c.nerdctl("start", "-a", containerName)
-	if err != nil {
-		log.Printf("failed to start container %s: %v", containerName, err)
-		return "", "", err
-	}
-	log.Printf("successfully ran container %s", containerName)
-	return stdout, stderr, nil
-}
-
-func (c client) Exec(containerName string, params ...string) (string, string, error) {
-	log.Printf("executing command %v in container %s", params, containerName)
-	params = append([]string{"exec", containerName}, params...)
-	stdout, stderr, err := c.nerdctl(params...)
-	if err != nil {
-		log.Printf("failed to execute command in container %s: %v", containerName, err)
-		return "", "", err
-	}
-	log.Printf("successfully executed command in container %s", containerName)
-	return stdout, stderr, nil
-}
-
-func (c client) Stop(containerName string) error {
-	log.Printf("stopping container %s", containerName)
-	_, _, err := c.nerdctl("stop", containerName)
-	if err != nil {
-		log.Printf("failed to stop container %s: %v", containerName, err)
-		return err
-	}
-	log.Printf("successfully stopped container %s", containerName)
-	return nil
-}
-
-func (c client) Remove(containerName string) error {
-	log.Printf("removing container %s", containerName)
-	_, _, err := c.nerdctl("rm", containerName)
-	if err != nil {
-		log.Printf("failed to remove container %s: %v", containerName, err)
-		return err
-	}
-	log.Printf("successfully removed container %s", containerName)
-	return nil
-}
-
 func (c client) Run(imageName string, params ...string) (string, string, error) {
 	imageParams := append([]string{"run", imageName}, params...)
 	stdout, stderr, err := c.nerdctl(imageParams...)

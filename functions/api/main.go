@@ -13,10 +13,9 @@ import (
 )
 
 type ApiConfig struct {
-	Port        int      `json:"port"`
-	MinPoolSize int      `json:"minPoolSize"`
-	MaxPoolSize int      `json:"maxPoolSize"`
-	Pull        []string `json:"pull"`
+	Port  int      `json:"port"`
+	Build string   `json:"build"`
+	Pull  []string `json:"pull"`
 }
 
 func main() {
@@ -31,9 +30,8 @@ func main() {
 	}
 
 	f.Init(f.FunctionsConfig{
-		MinPoolSize: apiConfig.MinPoolSize,
-		MaxPoolSize: apiConfig.MaxPoolSize,
-		Images:      apiConfig.Pull,
+		Build:  apiConfig.Build,
+		Images: apiConfig.Pull,
 	})
 
 	s := h.NewServer(h.ServerConfig{

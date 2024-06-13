@@ -9,9 +9,8 @@ import (
 )
 
 type FunctionsConfig struct {
-	MinPoolSize int
-	MaxPoolSize int
-	Images      []string
+	Build  string
+	Images []string
 }
 
 var fClient client
@@ -24,9 +23,32 @@ func Init(config FunctionsConfig) error {
 	initialized = true
 
 	var err error
-	fClient, err = newClient()	
+	fClient, err = newClient()
 	if err != nil {
 		log.Fatalf("could not get lima/containerd client")
+	}
+
+	// build all images configured
+	subdirs, err := os.ReadDir(config.Build)
+	if err != nil {
+		log.Printf("could not read build directory: %v", err)
+	} else {
+
+		for _, imageContext := range subdirs {
+			imageName := imageContext.Name()
+			dockerfile := config.Build + "/" + imageContext.Name() + "/Dockerfile"
+			err := fClient.Build("uberbase/"+imageName, dockerfile, config.Build+"/"+imageContext.Name())
+			if err != nil {
+				log.Printf("failed to build image %s, %s, %s", imageName, dockerfile, config.Build+"/"+imageContext.Name())
+			}
+		}
+	}
+
+	for _, image := range config.Images {
+		fClient.Pull(image, false)
+		if err != nil {
+			log.Fatalf("failed to pull image %s: %v", image, err)
+		}
 	}
 
 	// capture sigs
@@ -61,8 +83,4 @@ func Run(imageName string, params ...string) (string, error) {
 	}
 
 	return stdOut, nil
-}
-
-func functionNameToImageUrl(name string) string {
-	return "docker.io/bluetongueai/functions-" + name + ":latest"
 }

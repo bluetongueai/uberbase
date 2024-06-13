@@ -1,8 +1,5 @@
 {
   "port": ${UBERBASE_FUNCTIONS_PORT},
-  "minPoolSize": ${UBERBASE_FUNCTIONS_MIN_POOL_SIZE},
-  "maxPoolSize": ${UBERBASE_FUNCTIONS_MAX_POOL_SIZE},
-  "pull": [
-    "${UBERBASE_FUNCTIONS_IMAGES}"
-  ]
+  "build": "${UBERBASE_FUNCTIONS_IMAGE_PATH}",
+  "pull": [${UBERBASE_FUNCTIONS_IMAGES}]
 }
