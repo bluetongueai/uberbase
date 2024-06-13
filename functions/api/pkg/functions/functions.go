@@ -20,6 +20,8 @@ var initialized bool
 func Init(config FunctionsConfig) error {
 	log.SetOutput(os.Stdout)
 
+	initLima()
+
 	poolConfig := containerPoolConfig{
 		InitialSize: config.MinPoolSize,
 		MaxSize:     config.MaxPoolSize,
