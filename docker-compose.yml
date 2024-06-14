@@ -67,6 +67,7 @@ services:
     depends_on:
       - postgres
       - lldap
+      - redis
     networks:
       - net
 

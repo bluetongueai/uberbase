@@ -10,3 +10,5 @@ mkdir -p configs/lldap
 envsubst < ./lldap/config.template.toml > ./configs/lldap/lldap_config.toml
 mkdir -p configs/postgrest
 envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
+mkdir -p configs/lima
+envsubst < ./lima/ubuntu.template.yaml > ./configs/lima/ubuntu.yaml

@@ -5,7 +5,7 @@ images:
   arch: "aarch64"
 
 mounts:
-- location: "/uberbase"
+- location: "${PWD}/uberbase"
   writable: true
 - location: "/tmp/lima"
   writable: true

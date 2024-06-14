@@ -274,7 +274,7 @@ identity_validation:
     # jwt_algorithm: 'HS256'
 
     ## The secret key used to sign and verify the JWT.
-    jwt_secret: '${UBSERBASE_AUTHELIA_JWT_SECRET}'
+    jwt_secret: 'a_very_important_secret'
 
   ## Elevated Session flows. Adjusts the flow which require elevated sessions for example managing credentials, adding,
   ## removing, etc.
@@ -359,7 +359,7 @@ authentication_backend:
     ## Square brackets indicate optional portions of the format. Scheme must be 'ldap', 'ldaps', or 'ldapi`.
     ## The default scheme is 'ldapi' if the address is an absolute path otherwise it's 'ldaps'.
     ## The default port is '636', unless the scheme is 'ldap' in which case it's '389'.
-    address: 'ldap://${UBERBASE_LLDAP_HOST}:${UBERBASE_LLDAP_PORT}
+    address: 'ldaps://127.0.0.1:3890'
 
     ## The LDAP implementation, this affects elements like the attribute utilised for resetting a password.
     ## Acceptable options are as follows:
@@ -418,7 +418,7 @@ authentication_backend:
 
     ## The distinguished name of the container searched for objects in the directory information tree.
     ## See also: additional_users_dn, additional_groups_dn.
-    base_dn: 'dc=uberbase,dc=com'
+    base_dn: 'dc=example,dc=com'
 
     ## The additional_users_dn is prefixed to base_dn and delimited by a comma when searching for users.
     ## i.e. with this set to OU=Users and base_dn set to DC=a,DC=com; OU=Users,DC=a,DC=com is searched for users.
@@ -459,9 +459,9 @@ authentication_backend:
     # permit_referrals: false
 
     ## The username and password of the admin user.
-    user: 'cn=${UBERBASE_ADMIN_USERNAME},dc=uberbase,dc=com'
+    user: 'cn=admin,dc=example,dc=com'
     ## Password can also be set using a secret: https://www.authelia.com/c/secrets
-    password: '${UBERBASE_ADMIN_PASSWORD}'
+    password: 'my-password'
 
     ## The attributes for users and objects from the directory server.
     # attributes:
@@ -714,7 +714,7 @@ access_control:
 session:
   ## The secret to encrypt the session data. This is only used with Redis / Redis Sentinel.
   ## Secret can also be set using a secret: https://www.authelia.com/c/secrets
-  secret: '${UBERBASE_AUTHELIA_SESSION_SECRET}'
+  secret: 'insecure_session_secret'
 
   ## Cookies configures the list of allowed cookie domains for sessions to be created on.
   ## Undefined values will default to the values below.
@@ -725,7 +725,7 @@ session:
 
       ## The domain to protect.
       ## Note: the Authelia portal must also be in that domain.
-      domain: '${UBERBASE_DOMAIN}'
+      domain: 'example.com'
 
       ## Required. The fully qualified URI of the portal to redirect users to on proxies that support redirections.
       ## Rules:
@@ -733,7 +733,7 @@ session:
       ##   - The above 'domain' option MUST either:
       ##      - Match the host portion of this URI.
       ##      - Match the suffix of the host portion when prefixed with '.'.
-      authelia_url: 'https://${UBERBASE_DOMAIN}/auth'
+      authelia_url: 'https://example.com/auth'
 
       ## Optional. The fully qualified URI used as the redirection location if the portal is accessed directly. Not
       ## configuring this option disables the automatic redirection behaviour.
@@ -900,7 +900,7 @@ storage:
   ## The encryption key that is used to encrypt sensitive information in the database. Must be a string with a minimum
   ## length of 20. Please see the docs if you configure this with an undesirable key and need to change it, you MUST use
   ## the CLI to change this in the database if you want to change it from a previously configured value.
-  encryption_key: '${UBERBASE_AUTHELIA_ENCRYPTION_KEY}'
+  encryption_key: 'you_must_generate_a_random_string_of_more_than_twenty_chars_and_configure_this'
 
   ##
   ## Local (Storage Provider)
@@ -982,7 +982,7 @@ storage:
     ## Format: [<scheme>://]<hostname>[:<port>].
     ## Square brackets indicate optional portions of the format. Scheme must be 'tcp', 'tcp4', 'tcp6', or 'unix`.
     ## The default scheme is 'unix' if the address is an absolute path otherwise it's 'tcp'. The default port is '5432'.
-    address: 'tcp://${UBERBASE_POSTGRES_HOST}:${UBERBASE_POSTGRES_PORT}'
+    address: 'tcp://127.0.0.1:5432'
 
     ## The database name to use.
     database: 'authelia'
@@ -991,11 +991,11 @@ storage:
     schema: 'public'
 
     ## The username used for SQL authentication.
-    username: '${UBERBASE_POSTGRES_USER}'
+    username: 'postgres'
 
     ## The password used for SQL authentication.
     ## Can also be set using a secret: https://www.authelia.com/c/secrets
-    password: '${UBERBASE_POSTGRES_PASSWORD}'
+    password: 'postgres'
 
     ## The connection timeout in the duration common syntax.
     # timeout: '5 seconds'
@@ -1066,17 +1066,17 @@ notifier:
   ##     (configure in tls section)
   smtp:
     ## The address of the SMTP server to connect to in the address common syntax.
-    address: '${UBERBASE_SMTP_HOST}:${UBERBASE_SMTP_PORT}'
+    address: 'smtp://127.0.0.1:25'
 
     ## The connection timeout in the duration common syntax.
     # timeout: '5 seconds'
 
     ## The username used for SMTP authentication.
-    username: '${UBERBASE_SMTP_USER}'
+    username: 'test'
 
     ## The password used for SMTP authentication.
     ## Can also be set using a secret: https://www.authelia.com/c/secrets
-    password: '${UBERBASE_SMTP_PASSWORD}'
+    password: 'password'
 
     ## The sender is used to is used for the MAIL FROM command and the FROM header.
     ## If this is not defined and the username is an email, we use the username as this value. This can either be just
