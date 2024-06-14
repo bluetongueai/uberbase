@@ -16,7 +16,7 @@ services:
     container_name: redis
     volumes:
       - redis_data:/data
-      - ./logs/redis.log:/var/log/redis.log
+      - ./logs/redis:/var/log:Z
     ports:
       - ${UBERBASE_REDIS_PORT}:6379
     restart: unless-stopped
@@ -39,21 +39,21 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init/:/docker-entrypoint-initdb.d/
-      - ./logs/postgres.log:/var/log/postgres.log
+      - ./logs/postgres:/var/log
     networks:
       - net
 
   lldap:
     image: lldap/lldap:latest-debian-rootless
     container_name: lldap
-    entrypoint: /app/docker-entrypoint.sh &> /var/log/lldap.log
+    entrypoint: "/bin/bash -C /app/docker-entrypoint.sh &> /var/log/lldap.log"
     ports:
       - ${UBERBASE_LLDAP_ADMIN_PORT}:17170
     depends_on:
       - postgres
     volumes:
       - ./configs/lldap:/data
-      - ./logs/lldap.log:/var/log/lldap.log
+      - ./logs/lldap:/var/log
     env_file:
       - .env
     networks:
@@ -65,7 +65,7 @@ services:
       - ${UBERBASE_AUTHELIA_PORT}:9091
     volumes:
       - ./configs/authelia:/config
-      - ./logs/authelia.log:/var/log/authelia.log
+      - ./logs/authelia:/var/log
     env_file:
       - .env
     depends_on:
@@ -82,7 +82,7 @@ services:
       - ${UBERBASE_HTTPS_PORT}:443
     volumes:
       - ./configs/caddy/Caddyfile:/etc/caddy/Caddyfile
-      - ./logs/caddy.log:/var/log/caddy.log
+      - ./logs/caddy:/var/log
     depends_on:
       - authelia
     env_file:
