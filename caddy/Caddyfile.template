@@ -1,9 +1,6 @@
 {
   debug
   acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
-  servers {
-    log_credentials
-  }
 }
 
 (cors) {
@@ -30,34 +27,36 @@
   }
 }
 
-http://${UBERBASE_DOMAIN}/auth {
-	reverse_proxy authelia:9091
-  import cors {header.origin}
+auth.${UBERBASE_DOMAIN} {
+  # import cors auth.${UBERBASE_DOMAIN}
+  reverse_proxy authelia:${UBERBASE_AUTHELIA_PORT}
 }
 
-http://${UBERBASE_DOMAIN}/api/v1/functions {
-  forward_auth authelia:9091 {
-		uri /api/verify?rd=https://${UBERBASE_DOMAIN}/auth
-		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
-	}
-  reverse_proxy 0.0.0.0:6000/api/v1/functions
-  import cors {header.origin}
-}
+${UBERBASE_DOMAIN} {
+  # import cors auth.${UBERBASE_DOMAIN}
 
-http://${UBERBASE_DOMAIN}/api/v1 {
-  forward_auth authelia:9091 {
-		uri /api/verify?rd=https://${UBERBASE_DOMAIN}/auth
-		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
-	}
-  reverse_proxy 0.0.0.0:3000
-  import cors {header.origin}
-}
+  handle /api/v1/functions {
+    forward_auth authelia:${UBERBASE_AUTHELIA_PORT} {
+      uri /api/verify?rd=auth.${UBERBASE_DOMAIN}
+      copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+    }
+ 
+    reverse_proxy 127.0.0.1:${UBERBASE_FUNCTIONS_PORT}
+  }
 
-http://${UBERBASE_DOMAIN}/studio {
-  forward_auth authelia:9091 {
-		uri /api/verify?rd=https://${UBERBASE_DOMAIN}/auth
-		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
-	}
-  reverse_proxy 0.0.0.0:3001
-  import cors {header.origin}
+  handle /api/v1 {
+    forward_auth authelia:${UBERBASE_AUTHELIA_PORT} {
+      uri /api/verify?rd=auth.${UBERBASE_DOMAIN}
+      copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+    }
+    reverse_proxy postgrest:${UBERBASE_POSTGREST_PORT}
+  }
+
+  handle /studio {
+    forward_auth authelia:${UBERBASE_AUTHELIA_PORT} {
+      uri /api/verify?rd=auth.${UBERBASE_DOMAIN}
+      copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+    }
+    reverse_proxy studio:${UBERBASE_STUDIO_PORT}
+  }
 }
