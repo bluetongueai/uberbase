@@ -1,6 +1,9 @@
 #! /bin/bash
-sudo chmod 666 /dev/kvm
+platform=$(uname -m)
+if [ $platform = "x86_64" ]; then
+  sudo chmod 666 /dev/kvm
+fi
 source .env
-/uberbase/bin/configure
+./bin/configure
 echo -e "\033[33mStarting uberbase...\033[0m"
-api ./configs/functions/config.json
+./functions/api/bin/api ./configs/functions/config.json

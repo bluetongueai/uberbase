@@ -24,10 +24,12 @@ func initLima() {
 		if err != nil {
 			log.Fatalf("failed to create lima VM: %v\n%s\n%s", err, stdOut, stdErr)
 		}
+		log.Printf("created lima VM: %s", stdOut)
 	}
 
 	stdOut, stdErr, err = client.limactl("start", "default")
 	if err != nil {
 		log.Fatalf("failed to start lima VM: %v\n%s\n%s", err, stdOut, stdErr)
 	}
+	log.Printf("started lima VM: %s", stdOut)
 }

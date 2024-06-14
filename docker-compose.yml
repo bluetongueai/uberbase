@@ -42,10 +42,11 @@ services:
       - net
 
   lldap:
-    image: lldap/lldap:stable
+    image: lldap/lldap:latest-debian-rootless
     container_name: lldap
     ports:
       - ${UBERBASE_LLDAP_ADMIN_PORT}:17170
+    #user: 1000:1000
     depends_on:
       - postgres
     volumes:
@@ -60,9 +61,12 @@ services:
     ports:
       - ${UBERBASE_AUTHELIA_PORT}:9091
     volumes:
-      - ./configs/authelia:/config
+      - ./configs/authelia:/config:Z
     env_file:
       - .env
+    depends_on:
+      - postgres
+      - lldap
     networks:
       - net
 
@@ -92,6 +96,8 @@ services:
       - ${UBERBASE_POSTGREST_PORT}:3000
     env_file:
       - .env
+    depends_on:
+      - postgres
     networks:
       - net
 

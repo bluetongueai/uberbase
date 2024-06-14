@@ -53,7 +53,11 @@ func Init(config FunctionsConfig) error {
 
 	// start the docker compose stack
 	log.Printf("booting compose stack")
-	fClient.nerdctl("compose", "up", "-d")
+	stdOut, stdErr, err := fClient.nerdctl("compose", "up", "-d")
+	if err != nil {
+		log.Fatalf("failed to start compose stack: %v\n%s\n%s", err, stdOut, stdErr)
+	}
+	log.Printf("compose stack started: %s", stdOut)
 
 	// capture sigs
 	log.Printf("hooking into OS signals to gracefully shutdown")

@@ -6,5 +6,6 @@ images:
 
 mounts:
 - location: "/uberbase"
+  writable: true
 - location: "/tmp/lima"
   writable: true
