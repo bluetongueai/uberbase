@@ -10,8 +10,8 @@
   - [x] **[LLDAP]()** - LDAP authentication and authorization
   - [x] **[Authelia]()** - Two-factor authentication and single sign-on
   - [x] **[Caddy]()** - A powerful web server with automatic HTTPS
-  - [x] **[containerd]()** - A container runtime that is compatible with Docker
-  - [x] **[Supabase]()(studio)** - A web-based UI to interact with the Uberbase platform (adapted from Supabase's studio)
+  - [x] **[lima]()** - A VM platform to interactive with a containerd container runtime that is compatible with Docker
+  - [x] **[studio]()** - A custom Svelte web interface for managing the platform
 
 ## Getting Started
 
