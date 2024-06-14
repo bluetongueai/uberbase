@@ -91,12 +91,12 @@ services:
       context: ./postgrest
       args:
         - POSTGREST_VERSION=${UBERBASE_POSTGREST_VERSION}
+    env_file:
+      - .env
     volumes:
       - ./configs/postgrest/postgrest.conf:/etc/postgrest.conf
     ports:
       - ${UBERBASE_POSTGREST_PORT}:3000
-    env_file:
-      - .env
     depends_on:
       - postgres
     networks:

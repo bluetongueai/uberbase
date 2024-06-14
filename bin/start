@@ -6,4 +6,8 @@ fi
 source .env
 ./bin/configure
 echo -e "\033[33mStarting uberbase...\033[0m"
+
+export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
+echo "Starting on $UBERBASE_PLATFORM"
+
 ./functions/api/bin/api ./configs/functions/config.json

@@ -274,7 +274,7 @@ identity_validation:
     # jwt_algorithm: 'HS256'
 
     ## The secret key used to sign and verify the JWT.
-    jwt_secret: '${UBSERBASE_AUTHELIA_JWT_SECRET}'
+    jwt_secret: '${UBERBASE_AUTHELIA_JWT_SECRET}'
 
   ## Elevated Session flows. Adjusts the flow which require elevated sessions for example managing credentials, adding,
   ## removing, etc.
@@ -359,7 +359,7 @@ authentication_backend:
     ## Square brackets indicate optional portions of the format. Scheme must be 'ldap', 'ldaps', or 'ldapi`.
     ## The default scheme is 'ldapi' if the address is an absolute path otherwise it's 'ldaps'.
     ## The default port is '636', unless the scheme is 'ldap' in which case it's '389'.
-    address: 'ldap://${UBERBASE_LLDAP_HOST}:${UBERBASE_LLDAP_PORT}
+    address: 'ldap://${UBERBASE_LLDAP_HOST}:${UBERBASE_LLDAP_PORT}'
 
     ## The LDAP implementation, this affects elements like the attribute utilised for resetting a password.
     ## Acceptable options are as follows:
@@ -459,7 +459,7 @@ authentication_backend:
     # permit_referrals: false
 
     ## The username and password of the admin user.
-    user: 'cn=${UBERBASE_ADMIN_USERNAME},dc=uberbase,dc=com'
+    user: 'uid=${UBERBASE_ADMIN_USERNAME},ou=people,dc=uberbase,dc=com'
     ## Password can also be set using a secret: https://www.authelia.com/c/secrets
     password: '${UBERBASE_ADMIN_PASSWORD}'
 
@@ -733,7 +733,7 @@ session:
       ##   - The above 'domain' option MUST either:
       ##      - Match the host portion of this URI.
       ##      - Match the suffix of the host portion when prefixed with '.'.
-      authelia_url: 'https://${UBERBASE_DOMAIN}/auth'
+      authelia_url: 'https://auth.${UBERBASE_DOMAIN}'
 
       ## Optional. The fully qualified URI used as the redirection location if the portal is accessed directly. Not
       ## configuring this option disables the automatic redirection behaviour.
@@ -791,9 +791,9 @@ session:
   ##
   ## Important: Kubernetes (or HA) users must read https://www.authelia.com/t/statelessness
   ##
-  # redis:
-    # host: '127.0.0.1'
-    # port: 6379
+  redis:
+    host: '${UBERBASE_REDIS_HOST}'
+    port: ${UBERBASE_REDIS_PORT}
     ## Use a unix socket instead
     # host: '/var/run/redis/redis.sock'
 
@@ -1044,7 +1044,8 @@ storage:
 ## The available providers are: filesystem, smtp. You must use only one of these providers.
 notifier:
   ## You can disable the notifier startup check by setting this to true.
-  disable_startup_check: false
+  ## You'll want to set this to false in prod to ensure your email are deliverable
+  disable_startup_check: true
 
   ##
   ## File System (Notification Provider)
@@ -1066,7 +1067,7 @@ notifier:
   ##     (configure in tls section)
   smtp:
     ## The address of the SMTP server to connect to in the address common syntax.
-    address: '${UBERBASE_SMTP_HOST}:${UBERBASE_SMTP_PORT}'
+    address: 'smtp://${UBERBASE_SMTP_HOST}:${UBERBASE_SMTP_PORT}'
 
     ## The connection timeout in the duration common syntax.
     # timeout: '5 seconds'

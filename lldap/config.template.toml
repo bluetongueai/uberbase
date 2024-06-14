@@ -53,7 +53,7 @@ jwt_secret = "${UBERBASE_LLDAP_JWT_SECRET}"
 ## The sample value is for "example.com", but you can extend it with as
 ## many "dc" as you want, and you don't actually need to own the domain
 ## name.
-ldap_base_dn = "dc=company,dc=com"
+ldap_base_dn = "dc=uberbase,dc=com"
 
 ## Admin username.
 ## For the LDAP interface, a value of "admin" here will create the LDAP

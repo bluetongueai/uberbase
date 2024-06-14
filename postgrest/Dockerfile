@@ -8,9 +8,11 @@ RUN apt update && apt install -y \
 
 WORKDIR /app
 
+ENV UBERBASE_PLATFORM ${UBERBASE_PLATFORM:-aarch64}
+
 # TODO - parameterize the arch
-RUN curl -LO https://github.com/PostgREST/postgrest/releases/download/v12.2.0/postgrest-v12.2.0-ubuntu-aarch64.tar.xz
-RUN tar -xvf postgrest-v12.2.0-ubuntu-aarch64.tar.xz
+RUN curl -LO https://github.com/PostgREST/postgrest/releases/download/v12.2.0/postgrest-v12.2.0-ubuntu-${UBERBASE_PLATFORM}.tar.xz
+RUN tar -xvf postgrest-v12.2.0-ubuntu-${UBERBASE_PLATFORM}.tar.xz
 RUN chmod +x postgrest
 
 ENTRYPOINT ["/app/postgrest", "/etc/postgrest.conf"]
