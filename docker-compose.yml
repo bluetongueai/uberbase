@@ -85,7 +85,7 @@ services:
       - ${UBERBASE_HTTPS_PORT}:443
     volumes:
       - ./configs/caddy/Caddyfile:/etc/caddy/Caddyfile
-      - ./logs/caddy:/var/log
+      - ./logs/caddy:/var/log/caddy
     depends_on:
       - authelia
     env_file:
