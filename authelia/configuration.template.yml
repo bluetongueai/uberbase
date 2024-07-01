@@ -801,7 +801,7 @@ session:
     # username: 'authelia'
 
     ## Password can also be set using a secret: https://www.authelia.com/c/secrets
-    # password: 'authelia'
+    password: '${UBERBASE_REDIS_SECRET}'
 
     ## This is the Redis DB Index https://redis.io/commands/select (sometimes referred to as database number, DB, etc).
     # database_index: 0
