@@ -49,7 +49,7 @@ services:
   lldap:
     image: lldap/lldap:latest-debian-rootless
     container_name: lldap
-    entrypoint: /docker-entrypoint.sh run --config-file /data/lldap_config.toml > /var/log/lldap/lldap.log 2>&1
+    entrypoint: /bin/bash -c "/docker-entrypoint.sh run --config-file /data/lldap_config.toml > /var/log/lldap/lldap.log 2>&1"
     ports:
       - ${UBERBASE_LLDAP_ADMIN_PORT}:17170
     depends_on:
