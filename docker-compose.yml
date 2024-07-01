@@ -38,7 +38,7 @@ services:
       - .env
     ports:
       - ${UBERBASE_POSTGRES_PORT}:5432
-    entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all
+    entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all -c log_filename=postgresql.log
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init/:/docker-entrypoint-initdb.d/
@@ -103,6 +103,7 @@ services:
       - .env
     volumes:
       - ./configs/postgrest/postgrest.conf:/etc/postgrest.conf
+      - ./logs/postgrest:/var/log/postgrest
     ports:
       - ${UBERBASE_POSTGREST_PORT}:3000
     depends_on:
