@@ -28,12 +28,12 @@
 }
 
 auth.${UBERBASE_DOMAIN} {
-  # import cors auth.${UBERBASE_DOMAIN}
+  import cors auth.${UBERBASE_DOMAIN}
   reverse_proxy authelia:${UBERBASE_AUTHELIA_PORT}
 }
 
 ${UBERBASE_DOMAIN} {
-  # import cors auth.${UBERBASE_DOMAIN}
+  import cors ${UBERBASE_DOMAIN}
 
   handle /api/v1/functions {
     forward_auth authelia:${UBERBASE_AUTHELIA_PORT} {

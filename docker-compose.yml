@@ -16,10 +16,11 @@ services:
     container_name: redis
     volumes:
       - redis_data:/data
-      - ./logs/redis:/var/log:Z
+      - ./logs/redis:/var/log/redis:Z
     ports:
       - ${UBERBASE_REDIS_PORT}:6379
     restart: unless-stopped
+    entrypoint: redis-server --requirepass ${UBERBASE_REDIS_SECRET} --logfile /var/log/redis/redis.log --loglevel verbose
     env_file:
       - .env
     networks:
@@ -28,6 +29,7 @@ services:
   postgres:
     image: postgres:16.2
     container_name: postgres
+    user: postgres
     environment:
       POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
       POSTGRES_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
@@ -36,24 +38,25 @@ services:
       - .env
     ports:
       - ${UBERBASE_POSTGRES_PORT}:5432
+    entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init/:/docker-entrypoint-initdb.d/
-      - ./logs/postgres:/var/log
+      - ./logs/postgres:/var/log/postgres
     networks:
       - net
 
   lldap:
     image: lldap/lldap:latest-debian-rootless
     container_name: lldap
-    entrypoint: "/bin/bash -C /app/docker-entrypoint.sh &> /var/log/lldap.log"
+    entrypoint: /docker-entrypoint.sh run --config-file /data/lldap_config.toml > /var/log/lldap/lldap.log 2>&1
     ports:
       - ${UBERBASE_LLDAP_ADMIN_PORT}:17170
     depends_on:
       - postgres
     volumes:
       - ./configs/lldap:/data
-      - ./logs/lldap:/var/log
+      - ./logs/lldap:/var/log/lldap
     env_file:
       - .env
     networks:

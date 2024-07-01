@@ -71,20 +71,36 @@ When you bring up `uberbase` for the first time, it will create a handful of Pos
 It will bootstrap in an administrator user and start the platform. You will see several Docker containers
 start if you set up everything correctly.
 
-Access the `uberbase` studio at `http://localhost:5000`. The credentials default to: `admin`/`password`
+`uberbase` is configured by default to listen on the domain `uberbase.dev`. You can add this to your `/etc/hosts` file
+to access the platform locally.
 
-The Postgrest API can be accessed at `http://localhost:3000`. You'll need to generate an API key to authenticate your
+```bash
+echo "127.0.0.1 uberbase.dev" | sudo tee -a /etc/hosts
+```
+
+#### Overriding Defaults
+
+`uberbase` is configured entirely through environment variables. You can override the defaults by setting the relevant 
+environment variable either in the `docker run` command or in the `docker-compose.yml` file.
+
+Refer to the `.env` file for a list of all the environment variables that can be set.
+
+### Accessing the Platform
+
+Access the `uberbase` studio at `http://uberbase.dev:5000`. The credentials default to: `admin`/`password`
+
+The Postgrest API can be accessed at `http://uberbase.dev:3000`. You'll need to generate an API key to authenticate your
 API request from the `uberbase` studio. Pass your credentials in the `ApiKey` header to make an application
 authenticated request to the database.
 
-The functions API can be accessed at `http://localhost:6000`. After building your function code into a Docker image,
+The functions API can be accessed at `http://uberbase.dev:6000`. After building your function code into a Docker image,
 POST a request to the functions API:
 
 ```bash
 curl \
   -X POST \
   -H ApiKey=your-api-key \
-  http://localhost:6000/api/v1/functions/docker/whalesay?vm=small&args="Hello world!"
+  http://uberbase.dev:6000/api/v1/functions/docker/whalesay?vm=small&args="Hello world!"
 ```
 
 When interacting with the services in the platform, everything is secured through either the API key for anonymous
@@ -97,8 +113,15 @@ curl \
   -X POST \
   -H ApiKey=your-api-key \
   -H Authorization=Bearer your-jwt-token \
-  http://localhost:6000/api/v1/functions/docker/whalesay?vm=small&args="Hello world!"
+  http://uberbase.dev:6000/api/v1/functions/docker/whalesay?vm=small&args="Hello world!"
 ```
+
+Authelia can be accessed at `http://uberbase.dev:9091`. The default credentials are `admin`/`password`.
+
+LLDAP can be accessed at `http://uberbase.dev:17170`. The default credentials are `admin`/`password`.
+
+Should you need to access the Postgres database directly, you can do so by connecting to `uberbase.dev:5432`
+with the default credentials as specified in the `.env` file.
 
 ## Integrating
 
