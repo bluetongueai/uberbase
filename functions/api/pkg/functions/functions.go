@@ -75,12 +75,16 @@ func Init(config FunctionsConfig) error {
 		os.Exit(0)
 	}()
 
-	log.Println("container pool initialized")
 	return nil
 }
 
 func Shutdown() {
-	fClient.nerdctl("compose", "down")
+	log.Printf("shutting down compose stack")
+	stdout, stderr, err := fClient.nerdctl("compose", "down")
+	if err != nil {
+		log.Fatalf("failed to shutdown cleanly: %v\n%s\n%s", err, stdout, stderr)
+	}
+	log.Printf("compose stack shutdown: %s", stdout)
 }
 
 func Run(imageName string, params ...string) (string, error) {

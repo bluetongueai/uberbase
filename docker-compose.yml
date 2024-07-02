@@ -16,7 +16,7 @@ services:
     container_name: redis
     volumes:
       - redis_data:/data
-      - ./logs/redis:/var/log/redis:Z
+      - ${PWD}/logs:/var/log/redis:Z
     ports:
       - ${UBERBASE_REDIS_PORT}:6379
     restart: unless-stopped
@@ -38,11 +38,11 @@ services:
       - .env
     ports:
       - ${UBERBASE_POSTGRES_PORT}:5432
-    entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all -c log_filename=postgresql.log
+    #entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all -c log_filename=postgresql.log
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init/:/docker-entrypoint-initdb.d/
-      - ./logs/postgres:/var/log/postgres
+      - ${PWD}/postgres/init/00_init_ultrabase.sql:/docker-entrypoint-initdb.d/00_init_ultrabase.sql
+      - ${PWD}/logs:/var/log/postgres
     networks:
       - net
 
@@ -55,8 +55,8 @@ services:
     depends_on:
       - postgres
     volumes:
-      - ./configs/lldap:/data
-      - ./logs/lldap:/var/log/lldap
+      - ${PWD}/configs/lldap:/data
+      - ${PWD}/logs:/var/log/lldap
     env_file:
       - .env
     networks:
@@ -67,8 +67,8 @@ services:
     ports:
       - ${UBERBASE_AUTHELIA_PORT}:9091
     volumes:
-      - ./configs/authelia:/config
-      - ./logs/authelia:/var/log
+      - ${PWD}/configs/authelia:/config
+      - ${PWD}/logs:/var/log/authelia
     env_file:
       - .env
     depends_on:
@@ -84,8 +84,8 @@ services:
       - ${UBERBASE_HTTP_PORT}:80
       - ${UBERBASE_HTTPS_PORT}:443
     volumes:
-      - ./configs/caddy/Caddyfile:/etc/caddy/Caddyfile
-      - ./logs/caddy:/var/log/caddy
+      - ${PWD}/configs/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ${PWD}/logs:/var/log/caddy
     depends_on:
       - authelia
     env_file:
@@ -102,8 +102,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./configs/postgrest/postgrest.conf:/etc/postgrest.conf
-      - ./logs/postgrest:/var/log/postgrest
+      - ${PWD}/configs/postgrest/postgrest.conf:/etc/postgrest.conf
+      - ${PWD}/logs:/var/log/postgrest
     ports:
       - ${UBERBASE_POSTGREST_PORT}:3000
     depends_on:
