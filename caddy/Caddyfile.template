@@ -73,11 +73,12 @@ ${UBERBASE_DOMAIN} {
     reverse_proxy postgrest:${UBERBASE_POSTGREST_PORT}
   }
 
-  handle_path /studio {
-    forward_auth authelia:${UBERBASE_AUTHELIA_PORT} {
-      uri /api/verify?rd=https://auth.${UBERBASE_DOMAIN}
-      copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
-    }
-    reverse_proxy studio:3000
+  redir /studio /studio/
+  handle /studio/* {
+    #forward_auth authelia:${UBERBASE_AUTHELIA_PORT} {
+    #  uri /api/verify?rd=https://auth.${UBERBASE_DOMAIN}
+    #  copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+    #}
+    reverse_proxy 127.0.0.1:3000
   }
 }

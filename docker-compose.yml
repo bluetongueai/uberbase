@@ -115,7 +115,8 @@ services:
     image: uberbase/studio:latest
     build:
       context: ./studio
-    #ports:
+    ports:
+      - 3000:3000
     #  - ${UBERBASE_STUDIO_PORT}:3000
     env_file:
       - .env

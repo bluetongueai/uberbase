@@ -4,3 +4,4 @@ pyrotechnic/pyrotechnic
 keys/*
 functions/config.json
 logs/**/*.log
+functions/api/bin/*
