@@ -79,6 +79,6 @@ ${UBERBASE_DOMAIN} {
     #  uri /api/verify?rd=https://auth.${UBERBASE_DOMAIN}
     #  copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
     #}
-    reverse_proxy 127.0.0.1:3000
+    reverse_proxy studio:3000
   }
 }
