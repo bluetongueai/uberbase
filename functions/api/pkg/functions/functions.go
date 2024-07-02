@@ -4,8 +4,6 @@ import (
 	"errors"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 )
 
 type FunctionsConfig struct {
@@ -57,23 +55,16 @@ func Init(config FunctionsConfig) error {
 	if err != nil {
 		log.Fatalf("failed to build compose stack: %v\n%s\n%s", err, stdOut, stdErr)
 	}
-	log.Printf("compose stack built: %s", stdOut)
+	log.Printf("compose stack built: %s", stdErr)
 	log.Printf("booting compose stack")
 	stdOut, stdErr, err = fClient.nerdctl("compose", "up", "-d")
 	if err != nil {
 		log.Fatalf("failed to start compose stack: %v\n%s\n%s", err, stdOut, stdErr)
 	}
-	log.Printf("compose stack started: %s", stdOut)
+	log.Printf("compose stack started: %s", stdErr)
 
-	// capture sigs
-	log.Printf("hooking into OS signals to gracefully shutdown")
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-sigChan
-		Shutdown()
-		os.Exit(0)
-	}()
+	stdOut, stdErr, err = fClient.nerdctl("compose", "ps")
+	log.Printf("compose stack status: %s\n%s", stdOut, stdErr)
 
 	return nil
 }

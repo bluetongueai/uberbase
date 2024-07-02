@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/gin-gonic/gin"
 	f "github.com/tgittos/uberbase/functions/api/pkg/functions"
@@ -28,6 +30,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to read config file: %v", err)
 	}
+
+	// capture sigs
+	log.Printf("hooking into OS signals to gracefully shutdown")
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		log.Printf("received signal, shutting down")
+		f.Shutdown()
+		os.Exit(0)
+	}()
 
 	f.Init(f.FunctionsConfig{
 		Build:  apiConfig.Build,

@@ -751,7 +751,7 @@ session:
 
       ## Sets the Cookie SameSite value. Possible options are none, lax, or strict.
       ## Please read https://www.authelia.com/c/session#same_site
-      # same_site: 'lax'
+      same_site: 'lax'
 
       ## The value for inactivity, expiration, and remember_me are in seconds or the duration common syntax.
       ## All three of these values affect the cookie/session validity period. Longer periods are considered less secure
