@@ -5,7 +5,15 @@
   ],
   "mounts": [
     "source=/dev,destination=/dev,type=bind,consistency=cached"
-  ]
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "GitHub.copilot-chat",
+        "GitHub.copilot"
+      ]
+    }
+  }
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
   // Configure tool-specific properties.

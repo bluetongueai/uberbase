@@ -8,9 +8,7 @@ ARG USER_GID=$USER_UID
 RUN apt update && apt install -y \
     build-essential sudo \
     qemu-system qemu-utils \
-    jq bash vim sed tar git curl gettext supervisor \
-    postgresql-client postgresql \
-    nodejs npm
+    jq bash tar git curl gettext
 
 COPY --from=golang:1.22.3 /usr/local/go/ /usr/local/go/
 ENV PATH="/usr/local/go/bin:${PATH}"
@@ -25,6 +23,9 @@ RUN make install
 RUN groupadd $USERNAME
 RUN useradd -s /bin/bash  -g $USERNAME -m $USERNAME
 RUN echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME
+
+# remove lima src
+RUN rm -rf /lima
 
 USER $USERNAME
 WORKDIR /uberbase
