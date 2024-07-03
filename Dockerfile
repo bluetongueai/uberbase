@@ -31,9 +31,7 @@ WORKDIR /uberbase
 
 ADD . .
 
-RUN ./bin/build
 RUN sudo chmod +x bin/start
-
 RUN sudo chown -R uberbase:uberbase .
 
 EXPOSE ${UBERBASE_HTTP_PORT}

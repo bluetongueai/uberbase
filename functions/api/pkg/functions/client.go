@@ -70,7 +70,7 @@ func (c client) command(bin string, args ...string) (string, string, error) {
 	cmd.Stderr = stderrBuffer
 	err := cmd.Run()
 	if err != nil {
-		return "", "", err
+		return stdoutBuffer.String(), stderrBuffer.String(), err
 	}
 	return stdoutBuffer.String(), stderrBuffer.String(), nil
 }
