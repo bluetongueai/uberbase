@@ -5,6 +5,7 @@ export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 
 mkdir -p configs/casdoor
 envsubst < ./casdoor/app.template.conf > ./configs/casdoor/app.conf
+envsubst < ./casdoor/init_data.template.json > ./configs/casdoor/init_data.json
 mkdir -p configs/caddy
 envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
 mkdir -p configs/functions

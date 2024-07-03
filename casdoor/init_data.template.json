@@ -1,0 +1,27 @@
+{
+  "organizations": [
+    {
+      "owner": "${UBERBASE_ADMIN_USERNAME}",
+      "name": "uberbase",
+      "displayName": "Uberbase",
+      "websiteUrl": "${UBERBASE_DOMAIN}",
+      "masterPassword": "${UBERBASE_ADMIN_PASSWORD}",
+      "enableSoftDeletion": true,
+      "isProfilePublic": false
+    }
+  ],
+  "users": [
+    {
+      "owner": "${UBERBASE_ADMIN_USERNAME}",
+      "name": "${UBERBASE_ADMIN_USERNAME}",
+      "type": "normal-user",
+      "password": "${UBERBASE_ADMIN_PASSWORD}",
+      "displayName": "Uberbase Admin",
+      "email": "${UBERBASE_ADMIN_EMAIL}",
+      "ranking": 1,
+      "isAdmin": true,
+      "isForbidden": false,
+      "isDeleted": false
+    }
+  ]
+}
