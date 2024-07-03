@@ -56,7 +56,6 @@ services:
       - ${UBERBASE_MINIO_CONSOLE_PORT}:9001
     volumes:
       - minio_data:/data
-      - ${PWD}/minio/config:/root/.minio
     env_file:
       - .env
     networks:
@@ -64,6 +63,7 @@ services:
 
   casdoor:
     image: casbin/casdoor:latest
+    container_name: casdoor
     ports:
       - ${UBERBASE_CASDOOR_PORT}:8000
     volumes:
@@ -80,6 +80,7 @@ services:
 
   caddy:
     image: caddy:2.8.4
+    container_name: caddy
     ports:
       - ${UBERBASE_HTTP_PORT}:80
       - ${UBERBASE_HTTPS_PORT}:443
@@ -95,6 +96,7 @@ services:
 
   postgrest:
     image: uberbase/postgrest:latest
+    container_name: postgrest
     build:
       context: ./postgrest
       args:
