@@ -75,10 +75,10 @@ ${UBERBASE_DOMAIN} {
 
   redir /studio /studio/
   handle /studio/* {
-    #forward_auth authelia:${UBERBASE_AUTHELIA_PORT} {
-    #  uri /api/verify?rd=https://auth.${UBERBASE_DOMAIN}
-    #  copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
-    #}
+    forward_auth authelia:${UBERBASE_AUTHELIA_PORT} {
+      uri /api/verify?rd=https://auth.${UBERBASE_DOMAIN}
+      copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+    }
     reverse_proxy http://studio:3000
   }
 }
