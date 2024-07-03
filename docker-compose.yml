@@ -68,7 +68,6 @@ services:
       - ${UBERBASE_CASDOOR_PORT}:8000
     volumes:
       - ${PWD}/configs/casdoor:/conf
-      - ${PWD}/configs/casdoor/init_data.json:/init_data.json
       - ${PWD}/logs:/var/log/casdoor
     env_file:
       - .env

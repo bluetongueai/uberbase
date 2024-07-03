@@ -12,7 +12,7 @@
   ],
   "users": [
     {
-      "owner": "${UBERBASE_ADMIN_USERNAME}",
+      "owner": "uberbase",
       "name": "${UBERBASE_ADMIN_USERNAME}",
       "type": "normal-user",
       "password": "${UBERBASE_ADMIN_PASSWORD}",
