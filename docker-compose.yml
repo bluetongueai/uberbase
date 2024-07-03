@@ -51,26 +51,26 @@ services:
     image: quay.io/minio/minio
     container_name: minio
     command: server /data --console-address ":9001"
-    ports:
-      - ${UBERBASE_MINIO_PORT}:9000
-      - ${UBERBASE_MINIO_CONSOLE_PORT}:9001
     volumes:
       - minio_data:/data
     env_file:
       - .env
+    #ports:
+    #  - ${UBERBASE_MINIO_PORT}:9000
+    #  - ${UBERBASE_MINIO_CONSOLE_PORT}:9001
     networks:
       - net
 
   casdoor:
     image: casbin/casdoor:latest
     container_name: casdoor
-    ports:
-      - ${UBERBASE_CASDOOR_PORT}:8000
     volumes:
       - ${PWD}/configs/casdoor:/conf
       - ${PWD}/logs:/var/log/casdoor
     env_file:
       - .env
+    ports:
+      - ${UBERBASE_CASDOOR_PORT}:8000
     depends_on:
       - postgres
       - redis
