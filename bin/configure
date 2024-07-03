@@ -3,14 +3,12 @@
 source .env
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 
-mkdir -p configs/authelia
-envsubst < ./authelia/configuration.template.yml > ./configs/authelia/configuration.yml
+mkdir -p configs/casdoor
+envsubst < ./casdoor/app.template.conf > ./configs/casdoor/app.conf
 mkdir -p configs/caddy
 envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
 mkdir -p configs/functions
 envsubst < ./functions/config.template.json > ./configs/functions/config.json
-mkdir -p configs/lldap
-envsubst < ./lldap/config.template.toml > ./configs/lldap/lldap_config.toml
 mkdir -p configs/postgrest
 envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
 mkdir -p configs/lima
