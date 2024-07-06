@@ -4,13 +4,23 @@ source .env
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 
 mkdir -p configs/casdoor
-envsubst < ./casdoor/app.template.conf > ./configs/casdoor/app.conf
-envsubst < ./casdoor/init_data.template.json > ./configs/casdoor/init_data.json
+if [ ! -f ./configs/casdoor/app.conf ]; then
+  envsubst < ./casdoor/app.template.conf > ./configs/casdoor/app.conf
+fi
+if [ ! -f ./configs/casdoor/init_data.json ]; then
+  envsubst < ./casdoor/init_data.template.json > ./configs/casdoor/init_data.json
+fi
 mkdir -p configs/caddy
-envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
+if [ ! -f ./configs/caddy/Caddyfile ]; then
+  envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
+fi
 mkdir -p configs/functions
-envsubst < ./functions/config.template.json > ./configs/functions/config.json
+if [ ! -f ./configs/functions/config.json ]; then
+  envsubst < ./functions/config.template.json > ./configs/functions/config.json
+fi
 mkdir -p configs/postgrest
-envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
+if [ ! -f ./configs/postgrest/postgrest.conf ]; then
+  envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
+fi
 mkdir -p configs/lima
 envsubst < ./lima/ubuntu.template.yaml > ./configs/lima/ubuntu.yaml

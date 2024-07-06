@@ -5,7 +5,9 @@ images:
   arch: "aarch64"
 
 mounts:
-- location: "${PWD}"
+- location: "~"
   writable: true
 - location: "/tmp/lima"
   writable: true
+mountType: "virtiofs"
+

@@ -1,6 +1,8 @@
 package functions
 
-import "log"
+import (
+	"log"
+)
 
 func initLima() {
 	log.Printf("initializing lima VM platform")
@@ -19,7 +21,8 @@ func initLima() {
 
 	if stdOut == "" {
 		log.Println("no lima containers found, creating one")
-		stdOut, stdErr, err = client.command("/bin/bash", "-c", "cat", "./configs/lima/ubuntu.yaml", "|", "limactl", "--tty=false", "create", "--name=default", "-")
+		// read ubuntu lima config
+		stdOut, stdErr, err = client.limactl("--tty=false", "create", "--name=default", "./configs/lima/ubuntu.yaml")
 		if err != nil {
 			log.Fatalf("failed to create lima VM: %v\n%s\n%s", err, stdOut, stdErr)
 		}

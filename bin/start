@@ -5,7 +5,7 @@ if [ $platform = "x86_64" ]; then
 fi
 source .env
 ./bin/configure
-echo -e "\033[33mBuilding api for platform...\033[0m"
+echo -e "\033[33mBuilding api for platform $platform...\033[0m"
 ./bin/build
 echo -e "\033[33mStarting uberbase...\033[0m"
 
