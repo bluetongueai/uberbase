@@ -17,9 +17,8 @@ var nameCounts = make(map[string]int)
 var c client
 
 type client struct {
-	limaPath    string
-	limactlPath string
-	nerdctlPath string
+	podmanPath    		string
+	podmanComposePath string
 }
 
 func newClient() (client, error) {
@@ -31,28 +30,21 @@ func newClient() (client, error) {
 
 	log.Println("detecting container runtime")
 
-	// check for lima
-	path, err := exec.LookPath("lima")
+	// check for podman
+	path, err := exec.LookPath("podman")
 	if err != nil {
-		return client, fmt.Errorf("lima not found")
+		return client, fmt.Errorf("podman not found")
 	}
-	client.limaPath = path
+	client.podmanPath = path
 
-	// check for limactl
-	path, err = exec.LookPath("limactl")
+	// check for podman-compose
+	path, err = exec.LookPath("podman-compose")
 	if err != nil {
-		return client, fmt.Errorf("limactl not found")
+		return client, fmt.Errorf("podman-compose not found")
 	}
-	client.limactlPath = path
+	client.podmanComposePath = path
 
-	// check for nerdctl.lima
-	path, err = exec.LookPath("nerdctl.lima")
-	if err != nil {
-		return client, fmt.Errorf("nerdctl.lima not found")
-	}
-	client.nerdctlPath = path
-
-	log.Printf("using paths: lima=%s limactl=%s nerdctl=%s", client.limaPath, client.limactlPath, client.nerdctlPath)
+	log.Printf("using paths: podman=%s, podman-compose=%s", client.podmanPath, client.podmanComposePath)
 
 	c = client
 
@@ -75,22 +67,18 @@ func (c client) command(bin string, args ...string) (string, string, error) {
 	return stdoutBuffer.String(), stderrBuffer.String(), nil
 }
 
-func (c client) lima(args ...string) (string, string, error) {
-	return c.command(c.limaPath, args...)
+func (c client) podman(args ...string) (string, string, error) {
+	return c.command(c.podmanPath, args...)
 }
 
-func (c client) limactl(args ...string) (string, string, error) {
-	return c.command(c.limactlPath, args...)
-}
-
-func (c client) nerdctl(args ...string) (string, string, error) {
-	return c.command(c.nerdctlPath, args...)
+func (c client) podmanCompose(args ...string) (string, string, error) {
+	return c.command(c.podmanComposePath, args...)
 }
 
 func (c client) Pull(imageName string, force bool) error {
 	if force || !c.imageExists(imageName) {
 		log.Printf("fetching containerd image %s", imageName)
-		_, _, err := c.nerdctl("pull", imageName)
+		_, _, err := c.podman("pull", imageName)
 		if err != nil {
 			log.Printf("failed to pull image %s: %v", imageName, err)
 			return err
@@ -102,7 +90,7 @@ func (c client) Pull(imageName string, force bool) error {
 }
 
 func (c client) imageExists(imageName string) bool {
-	_, _, err := c.nerdctl("inspect", imageName)
+	_, _, err := c.podman("inspect", imageName)
 	if err != nil {
 		return false
 	}
@@ -111,7 +99,7 @@ func (c client) imageExists(imageName string) bool {
 
 func (c client) Build(imageName, dockerfile string, context string) error {
 	log.Printf("building containerd image %s", imageName)
-	_, _, err := c.nerdctl("build", "-t", imageName, "-f", dockerfile, context)
+	_, _, err := c.podman("build", "-t", imageName, "-f", dockerfile, context)
 	if err != nil {
 		log.Printf("failed to build image %s: %v", imageName, err)
 		return err
@@ -122,7 +110,7 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 
 func (c client) Run(imageName string, params ...string) (string, string, error) {
 	imageParams := append([]string{"run", imageName}, params...)
-	stdout, stderr, err := c.nerdctl(imageParams...)
+	stdout, stderr, err := c.podman(imageParams...)
 	if err != nil {
 		log.Printf("failed to run image %s: %v", imageName, err)
 		return "", "", err

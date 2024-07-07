@@ -1,8 +1,5 @@
 #! /bin/bash
 platform=$(uname -m)
-if [ $platform = "x86_64" ]; then
-  sudo chmod 666 /dev/kvm
-fi
 source .env
 ./bin/configure
 echo -e "\033[33mBuilding api for platform $platform...\033[0m"
