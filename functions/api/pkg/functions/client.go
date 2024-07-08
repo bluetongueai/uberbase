@@ -17,8 +17,7 @@ var nameCounts = make(map[string]int)
 var c client
 
 type client struct {
-	podmanPath    		string
-	podmanComposePath string
+	dockerPath        string
 }
 
 func newClient() (client, error) {
@@ -30,21 +29,14 @@ func newClient() (client, error) {
 
 	log.Println("detecting container runtime")
 
-	// check for podman
-	path, err := exec.LookPath("podman")
+	// check for docker
+	path, err := exec.LookPath("docker")
 	if err != nil {
-		return client, fmt.Errorf("podman not found")
+		return client, fmt.Errorf("docker not found")
 	}
-	client.podmanPath = path
+	client.dockerPath = path
 
-	// check for podman-compose
-	path, err = exec.LookPath("podman-compose")
-	if err != nil {
-		return client, fmt.Errorf("podman-compose not found")
-	}
-	client.podmanComposePath = path
-
-	log.Printf("using paths: podman=%s, podman-compose=%s", client.podmanPath, client.podmanComposePath)
+	log.Printf("using paths: docker=%s", client.dockerPath)
 
 	c = client
 
@@ -67,18 +59,19 @@ func (c client) command(bin string, args ...string) (string, string, error) {
 	return stdoutBuffer.String(), stderrBuffer.String(), nil
 }
 
-func (c client) podman(args ...string) (string, string, error) {
-	return c.command(c.podmanPath, args...)
+func (c client) docker(args ...string) (string, string, error) {
+	return c.command(c.dockerPath, args...)
 }
 
-func (c client) podmanCompose(args ...string) (string, string, error) {
-	return c.command(c.podmanComposePath, args...)
+func (c client) dockerCompose(args ...string) (string, string, error) {
+	cmdArgs := append([]string{"compose"}, args...)
+	return c.command(c.dockerPath, cmdArgs...)
 }
 
 func (c client) Pull(imageName string, force bool) error {
 	if force || !c.imageExists(imageName) {
 		log.Printf("fetching containerd image %s", imageName)
-		_, _, err := c.podman("pull", imageName)
+		_, _, err := c.docker("pull", imageName)
 		if err != nil {
 			log.Printf("failed to pull image %s: %v", imageName, err)
 			return err
@@ -90,7 +83,7 @@ func (c client) Pull(imageName string, force bool) error {
 }
 
 func (c client) imageExists(imageName string) bool {
-	_, _, err := c.podman("inspect", imageName)
+	_, _, err := c.docker("inspect", imageName)
 	if err != nil {
 		return false
 	}
@@ -99,7 +92,7 @@ func (c client) imageExists(imageName string) bool {
 
 func (c client) Build(imageName, dockerfile string, context string) error {
 	log.Printf("building containerd image %s", imageName)
-	_, _, err := c.podman("build", "-t", imageName, "-f", dockerfile, context)
+	_, _, err := c.docker("build", "-t", imageName, "-f", dockerfile, context)
 	if err != nil {
 		log.Printf("failed to build image %s: %v", imageName, err)
 		return err
@@ -110,7 +103,7 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 
 func (c client) Run(imageName string, params ...string) (string, string, error) {
 	imageParams := append([]string{"run", imageName}, params...)
-	stdout, stderr, err := c.podman(imageParams...)
+	stdout, stderr, err := c.docker(imageParams...)
 	if err != nil {
 		log.Printf("failed to run image %s: %v", imageName, err)
 		return "", "", err

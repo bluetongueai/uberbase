@@ -12,7 +12,10 @@
 		"--privileged"
 	],
 	"mounts": [
-		"source=/dev,destination=/dev,type=bind"
+		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+		"source=./logs,target=/workspaces/uberbase/logs,type=bind",
+		"source=./postgres/init/00_init_ultrabase.sql,target=/workspaces/uberbase/postgres/init/00_init_ultrabase.sql,type=bind",
+		"source=./configs,target=/workspaces/uberbase/configs,type=bind",
 	],
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

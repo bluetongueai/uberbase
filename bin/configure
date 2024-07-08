@@ -22,5 +22,3 @@ mkdir -p configs/postgrest
 if [ ! -f ./configs/postgrest/postgrest.conf ]; then
   envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
 fi
-mkdir -p configs/lima
-envsubst < ./lima/ubuntu.template.yaml > ./configs/lima/ubuntu.yaml
