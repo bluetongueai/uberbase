@@ -2,21 +2,15 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
 {
 	"name": "Uberbase Dev",
-	"build": {
-		// Sets the run context to one level up instead of the .devcontainer folder.
-		"context": "..",
-		// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
-		"dockerfile": "../Dockerfile"
-	},
-	"runArgs": [
-		"--privileged"
-	],
-	"mounts": [
-		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-		"source=./logs,target=/workspaces/uberbase/logs,type=bind",
-		"source=./postgres/init/00_init_ultrabase.sql,target=/workspaces/uberbase/postgres/init/00_init_ultrabase.sql,type=bind",
-		"source=./configs,target=/workspaces/uberbase/configs,type=bind",
-	],
+	"image": "mcr.microsoft.com/devcontainers/universal:linux",
+	//"build": {
+	//	// Sets the run context to one level up instead of the .devcontainer folder.
+	//	"context": "..",
+	//	// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
+	//	"dockerfile": "../Dockerfile"
+	//},
+	"runArgs": [],
+	"mounts": [],
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.

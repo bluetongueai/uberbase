@@ -1,0 +1,12 @@
+#! /bin/bash
+
+arch=$(uname -m)
+
+curl -LO https://github.com/firecracker-microvm/firecracker/releases/download/v1.7.0/firecracker-v1.7.0-$arch.tgz
+tar -xvzf firecracker-v1.7.0-$arch.tgz
+chmod +x release-v1.7.0-$arch/*
+sudo mv release-v1.7.0-$arch/* /usr/local/bin/.
+rm -Rf release-v1.7.0-$arch
+sudo ln -s /usr/local/bin/firecracker-v1.7.0-$arch /usr/local/bin/firecracker
+sudo ln -s /usr/local/bin/jailer-v1.7.0-$arch /usr/local/bin/jailer
+
