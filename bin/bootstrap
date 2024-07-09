@@ -10,3 +10,5 @@ rm -Rf release-v1.7.0-$arch
 sudo ln -s /usr/local/bin/firecracker-v1.7.0-$arch /usr/local/bin/firecracker
 sudo ln -s /usr/local/bin/jailer-v1.7.0-$arch /usr/local/bin/jailer
 
+curl -LO https://github.com/containerd/nerdctl/releases/download/v2.0.0-rc.0/nerdctl-full-2.0.0-rc.0-linux-amd64.tar.gz
+sudo tar -xvzf nerdctl-full-2.0.0-rc.0-linux-amd64.tar.gz -C /usr/local
