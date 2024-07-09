@@ -36,7 +36,7 @@ sudo ip link set dev "$TAP_DEV" up
 cat <<EOF > vmconfig.json
 {
   "boot-source": {
-    "kernel_image_path": "hello-vmlinux.bin",
+    "kernel_image_path": "vmlinux.bin",
     "boot_args": "$KERNEL_BOOT_ARGS"
   },
   "drives": [
