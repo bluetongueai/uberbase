@@ -60,5 +60,6 @@ cat <<EOF > vmconfig.json
   }
 }
 EOF
+
 # start firecracker
 sudo firecracker --no-api --config-file vmconfig.json

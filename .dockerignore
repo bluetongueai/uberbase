@@ -1,8 +1,9 @@
 .git
 configs/*
 */**/node_modules
-pyrotechnic/pyrotechnic
 keys/*
 functions/config.json
 logs/**/*.log
 functions/api/bin/*
+linux.git
+vmlinux.bin
