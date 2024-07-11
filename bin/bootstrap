@@ -1,14 +1,28 @@
 #! /bin/bash
 
-arch=$(uname -m)
+#arch=$(uname -m)
+#
+#curl -LO https://github.com/firecracker-microvm/firecracker/releases/download/v1.7.0/firecracker-v1.7.0-$arch.tgz
+#tar -xvzf firecracker-v1.7.0-$arch.tgz
+#chmod +x release-v1.7.0-$arch/*
+#sudo mv release-v1.7.0-$arch/* /usr/local/bin/.
+#rm -Rf release-v1.7.0-$arch
+#sudo ln -s /usr/local/bin/firecracker-v1.7.0-$arch /usr/local/bin/firecracker
+#sudo ln -s /usr/local/bin/jailer-v1.7.0-$arch /usr/local/bin/jailer
+#
+#curl -LO https://github.com/containerd/nerdctl/releases/download/v2.0.0-rc.0/nerdctl-full-2.0.0-rc.0-linux-amd64.tar.gz
+#sudo tar -xvzf nerdctl-full-2.0.0-rc.0-linux-amd64.tar.gz -C /usr/local
+#
 
-curl -LO https://github.com/firecracker-microvm/firecracker/releases/download/v1.7.0/firecracker-v1.7.0-$arch.tgz
-tar -xvzf firecracker-v1.7.0-$arch.tgz
-chmod +x release-v1.7.0-$arch/*
-sudo mv release-v1.7.0-$arch/* /usr/local/bin/.
-rm -Rf release-v1.7.0-$arch
-sudo ln -s /usr/local/bin/firecracker-v1.7.0-$arch /usr/local/bin/firecracker
-sudo ln -s /usr/local/bin/jailer-v1.7.0-$arch /usr/local/bin/jailer
+cd /firecracker-containerd
+sed -i 's/grep -Po/grep -Eo/g' Makefile
+make build
+make install
+make firecracker
+make install-firecracker
 
-curl -LO https://github.com/containerd/nerdctl/releases/download/v2.0.0-rc.0/nerdctl-full-2.0.0-rc.0-linux-amd64.tar.gz
-sudo tar -xvzf nerdctl-full-2.0.0-rc.0-linux-amd64.tar.gz -C /usr/local
+mkdir -p /var/lib/firecracker-containerd
+mkdir -p /var/lib/firecracker-containerd/runtime
+mkdir -p /var/lib/firecracker-containerd/snapshotter/devmapper
+
+
