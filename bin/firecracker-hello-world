@@ -4,9 +4,9 @@ set -eu
 ARCH=$(uname -m)
 
 # download a kernel and filesystem image
-[ -e hello-vmlinux.bin ] || curl -O https://s3.amazonaws.com/spec.ccfc.min/img/hello/kernel/hello-vmlinux.bin
-[ -e ubuntu-22.04.ext4 ] || curl -O https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.9/${ARCH}/ubuntu-22.04.ext4
-[ -e hello-id_rsa ] || curl -o hello-id_rsa https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.9/${ARCH}/ubuntu-22.04.id_rsa
+[ -e /var/lib/firecracker-containerd/runtime/hello-vmlinux.bin ] || curl -O https://s3.amazonaws.com/spec.ccfc.min/img/hello/kernel/hello-vmlinux.bin --output /var/lib/firecracker-containerd/runtime
+[ -e /var/lib/firecracker-containerd/runtime/ubuntu-22.04.ext4 ] || curl -O https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.9/${ARCH}/ubuntu-22.04.ext4 --output /var/lib/firecracker-containerd/runtime
+[ -e /var/lib/firecracker-containerd/runtime/hello-id_rsa ] || curl -o hello-id_rsa https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.9/${ARCH}/ubuntu-22.04.id_rsa --output /var/lib/firecracker-containerd/runtime
 
 
 # Download the ssh key for the rootfs
@@ -62,4 +62,4 @@ cat <<EOF > vmconfig.json
 EOF
 
 # start firecracker
-sudo firecracker --no-api --config-file vmconfig.json
+# sudo firecracker --no-api --config-file vmconfig.json
