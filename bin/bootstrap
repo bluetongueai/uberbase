@@ -14,15 +14,22 @@
 #sudo tar -xvzf nerdctl-full-2.0.0-rc.0-linux-amd64.tar.gz -C /usr/local
 #
 
-cd /firecracker-containerd
-sed -i 's/grep -Po/grep -Eo/g' Makefile
-make build
-make install
-make firecracker
-make install-firecracker
+bin/configure
 
 mkdir -p /var/lib/firecracker-containerd
 mkdir -p /var/lib/firecracker-containerd/runtime
 mkdir -p /var/lib/firecracker-containerd/snapshotter/devmapper
 
+[ -e /var/lib/firecracker-containerd/runtime/hello-vmlinux.bin ] || curl -o /var/lib/firecracker-containerd/runtime/hello-vmlinux.bin https://s3.amazonaws.com/spec.ccfc.min/img/hello/kernel/hello-vmlinux.bin
+[ -e /var/lib/firecracker-containerd/runtime/ubuntu-22.04.ext4 ] || curl -o /var/lib/firecracker-containerd/runtime/ubuntu-22.04.ext4 https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.9/${ARCH}/ubuntu-22.04.ext4
+[ -e /var/lib/firecracker-containerd/runtime/hello-id_rsa ] || curl -o /var/lib/firecracker-containerd/runtime/ubuntu-22.04.id_rsa https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.9/${ARCH}/ubuntu-22.04.id_rsa
 
+pushd /firecracker-containerd
+sed -i 's/grep -Po/grep -Eo/g' Makefile
+make all
+make install
+make firecracker
+make install-firecracker
+popd
+
+bin/devmapper
