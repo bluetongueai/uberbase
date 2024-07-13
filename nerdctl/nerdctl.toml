@@ -1,0 +1,3 @@
+address = "unix:///run/firecracker-containerd/containerd.sock"
+namespace = "default"
+snapshotter = "devmapper"
