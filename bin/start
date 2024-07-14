@@ -6,6 +6,8 @@ echo "Starting on $UBERBASE_PLATFORM"
 
 # set up if we need it
 ./bin/setup
+./bin/configure
+./bin/build
 
 # start the uberbaes api
 ./functions/api/bin/api ./configs/functions/config.json 2>&1 | tee ./logs/uberbase.log
