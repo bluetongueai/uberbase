@@ -38,7 +38,7 @@ fi
 
 # start firecracker-containerd
 echo "starting docker"
-dockerd --config /etc/containerd/config.toml 2>/dev/null &
+dockerd 2>/dev/null &
 sleep 5
 
 # finish firecracker-containerd install
@@ -57,4 +57,4 @@ echo "shutting down dockerd"
 ps aux | grep dockerd | grep -v grep | awk '{print $1}' | xargs kill -9
 
 export UBERBASE_BOOTSTRAPPED=true
-printf "\n##\n# Bootstrapped!\nexport UBERBASE_BOOTSTRAPPED=true" >> .env
+# printf "\n##\n# Bootstrapped!\nexport UBERBASE_BOOTSTRAPPED=true" >> .env
