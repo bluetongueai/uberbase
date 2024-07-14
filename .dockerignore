@@ -1,1 +1,10 @@
+.git
+configs/*
 */**/node_modules
+keys/*
+functions/config.json
+logs/**/*.log
+functions/api/bin/*
+linux.git
+vmlinux.bin
+data/*

@@ -1,7 +1,6 @@
 package functions
 
 import (
-	"errors"
 	"log"
 	"os"
 )
@@ -12,18 +11,14 @@ type FunctionsConfig struct {
 }
 
 var fClient client
-var initialized bool
 
 func Init(config FunctionsConfig) error {
 	log.SetOutput(os.Stdout)
 
-	initLima()
-	initialized = true
-
 	var err error
 	fClient, err = newClient()
 	if err != nil {
-		log.Fatalf("could not get lima/containerd client")
+		log.Fatalf("could not get docker client")
 	}
 
 	// build all images configured
@@ -51,19 +46,19 @@ func Init(config FunctionsConfig) error {
 
 	// start the docker compose stack
 	log.Printf("building compose stack")
-	stdOut, stdErr, err := fClient.nerdctl("compose", "build")
+	stdOut, stdErr, err := fClient.dockerCompose("build")
 	if err != nil {
 		log.Fatalf("failed to build compose stack: %v\n%s\n%s", err, stdOut, stdErr)
 	}
 	log.Printf("compose stack built: %s", stdErr)
 	log.Printf("booting compose stack")
-	stdOut, stdErr, err = fClient.nerdctl("compose", "up", "-d")
+	stdOut, stdErr, err = fClient.dockerCompose("up", "-d")
 	if err != nil {
 		log.Fatalf("failed to start compose stack: %v\n%s\n%s", err, stdOut, stdErr)
 	}
 	log.Printf("compose stack started: %s", stdErr)
 
-	stdOut, stdErr, err = fClient.nerdctl("compose", "ps")
+	stdOut, stdErr, err = fClient.dockerCompose("ps")
 	log.Printf("compose stack status: %s\n%s", stdOut, stdErr)
 
 	return nil
@@ -71,7 +66,7 @@ func Init(config FunctionsConfig) error {
 
 func Shutdown() {
 	log.Printf("shutting down compose stack")
-	stdout, stderr, err := fClient.nerdctl("compose", "down")
+	stdout, stderr, err := fClient.dockerCompose("down")
 	if err != nil {
 		log.Fatalf("failed to shutdown cleanly: %v\n%s\n%s", err, stdout, stderr)
 	}
@@ -79,10 +74,6 @@ func Shutdown() {
 }
 
 func Run(imageName string, params ...string) (string, error) {
-	if !initialized {
-		return "", errors.New("functions not initialized")
-	}
-
 	stdOut, stdErr, err := fClient.Run(imageName, params...)
 	if err != nil {
 		return "", err

@@ -53,58 +53,14 @@ minio.${UBERBASE_DOMAIN} {
   reverse_proxy minio:${UBERBASE_MINIO_PORT}
 }
 
-# optional - expose your lldap instance (not recommended in production)
-lldap.${UBERBASE_DOMAIN} {
-  import cors lldap.${UBERBASE_DOMAIN}
-  reverse_proxy lldap:${UBERBASE_LLDAP_PORT}
-}
-
-# optional - expose your postgres instance (not recommended in production)
-postgres.${UBERBASE_DOMAIN} {
-  import cors postgres.${UBERBASE_DOMAIN}
-  reverse_proxy postgres:${UBERBASE_POSTGRES_PORT}
-}
-
-# optional - expose your redis instance
-redis.${UBERBASE_DOMAIN} {
-  import cors redis.${UBERBASE_DOMAIN}
-  reverse_proxy redis:${UBERBASE_REDIS_PORT}
-}
-
 ${UBERBASE_DOMAIN} {
   import cors ${UBERBASE_DOMAIN}
 
   handle /api/v1/functions {
-<<<<<<< HEAD
-    #forward_auth authelia:${UBERBASE_AUTHELIA_PORT} {
-    #  uri /api/verify?rd=https://auth.${UBERBASE_DOMAIN}
-    #  copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
-    #}
- 
-=======
->>>>>>> main
     reverse_proxy 127.0.0.1:${UBERBASE_FUNCTIONS_PORT}
   }
 
   handle /api/v1 {
-<<<<<<< HEAD
-    forward_auth authelia:${UBERBASE_AUTHELIA_PORT} {
-      uri /api/verify?rd=https://auth.${UBERBASE_DOMAIN}
-      copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
-    }
     reverse_proxy postgrest:${UBERBASE_POSTGREST_PORT}
   }
-
-  redir /studio /studio/
-  handle /studio/* {
-    #forward_auth authelia:${UBERBASE_AUTHELIA_PORT} {
-    #  uri /api/verify?rd=https://auth.${UBERBASE_DOMAIN}
-    #  copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
-    #}
-    reverse_proxy http://studio:3000
-  }
-=======
-    reverse_proxy postgrest:${UBERBASE_POSTGREST_PORT}
-  }
->>>>>>> main
 }

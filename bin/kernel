@@ -1,0 +1,11 @@
+#! /bin/bash
+
+git clone --depth=1 --branch=v5.10 https://github.com/torvalds/linux.git linux.git
+cd linux.git
+cp ../kernel/.config .
+arch=$(uname -m)
+if [ "$arch" = "x86_64" ]; then
+     make vmlinux
+elif [ "$arch" = "aarch64" ]; then
+     make image
+fi
