@@ -30,11 +30,5 @@ make all
 make install
 make firecracker
 make install-firecracker
-popd
-
-pushd /nerdctl
-curl -LO https://github.com/containerd/nerdctl/releases/download/v1.7.6/nerdctl-1.7.6-linux-amd64.tar.gz
-tar -xf nerdctl-1.7.6-linux-amd64.tar.gz -C /usr/local/bin nerdctl
-install -d /etc/nerdctl
-rm /nerdctl/*
+make demo-network
 popd

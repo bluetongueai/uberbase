@@ -6,5 +6,11 @@
   "cpu_template": "T2",
   "log_fifo": "fc-logs.fifo",
   "log_levels": ["debug"],
-  "metrics_fifo": "fc-metrics.fifo"
+  "metrics_fifo": "fc-metrics.fifo",
+  "default_network_interfaces": [{
+    "CNIConfig": {
+      "NetworkName": "fcnet",
+      "InterfaceName": "veth0"
+    }
+  }]
 }
