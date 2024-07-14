@@ -1,0 +1,60 @@
+#! /bin/bash
+
+source .env
+
+# if the system is already bootstrapped, exit
+if [ "$UBERBASE_BOOTSTRAPPED" = "true" ]; then
+  exit 0
+fi
+
+ARCH=$(uname -m)
+
+# download firecracker kernel, rootfs and ssh key
+[ -e /var/lib/firecracker-containerd/runtime/hello-vmlinux.bin ] || curl -Lo /var/lib/firecracker-containerd/runtime/hello-vmlinux.bin https://s3.amazonaws.com/spec.ccfc.min/img/hello/kernel/hello-vmlinux.bin
+[ -e /var/lib/firecracker-containerd/runtime/ubuntu-22.04.ext4 ] || curl -Lo /var/lib/firecracker-containerd/runtime/ubuntu-22.04.ext4 https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.9/${ARCH}/ubuntu-22.04.ext4
+[ -e /var/lib/firecracker-containerd/runtime/hello-id_rsa ] || curl -Lo /var/lib/firecracker-containerd/runtime/ubuntu-22.04.id_rsa https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.9/${ARCH}/ubuntu-22.04.id_rsa
+
+# build firecracker-containerd
+pushd /firecracker-containerd
+echo "building firecracker-containerd"
+sed -i 's/grep -Po/grep -Eo/g' Makefile
+make all
+echo "installing firecracker-containerd"
+make install
+popd
+
+# create a 20GB thin pool using loop devices (dev only, not for production)
+echo "creating thin pool"
+if [ -e ${PWD}/data/lvm ]; then
+  echo "thin pool already exists"
+else
+  modprobe dm_thin_pool
+  fallocate -l 20G ${PWD}/data/lvm
+  lo_dev=$(losetup -f)
+  losetup $lo_dev ${PWD}/data/lvm
+  vgcreate vg0 $lo_dev
+  lvcreate -L 18G --thinpool containerd-thinpool vg0
+fi
+
+# start firecracker-containerd
+echo "starting docker"
+dockerd --config /etc/containerd/config.toml 2>/dev/null &
+sleep 5
+
+# finish firecracker-containerd install
+echo 
+pushd /firecracker-containerd
+echo "building firecracker"
+make firecracker
+echo "installing firecracker"
+make install-firecracker
+echo "installing CNI networking plugins"
+make demo-network
+popd
+
+# shut down firecracker-container
+echo "shutting down dockerd"
+ps aux | grep dockerd | grep -v grep | awk '{print $1}' | xargs kill -9
+
+export UBERBASE_BOOTSTRAPPED=true
+printf "\n##\n# Bootstrapped!\nexport UBERBASE_BOOTSTRAPPED=true" >> .env
