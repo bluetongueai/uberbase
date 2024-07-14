@@ -70,7 +70,7 @@ func (c client) dockerCompose(args ...string) (string, string, error) {
 
 func (c client) Pull(imageName string, force bool) error {
 	if force || !c.imageExists(imageName) {
-		log.Printf("fetching containerd image %s", imageName)
+		log.Printf("fetching docker image %s", imageName)
 		_, _, err := c.docker("pull", imageName)
 		if err != nil {
 			log.Printf("failed to pull image %s: %v", imageName, err)
@@ -91,7 +91,7 @@ func (c client) imageExists(imageName string) bool {
 }
 
 func (c client) Build(imageName, dockerfile string, context string) error {
-	log.Printf("building containerd image %s", imageName)
+	log.Printf("building docker image %s", imageName)
 	_, _, err := c.docker("build", "-t", imageName, "-f", dockerfile, context)
 	if err != nil {
 		log.Printf("failed to build image %s: %v", imageName, err)

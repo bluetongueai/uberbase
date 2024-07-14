@@ -1,7 +1,0 @@
-#! /bin/bash
-
-sudo dd if=/dev/zero of=debian.ext4 bs=1M count=1500
-mkfs.ext3 debian.ext4
-sudo mkdir -p /tmp/alpine
-sudo mount debian.ext4 /tmp/alpine
-docker run -it --rm -v /tmp/alpine:/alpine bluetongueai/functions-base

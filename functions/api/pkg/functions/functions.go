@@ -18,7 +18,7 @@ func Init(config FunctionsConfig) error {
 	var err error
 	fClient, err = newClient()
 	if err != nil {
-		log.Fatalf("could not get lima/containerd client")
+		log.Fatalf("could not get docker client")
 	}
 
 	// build all images configured
