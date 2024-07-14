@@ -18,8 +18,8 @@ services:
     volumes:
       - redis_data:/data
       - ${PWD}/logs:/var/log/redis:Z
-    #ports:
-    #  - ${UBERBASE_REDIS_PORT}:6379
+    ports:
+      - ${UBERBASE_REDIS_PORT}:6379
     restart: unless-stopped
     entrypoint: redis-server --requirepass ${UBERBASE_REDIS_SECRET} --logfile /var/log/redis/redis.log --loglevel verbose
     env_file:
@@ -37,8 +37,8 @@ services:
       POSTGRES_DB: ${UBERBASE_POSTGRES_DATABASE}
     env_file:
       - .env
-    #ports:
-    #  - ${UBERBASE_POSTGRES_PORT}:5432
+    ports:
+      - ${UBERBASE_POSTGRES_PORT}:5432
     # entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all -c log_filename=postgresql.log
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -55,9 +55,9 @@ services:
       - minio_data:/data
     env_file:
       - .env
-    #ports:
-    #  - ${UBERBASE_MINIO_PORT}:9000
-    #  - ${UBERBASE_MINIO_CONSOLE_PORT}:9001
+    ports:
+      - ${UBERBASE_MINIO_PORT}:9000
+      - ${UBERBASE_MINIO_CONSOLE_PORT}:9001
     networks:
       - net
 
@@ -105,8 +105,8 @@ services:
     volumes:
       - ${PWD}/configs/postgrest/postgrest.conf:/etc/postgrest.conf
       - ${PWD}/logs:/var/log/postgrest
-    #ports:
-    #  - ${UBERBASE_POSTGREST_PORT}:3000
+    ports:
+      - ${UBERBASE_POSTGREST_PORT}:3000
     depends_on:
       - postgres
     networks:
