@@ -1,4 +1,3 @@
-#FROM docker:dind-rootless
 FROM docker:dind
 
 USER root
