@@ -2,12 +2,11 @@ package functions
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"log"
 	"os/exec"
 	"time"
-	//"strings"
+	"strings"
 
 	"github.com/goombaio/namegenerator"
 )
@@ -45,10 +44,10 @@ func newClient() (client, error) {
 }
 
 func (c client) command(bin string, args ...string) (string, string, error) {
-	ctx := context.Background()
 	var cmd *exec.Cmd
 	log.Printf("running command %s %v", bin, args)
-	cmd = exec.CommandContext(ctx, bin, args...)
+	argString := strings.Join(args, " ")
+	cmd = exec.Command(bin, argString)
 	stdoutBuffer := &bytes.Buffer{}
 	stderrBuffer := &bytes.Buffer{}
 	cmd.Stdout = stdoutBuffer
@@ -103,8 +102,6 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 }
 
 func (c client) Run(imageName string, params ...string) (string, string, error) {
-	// paramString := strings.Join(params, " ")
-	// imageParams := append([]string{"run", "--rm", imageName}, paramString)
 	imageParams := append([]string{"run", "--rm", "-i", imageName}, params...)
 	stdout, stderr, err := c.docker(imageParams...)
 	if err != nil {
