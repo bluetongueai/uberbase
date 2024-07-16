@@ -106,7 +106,7 @@ func (c client) Run(imageName string, params ...string) (string, string, error) 
 	stdout, stderr, err := c.docker(imageParams...)
 	if err != nil {
 		log.Printf("failed to run image %s: %v", imageName, err)
-		return "", "", err
+		return stdout, stderr, err
 	}
 	return stdout, stderr, nil
 }

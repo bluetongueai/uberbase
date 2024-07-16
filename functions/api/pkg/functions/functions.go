@@ -73,15 +73,6 @@ func Shutdown() {
 	log.Printf("compose stack shutdown: %s", stdout)
 }
 
-func Run(imageName string, params ...string) (string, error) {
-	stdOut, stdErr, err := fClient.Run(imageName, params...)
-	if err != nil {
-		return "", err
-	}
-
-	if stdErr != "" {
-		return stdErr, nil
-	}
-
-	return stdOut, nil
+func Run(imageName string, params ...string) (string, string, error) {
+	return fClient.Run(imageName, params...)
 }

@@ -79,10 +79,20 @@ func functionHandler(c *gin.Context) {
 
 	log.Printf("running function %s with params %v", name, image_params)
 
-	output, err := f.Run(name, image_params...)
+	stdout, stderr, err := f.Run(name, image_params...)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": "failure",
+			"error": err.Error(),
+			"stdout": stdout,
+			"stderr": stderr,
+		})
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"output": output})
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"stdout": stdout,
+		"stderr": stderr,
+	})
 }
