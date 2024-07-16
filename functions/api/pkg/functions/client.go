@@ -105,7 +105,7 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 func (c client) Run(imageName string, params ...string) (string, string, error) {
 	// paramString := strings.Join(params, " ")
 	// imageParams := append([]string{"run", "--rm", imageName}, paramString)
-	imageParams := append([]string{"run", "--rm", imageName}, params...)
+	imageParams := append([]string{"run", "--rm", "-i", imageName}, params...)
 	stdout, stderr, err := c.docker(imageParams...)
 	if err != nil {
 		log.Printf("failed to run image %s: %v", imageName, err)
