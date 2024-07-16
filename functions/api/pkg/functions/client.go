@@ -6,7 +6,6 @@ import (
 	"log"
 	"os/exec"
 	"time"
-	"strings"
 
 	"github.com/goombaio/namegenerator"
 )
@@ -46,8 +45,7 @@ func newClient() (client, error) {
 func (c client) command(bin string, args ...string) (string, string, error) {
 	var cmd *exec.Cmd
 	log.Printf("running command %s %v", bin, args)
-	argString := strings.Join(args, " ")
-	cmd = exec.Command(bin, argString)
+	cmd = exec.Command(bin, args...)
 	stdoutBuffer := &bytes.Buffer{}
 	stderrBuffer := &bytes.Buffer{}
 	cmd.Stdout = stdoutBuffer

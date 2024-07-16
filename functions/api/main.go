@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
+	"fmt"
 	"syscall"
+	"strings"
+	"io"
 
 	"github.com/gin-gonic/gin"
 	f "github.com/tgittos/uberbase/functions/api/pkg/functions"
@@ -18,6 +20,10 @@ type ApiConfig struct {
 	Port  int      `json:"port"`
 	Build string   `json:"build"`
 	Pull  []string `json:"pull"`
+}
+
+type FunctionRequest struct {
+	Args	[]string 	`json:args`
 }
 
 func main() {
@@ -69,17 +75,23 @@ func readConfigFile(configPath string) (ApiConfig, error) {
 
 func functionHandler(c *gin.Context) {
 	name := strings.TrimPrefix(c.Param("name"), "/")
+	var request FunctionRequest
 
-	params := c.PostForm("params")
-
-	image_params := []string{}
-	if params != "" {
-		image_params = strings.Split(params, " ")
+  err := c.BindJSON(&request);
+	if err != nil && err != io.EOF {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("invalid JSON request: %v", err),
+		})
+		return
 	}
 
-	log.Printf("running function %s with params %v", name, image_params)
+	args := []string{}
+	if request.Args != nil {
+		args = request.Args
+	}
+	log.Printf("running image %s with args %v", name, args)
+	stdout, stderr, err := f.Run(name, args...)
 
-	stdout, stderr, err := f.Run(name, image_params...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status": "failure",
