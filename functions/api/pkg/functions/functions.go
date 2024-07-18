@@ -37,6 +37,16 @@ func Init(config FunctionsConfig) error {
 		}
 	}
 
+	// login to docker registry if DOCKER_TOKEN set on environment
+	if os.Getenv("DOCKER_TOKEN") != "" && os.Getenv("DOCKER_USER") != "" {
+		log.Printf("logging into docker registry")
+		stdOut, stdErr, err := fClient.docker("login", "-u", os.Getenv("DOCKER_USER"), "-p", os.Getenv("DOCKER_TOKEN"))
+		if err != nil {
+			log.Fatalf("failed to login to docker registry: %v\n%s\n%s", err, stdOut, stdErr)
+		}
+		log.Printf("logged into docker registry: %s", stdOut)
+	}
+
 	for _, image := range config.Images {
 		fClient.Pull(image, false)
 		if err != nil {
