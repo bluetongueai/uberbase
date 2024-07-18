@@ -50,7 +50,7 @@ func main() {
 
 	f.Init(f.FunctionsConfig{
 		Build:  apiConfig.Build,
-		Images: apiConfig.Pull,
+		Pull: apiConfig.Pull,
 	})
 
 	s := h.NewServer(h.ServerConfig{

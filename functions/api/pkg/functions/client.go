@@ -66,18 +66,18 @@ func (c client) dockerCompose(args ...string) (string, string, error) {
 	return c.command(c.dockerPath, cmdArgs...)
 }
 
-func (c client) Pull(imageName string, force bool) error {
+func (c client) Pull(imageName string, force bool) (string, string, error) {
 	if force || !c.imageExists(imageName) {
 		log.Printf("fetching docker image %s", imageName)
-		_, _, err := c.docker("pull", imageName)
+		stdout, stderr, err := c.docker("pull", imageName)
 		if err != nil {
 			log.Printf("failed to pull image %s: %v", imageName, err)
-			return err
+			return stdout, stderr, err
 		}
 		log.Printf("successfully pulled image %s", imageName)
-		return nil
+		return stdout, stderr, nil
 	}
-	return nil
+	return "image already exists, force not specified", "", nil
 }
 
 func (c client) imageExists(imageName string) bool {

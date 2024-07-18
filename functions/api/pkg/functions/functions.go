@@ -7,7 +7,7 @@ import (
 
 type FunctionsConfig struct {
 	Build  string
-	Images []string
+	Pull []string
 }
 
 var fClient client
@@ -47,11 +47,13 @@ func Init(config FunctionsConfig) error {
 		log.Printf("logged into docker registry: %s", stdOut)
 	}
 
-	for _, image := range config.Images {
-		fClient.Pull(image, false)
+	for _, image := range config.Pull {
+		log.Printf("pulling image %s", image)
+		stdOut, stdErr, err := fClient.Pull(image, false)
 		if err != nil {
-			log.Fatalf("failed to pull image %s: %v", image, err)
+			log.Fatalf("failed to pull image: %v\n%s\n%s", err, stdOut, stdErr)
 		}
+		log.Printf("pulled image %s: %s", image, stdOut)
 	}
 
 	// start the docker compose stack
