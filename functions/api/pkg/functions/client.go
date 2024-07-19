@@ -99,11 +99,14 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 	return nil
 }
 
-func (c client) Run(imageName string, detatch bool, params ...string) (string, string, error) {
+func (c client) Run(imageName string, detatch bool, env map[string]string, params ...string) (string, string, error) {
 	// imageParams := append([]string{"run", "--rm", "-i", imageName}, params...)
 	imageParams := []string{"run", "--rm", "-i"}
 	if detatch {
 		imageParams = append(imageParams, "-d")
+	}
+	for k, v := range env {
+		imageParams = append(imageParams, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
 	imageParams = append(append(imageParams, imageName), params...)
 	stdout, stderr, err := c.docker(imageParams...)

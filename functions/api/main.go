@@ -23,8 +23,9 @@ type ApiConfig struct {
 }
 
 type FunctionRequest struct {
-	Args		*[]string 	`json:args`
-	Detatch *bool			`json:detatch`
+	Args		*[]string 					`json:args`
+	Detatch *bool								`json:detatch`
+	Env 		*map[string]string	`json:env`
 }
 
 type StopRequest struct {
@@ -129,7 +130,11 @@ func functionHandler(c *gin.Context) {
 	if request.Detatch != nil {
 		detatch = *request.Detatch
 	}
-	stdout, stderr, err := f.Run(name, detatch, args...)
+	env := map[string]string{}
+	if request.Env != nil {
+		env = *request.Env
+	}
+	stdout, stderr, err := f.Run(name, detatch, env, args...)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
