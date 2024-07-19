@@ -99,11 +99,26 @@ func (c client) Build(imageName, dockerfile string, context string) error {
 	return nil
 }
 
-func (c client) Run(imageName string, params ...string) (string, string, error) {
-	imageParams := append([]string{"run", "--rm", "-i", imageName}, params...)
+func (c client) Run(imageName string, detatch bool, params ...string) (string, string, error) {
+	// imageParams := append([]string{"run", "--rm", "-i", imageName}, params...)
+	imageParams := []string{"run", "--rm", "-i"}
+	if detatch {
+		imageParams = append(imageParams, "-d")
+	}
+	imageParams = append(append(imageParams, imageName), params...)
 	stdout, stderr, err := c.docker(imageParams...)
 	if err != nil {
 		log.Printf("failed to run image %s: %v", imageName, err)
+		return stdout, stderr, err
+	}
+	return stdout, stderr, nil
+}
+
+func (c client) Stop(containerId string) (string, string, error) {
+	// imageParams := append([]string{"run", "--rm", "-i", imageName}, params...)
+	stdout, stderr, err := c.docker("stop", containerId)
+	if err != nil {
+		log.Printf("failed to stop container %s: %v", containerId, err)
 		return stdout, stderr, err
 	}
 	return stdout, stderr, nil

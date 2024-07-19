@@ -23,7 +23,12 @@ type ApiConfig struct {
 }
 
 type FunctionRequest struct {
-	Args	[]string 	`json:args`
+	Args		*[]string 	`json:args`
+	Detatch *bool			`json:detatch`
+}
+
+type StopRequest struct {
+	ContainerId string `json:containerId`
 }
 
 func main() {
@@ -56,7 +61,8 @@ func main() {
 	s := h.NewServer(h.ServerConfig{
 		Port: apiConfig.Port,
 	})
-	s.AddRoute("POST", "/api/v1/functions/*name", functionHandler)
+	s.AddRoute("POST", "/api/v1/functions/stop", stopHandler)
+	s.AddRoute("POST", "/api/v1/functions/run/*name", functionHandler)
 	s.Start()
 }
 
@@ -73,10 +79,39 @@ func readConfigFile(configPath string) (ApiConfig, error) {
 	return data, nil
 }
 
+func stopHandler(c *gin.Context) {
+	var request StopRequest
+  err := c.BindJSON(&request);
+	if err != nil && err != io.EOF {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("invalid JSON request: %v", err),
+		})
+		return
+	}
+
+	stdout, stderr, err := f.Stop(request.ContainerId)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": "failure",
+			"error": err.Error(),
+			"stdout": stdout,
+			"stderr": stderr,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"stdout": stdout,
+		"stderr": stderr,
+	})
+}
+
 func functionHandler(c *gin.Context) {
 	name := strings.TrimPrefix(c.Param("name"), "/")
-	var request FunctionRequest
 
+	var request FunctionRequest
   err := c.BindJSON(&request);
 	if err != nil && err != io.EOF {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -87,10 +122,14 @@ func functionHandler(c *gin.Context) {
 
 	args := []string{}
 	if request.Args != nil {
-		args = request.Args
+		args = *request.Args
 	}
 	log.Printf("running image %s with args %v", name, args)
-	stdout, stderr, err := f.Run(name, args...)
+	detatch := false
+	if request.Detatch != nil {
+		detatch = *request.Detatch
+	}
+	stdout, stderr, err := f.Run(name, detatch, args...)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

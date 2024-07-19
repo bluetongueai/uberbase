@@ -85,6 +85,10 @@ func Shutdown() {
 	log.Printf("compose stack shutdown: %s", stdout)
 }
 
-func Run(imageName string, params ...string) (string, string, error) {
-	return fClient.Run(imageName, params...)
+func Run(imageName string, detatch bool, params ...string) (string, string, error) {
+	return fClient.Run(imageName, detatch, params...)
+}
+
+func Stop(containerId string) (string, string, error) {
+	return fClient.Stop(containerId)
 }

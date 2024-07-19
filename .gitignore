@@ -7,3 +7,4 @@ functions/api/bin/*
 linux.git
 vmlinux.bin
 data
+*/**/.DS_Store
