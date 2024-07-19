@@ -49,7 +49,7 @@ func Init(config FunctionsConfig) error {
 
 	for _, image := range config.Pull {
 		log.Printf("pulling image %s", image)
-		stdOut, stdErr, err := fClient.Pull(image, false)
+		stdOut, stdErr, err := fClient.Pull(image, true)
 		if err != nil {
 			log.Fatalf("failed to pull image: %v\n%s\n%s", err, stdOut, stdErr)
 		}
