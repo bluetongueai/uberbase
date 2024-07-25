@@ -45,6 +45,11 @@ services:
       - ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data:Z
       - ${PWD}/postgres/init:/docker-entrypoint-initdb.d
       - ${PWD}/logs:/var/log/postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${UBERBASE_POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - net
 
@@ -74,8 +79,8 @@ services:
     ports:
       - ${UBERBASE_CASDOOR_PORT}:8000
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
     networks:
       - net
 
