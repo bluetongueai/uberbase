@@ -16,7 +16,7 @@ services:
     image: redis:alpine
     container_name: redis
     volumes:
-      - redis_data:/data
+      - ${UBERBASE_REDIS_STORAGE}:/data
       - ${PWD}/logs:/var/log/redis:Z
     ports:
       - ${UBERBASE_REDIS_PORT}:6379
@@ -41,7 +41,7 @@ services:
       - ${UBERBASE_POSTGRES_PORT}:5432
     # entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all -c log_filename=postgresql.log
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data
       - ${PWD}/postgres/init/00_init_ultrabase.sql:/docker-entrypoint-initdb.d/00_init_ultrabase.sql
       - ${PWD}/logs:/var/log/postgres
     networks:
@@ -52,7 +52,7 @@ services:
     container_name: minio
     command: server /data --console-address ":9001"
     volumes:
-      - minio_data:/data
+      - ${UBERBASE_MINIO_STORAGE}:/data
     env_file:
       - .env
     ports:
