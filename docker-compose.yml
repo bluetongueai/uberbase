@@ -42,7 +42,7 @@ services:
     # entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all -c log_filename=postgresql.log
     volumes:
       - ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data
-      - ${PWD}/postgres/init/00_init_ultrabase.sql:/docker-entrypoint-initdb.d/00_init_ultrabase.sql
+      - ${PWD}/postgres/init:/docker-entrypoint-initdb.d
       - ${PWD}/logs:/var/log/postgres
     networks:
       - net
