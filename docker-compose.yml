@@ -15,6 +15,7 @@ services:
   redis:
     image: redis:alpine
     container_name: redis
+    hostname: redis
     user: "0"
     volumes:
       - ${UBERBASE_REDIS_STORAGE}:/data:Z
@@ -31,6 +32,7 @@ services:
   postgres:
     image: postgres:16.2
     container_name: postgres
+    hostname: postgres
     user: "999"
     environment:
       POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
@@ -56,6 +58,7 @@ services:
   minio:
     image: quay.io/minio/minio
     container_name: minio
+    hostname: minio
     user: "0"
     command: server /data --console-address ":9001"
     volumes:
@@ -74,6 +77,7 @@ services:
   casdoor:
     image: casbin/casdoor:latest
     container_name: casdoor
+    hostname: casdoor
     volumes:
       - ${PWD}/configs/casdoor:/conf
       - ${PWD}/logs:/var/log/casdoor
@@ -90,6 +94,7 @@ services:
   caddy:
     image: caddy:2.8.4
     container_name: caddy
+    hostname: caddy
     ports:
       - ${UBERBASE_HTTP_PORT}:80
       - ${UBERBASE_HTTPS_PORT}:443
@@ -106,6 +111,7 @@ services:
   postgrest:
     image: uberbase/postgrest:latest
     container_name: postgrest
+    hostname: postgrest
     build:
       context: ./postgrest
       args:
