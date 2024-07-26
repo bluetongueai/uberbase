@@ -66,7 +66,7 @@ func Init(config FunctionsConfig) error {
 	}
 	log.Printf("compose stack started: %s", stdErr)
 
-	stdOut, stdErr, err = fClient.dockerCompose("ps")
+	stdOut, stdErr, _ = fClient.dockerCompose("ps")
 	log.Printf("compose stack status: %s\n%s", stdOut, stdErr)
 
 	return nil
