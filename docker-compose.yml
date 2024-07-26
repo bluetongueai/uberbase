@@ -109,7 +109,7 @@ services:
       - net
 
   postgrest:
-    image: uberbase/postgrest:latest
+    image: bluetongueai/postgrest:latest
     container_name: postgrest
     hostname: postgrest
     build:
