@@ -6,8 +6,8 @@ import (
 )
 
 type FunctionsConfig struct {
-	Build  string
-	Pull []string
+	Build string
+	Pull  []string
 }
 
 var fClient client
@@ -57,14 +57,10 @@ func Init(config FunctionsConfig) error {
 	}
 
 	// start the docker compose stack
-	log.Printf("building compose stack")
-	stdOut, stdErr, err := fClient.dockerCompose("build")
-	if err != nil {
-		log.Fatalf("failed to build compose stack: %v\n%s\n%s", err, stdOut, stdErr)
-	}
-	log.Printf("compose stack built: %s", stdErr)
+	log.Printf("pulling compose stack")
+	fClient.dockerCompose("pull")
 	log.Printf("booting compose stack")
-	stdOut, stdErr, err = fClient.dockerCompose("up", "-d")
+	stdOut, stdErr, err := fClient.dockerCompose("up", "-d")
 	if err != nil {
 		log.Fatalf("failed to start compose stack: %v\n%s\n%s", err, stdOut, stdErr)
 	}
