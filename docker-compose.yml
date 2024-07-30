@@ -13,15 +13,17 @@ volumes:
 services:
 
   redis:
-    image: redis:alpine
+    image: redis/redis-stack:latest
     container_name: redis
+    hostname: redis
+    user: "0"
     volumes:
-      - redis_data:/data
+      - ${UBERBASE_REDIS_STORAGE}:/data:Z
       - ${PWD}/logs:/var/log/redis:Z
-    #ports:
-    #  - ${UBERBASE_REDIS_PORT}:6379
+    ports:
+      - ${UBERBASE_REDIS_PORT}:6379
     restart: unless-stopped
-    entrypoint: redis-server --requirepass ${UBERBASE_REDIS_SECRET} --logfile /var/log/redis/redis.log --loglevel verbose
+    # entrypoint: redis-server --requirepass ${UBERBASE_REDIS_SECRET} --logfile /var/log/redis/redis.log --loglevel verbose
     env_file:
       - .env
     networks:
@@ -30,40 +32,52 @@ services:
   postgres:
     image: postgres:16.2
     container_name: postgres
-    user: postgres
+    hostname: postgres
+    user: "999"
     environment:
       POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
       POSTGRES_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
       POSTGRES_DB: ${UBERBASE_POSTGRES_DATABASE}
     env_file:
       - .env
-    #ports:
-    #  - ${UBERBASE_POSTGRES_PORT}:5432
+    ports:
+      - ${UBERBASE_POSTGRES_PORT}:5432
     # entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all -c log_filename=postgresql.log
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ${PWD}/postgres/init/00_init_ultrabase.sql:/docker-entrypoint-initdb.d/00_init_ultrabase.sql
+      - ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data:Z
+      - ${PWD}/postgres/init:/docker-entrypoint-initdb.d
       - ${PWD}/logs:/var/log/postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${UBERBASE_POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - net
 
   minio:
     image: quay.io/minio/minio
     container_name: minio
+    hostname: minio
+    user: "0"
     command: server /data --console-address ":9001"
     volumes:
-      - minio_data:/data
+      - ${UBERBASE_MINIO_STORAGE}:/data:Z
     env_file:
       - .env
-    #ports:
-    #  - ${UBERBASE_MINIO_PORT}:9000
-    #  - ${UBERBASE_MINIO_CONSOLE_PORT}:9001
+    environment:
+      MINIO_ROOT_USER: ${UBERBASE_MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${UBERBASE_MINIO_ROOT_PASSWORD}
+    ports:
+      - ${UBERBASE_MINIO_PORT}:9000
+      - ${UBERBASE_MINIO_CONSOLE_PORT}:9001
     networks:
       - net
 
   casdoor:
     image: casbin/casdoor:latest
     container_name: casdoor
+    hostname: casdoor
     volumes:
       - ${PWD}/configs/casdoor:/conf
       - ${PWD}/logs:/var/log/casdoor
@@ -72,14 +86,15 @@ services:
     ports:
       - ${UBERBASE_CASDOOR_PORT}:8000
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
     networks:
       - net
 
   caddy:
     image: caddy:2.8.4
     container_name: caddy
+    hostname: caddy
     ports:
       - ${UBERBASE_HTTP_PORT}:80
       - ${UBERBASE_HTTPS_PORT}:443
@@ -94,8 +109,9 @@ services:
       - net
 
   postgrest:
-    image: uberbase/postgrest:latest
+    image: bluetongueai/postgrest:latest
     container_name: postgrest
+    hostname: postgrest
     build:
       context: ./postgrest
       args:
@@ -105,8 +121,8 @@ services:
     volumes:
       - ${PWD}/configs/postgrest/postgrest.conf:/etc/postgrest.conf
       - ${PWD}/logs:/var/log/postgrest
-    #ports:
-    #  - ${UBERBASE_POSTGREST_PORT}:3000
+    ports:
+      - ${UBERBASE_POSTGREST_PORT}:3000
     depends_on:
       - postgres
     networks:

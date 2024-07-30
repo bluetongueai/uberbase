@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
+	"fmt"
 	"syscall"
+	"strings"
+	"io"
 
 	"github.com/gin-gonic/gin"
 	f "github.com/tgittos/uberbase/functions/api/pkg/functions"
@@ -18,6 +20,16 @@ type ApiConfig struct {
 	Port  int      `json:"port"`
 	Build string   `json:"build"`
 	Pull  []string `json:"pull"`
+}
+
+type FunctionRequest struct {
+	Args		*[]string 					`json:args`
+	Detatch *bool								`json:detatch`
+	Env 		*map[string]string	`json:env`
+}
+
+type StopRequest struct {
+	ContainerId string `json:containerId`
 }
 
 func main() {
@@ -44,13 +56,14 @@ func main() {
 
 	f.Init(f.FunctionsConfig{
 		Build:  apiConfig.Build,
-		Images: apiConfig.Pull,
+		Pull: apiConfig.Pull,
 	})
 
 	s := h.NewServer(h.ServerConfig{
 		Port: apiConfig.Port,
 	})
-	s.AddRoute("POST", "/api/v1/functions/*name", functionHandler)
+	s.AddRoute("POST", "/api/v1/functions/stop", stopHandler)
+	s.AddRoute("POST", "/api/v1/functions/run/*name", functionHandler)
 	s.Start()
 }
 
@@ -67,22 +80,75 @@ func readConfigFile(configPath string) (ApiConfig, error) {
 	return data, nil
 }
 
+func stopHandler(c *gin.Context) {
+	var request StopRequest
+  err := c.BindJSON(&request);
+	if err != nil && err != io.EOF {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("invalid JSON request: %v", err),
+		})
+		return
+	}
+
+	stdout, stderr, err := f.Stop(request.ContainerId)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": "failure",
+			"error": err.Error(),
+			"stdout": stdout,
+			"stderr": stderr,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"stdout": stdout,
+		"stderr": stderr,
+	})
+}
+
 func functionHandler(c *gin.Context) {
 	name := strings.TrimPrefix(c.Param("name"), "/")
 
-	params := c.PostForm("params")
-
-	image_params := []string{}
-	if params != "" {
-		image_params = strings.Split(params, " ")
+	var request FunctionRequest
+  err := c.BindJSON(&request);
+	if err != nil && err != io.EOF {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("invalid JSON request: %v", err),
+		})
+		return
 	}
 
-	log.Printf("running function %s with params %v", name, image_params)
+	args := []string{}
+	if request.Args != nil {
+		args = *request.Args
+	}
+	log.Printf("running image %s with args %v", name, args)
+	detatch := false
+	if request.Detatch != nil {
+		detatch = *request.Detatch
+	}
+	env := map[string]string{}
+	if request.Env != nil {
+		env = *request.Env
+	}
+	stdout, stderr, err := f.Run(name, detatch, env, args...)
 
-	output, err := f.Run(name, image_params...)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": "failure",
+			"error": err.Error(),
+			"stdout": stdout,
+			"stderr": stderr,
+		})
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"output": output})
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"stdout": stdout,
+		"stderr": stderr,
+	})
 }

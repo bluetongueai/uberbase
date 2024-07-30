@@ -6,8 +6,8 @@ import (
 )
 
 type FunctionsConfig struct {
-	Build  string
-	Images []string
+	Build string
+	Pull  []string
 }
 
 var fClient client
@@ -37,28 +37,36 @@ func Init(config FunctionsConfig) error {
 		}
 	}
 
-	for _, image := range config.Images {
-		fClient.Pull(image, false)
+	// login to docker registry if DOCKER_TOKEN set on environment
+	if os.Getenv("DOCKER_TOKEN") != "" && os.Getenv("DOCKER_USER") != "" {
+		log.Printf("logging into docker registry")
+		stdOut, stdErr, err := fClient.docker("login", "-u", os.Getenv("DOCKER_USER"), "-p", os.Getenv("DOCKER_TOKEN"))
 		if err != nil {
-			log.Fatalf("failed to pull image %s: %v", image, err)
+			log.Fatalf("failed to login to docker registry: %v\n%s\n%s", err, stdOut, stdErr)
 		}
+		log.Printf("logged into docker registry: %s", stdOut)
+	}
+
+	for _, image := range config.Pull {
+		log.Printf("pulling image %s", image)
+		stdOut, stdErr, err := fClient.Pull(image, true)
+		if err != nil {
+			log.Fatalf("failed to pull image: %v\n%s\n%s", err, stdOut, stdErr)
+		}
+		log.Printf("pulled image %s: %s", image, stdOut)
 	}
 
 	// start the docker compose stack
-	log.Printf("building compose stack")
-	stdOut, stdErr, err := fClient.dockerCompose("build")
-	if err != nil {
-		log.Fatalf("failed to build compose stack: %v\n%s\n%s", err, stdOut, stdErr)
-	}
-	log.Printf("compose stack built: %s", stdErr)
+	log.Printf("pulling compose stack")
+	fClient.dockerCompose("pull")
 	log.Printf("booting compose stack")
-	stdOut, stdErr, err = fClient.dockerCompose("up", "-d")
+	stdOut, stdErr, err := fClient.dockerCompose("up", "-d")
 	if err != nil {
 		log.Fatalf("failed to start compose stack: %v\n%s\n%s", err, stdOut, stdErr)
 	}
 	log.Printf("compose stack started: %s", stdErr)
 
-	stdOut, stdErr, err = fClient.dockerCompose("ps")
+	stdOut, stdErr, _ = fClient.dockerCompose("ps")
 	log.Printf("compose stack status: %s\n%s", stdOut, stdErr)
 
 	return nil
@@ -73,15 +81,10 @@ func Shutdown() {
 	log.Printf("compose stack shutdown: %s", stdout)
 }
 
-func Run(imageName string, params ...string) (string, error) {
-	stdOut, stdErr, err := fClient.Run(imageName, params...)
-	if err != nil {
-		return "", err
-	}
+func Run(imageName string, detatch bool, env map[string]string, params ...string) (string, string, error) {
+	return fClient.Run(imageName, detatch, env, params...)
+}
 
-	if stdErr != "" {
-		return stdErr, nil
-	}
-
-	return stdOut, nil
+func Stop(containerId string) (string, string, error) {
+	return fClient.Stop(containerId)
 }

@@ -22,3 +22,8 @@ mkdir -p configs/postgrest
 if [ ! -f ./configs/postgrest/postgrest.conf ]; then
   envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
 fi
+
+mkdir -p data/postgres
+chown 999 -R ./data/postgres
+mkdir -p data/redis
+mkdir -p data/minio
