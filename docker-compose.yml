@@ -75,7 +75,7 @@ services:
       - net
 
   casdoor:
-    image: casbin/casdoor:latest
+    image: casbin/casdoor:v1.659.0
     container_name: casdoor
     hostname: casdoor
     volumes:
