@@ -74,23 +74,6 @@ services:
     networks:
       - net
 
-  casdoor:
-    image: casbin/casdoor:v1.659.0
-    container_name: casdoor
-    hostname: casdoor
-    volumes:
-      - ${PWD}/configs/casdoor:/conf
-      - ${PWD}/logs:/var/log/casdoor
-    env_file:
-      - .env
-    ports:
-      - ${UBERBASE_CASDOOR_PORT}:8000
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - net
-
   caddy:
     image: caddy:2.8.4
     container_name: caddy
@@ -102,9 +85,33 @@ services:
       - ${PWD}/configs/caddy/Caddyfile:/etc/caddy/Caddyfile
       - ${PWD}/logs:/var/log/caddy
     depends_on:
-      - casdoor
+      - zitadel
     env_file:
       - .env
+    networks:
+      - net
+  
+  zitadel:
+    image: ghcr.io/zitadel/zitadel:latest
+    hostname: zitadel
+    command: start-from-init --masterkey ${UBERBASE_ZITADEL_MASTERKEY} --tlsMode disabled
+    environment:
+      ZITADEL_DATABASE_POSTGRES_HOST: ${UBERBASE_POSTGRES_HOST}
+      ZITADEL_DATABASE_POSTGRES_PORT: ${UBERBASE_POSTGRES_PORT}
+      ZITADEL_DATABASE_POSTGRES_DATABASE: ${UBERBASE_ZITADEL_DATABASE}
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: ${UBERBASE_POSTGRES_USER}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
+      ZITADEL_EXTERNALDOMAIN: ${UBERBASE_DOMAIN}
+      ZITADEL_EXTERNALSECURE: false
+    depends_on:
+      postgres:
+        condition: 'service_healthy'
+    ports:
+      - ${UBERBASE_ZITADEL_PORT}:8080
     networks:
       - net
 

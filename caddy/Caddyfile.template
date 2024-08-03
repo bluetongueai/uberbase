@@ -32,7 +32,7 @@
 
 auth.${UBERBASE_DOMAIN} {
   import cors auth.${UBERBASE_DOMAIN}
-  reverse_proxy casdoor:${UBERBASE_CASDOOR_PORT}
+  reverse_proxy zitadel:${UBERBASE_ZITADEL_PORT}
 }
 
 # optional - expose your postgres instance (not recommended in production)
