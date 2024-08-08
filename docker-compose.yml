@@ -11,7 +11,6 @@ volumes:
 
 
 services:
-
   redis:
     image: redis/redis-stack:latest
     container_name: redis
@@ -41,7 +40,8 @@ services:
     env_file:
       - .env
     ports:
-      - ${UBERBASE_POSTGRES_PORT}:5432
+      #- ${UBERBASE_POSTGRES_PORT}:5432
+      - 5432:5432
     # entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all -c log_filename=postgresql.log
     volumes:
       - ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data:Z
@@ -93,27 +93,34 @@ services:
   
   zitadel:
     image: ghcr.io/zitadel/zitadel:latest
+    container_name: zitadel
     hostname: zitadel
     command: start-from-init --masterkey ${UBERBASE_ZITADEL_MASTERKEY} --tlsMode disabled
+    env_file:
+      - .env
     environment:
-      ZITADEL_DATABASE_POSTGRES_HOST: ${UBERBASE_POSTGRES_HOST}
-      ZITADEL_DATABASE_POSTGRES_PORT: ${UBERBASE_POSTGRES_PORT}
-      ZITADEL_DATABASE_POSTGRES_DATABASE: ${UBERBASE_ZITADEL_DATABASE}
+      #ZITADEL_DATABASE_POSTGRES_HOST: host.docker.internal
+      ZITADEL_DATABASE_POSTGRES_HOST: postgres
+      ZITADEL_DATABASE_POSTGRES_PORT: 5432
+      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
       ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
-      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: zitadel
       ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
-      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: ${UBERBASE_POSTGRES_USER}
-      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: postgres
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: postgres
       ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
-      ZITADEL_EXTERNALDOMAIN: ${UBERBASE_DOMAIN}
+      ZITADEL_EXTERNALDOMAIN: localhost
       ZITADEL_EXTERNALSECURE: false
     depends_on:
       postgres:
         condition: 'service_healthy'
     ports:
-      - ${UBERBASE_ZITADEL_PORT}:8080
+      #- ${UBERBASE_ZITADEL_PORT}:8080
+      - 8080:8080
     networks:
       - net
+    #extra_hosts:
+    #  - "host.docker.internal:host-gateway"
 
   postgrest:
     image: bluetongueai/postgrest:latest
