@@ -30,7 +30,7 @@ services:
   postgres:
     image: docker.io/library/postgres:16.2
     container_name: postgres
-    user: "999"
+    user: ${UID}:${GID}
     environment:
       POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
       POSTGRES_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}

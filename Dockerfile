@@ -25,14 +25,14 @@ WORKDIR /home/podman/app
 ADD caddy /home/podman/app/caddy
 ADD postgrest /home/podman/app/postgrest
 ADD functions /home/podman/app/functions
-ADD configs /home/podman/app/configs
 ADD bin /home/podman/app/bin
-ADD data /home/podman/app/data
-ADD logs /home/podman/app/logs
-ADD .env /home/podman/app/.env
 ADD docker-compose.yml /home/podman/app/docker-compose.yml
+ADD .env /home/podman/app/.env
+
+RUN mkdir -p /home/podman/app/data
 
 RUN chown podman:podman -R /home/podman
+
 USER podman
 
 ENTRYPOINT ["/home/podman/app/bin/start"]
