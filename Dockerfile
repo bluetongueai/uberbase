@@ -1,17 +1,38 @@
-FROM docker:dind
+FROM golang:1.22.6 AS builder
+FROM quay.io/podman/stable:latest
 
-USER root
+RUN dnf -y install \
+    podman podman-compose fuse-overlayfs --exclude container-selinux \
+    make gettext \
+    && dnf clean all
 
-RUN apk add bash tar git curl gettext make supervisor ncurses
+RUN useradd podman; \
+echo podman:1001:65534 > /etc/subuid; \
+echo podman:1001:65534 > /etc/subgid;
 
-COPY --from=golang:1.22.5-alpine /usr/local/go/ /usr/local/go/
-ENV PATH="/usr/local/go/bin:${PATH}"
+VOLUME /var/lib/containers
+VOLUME /home/podman/.local/share/containers
 
-EXPOSE ${UBERBASE_HTTP_PORT}
-EXPOSE ${UBERBASE_HTTPS_PORT}
+RUN chmod 644 /etc/containers/containers.conf; sed -i -e 's|^#mount_program|mount_program|g' -e '/additionalimage.*/a "/var/lib/shared",' -e 's|^mountopt[[:space:]]*=.*$|mountopt = "nodev,fsync=0"|g' /etc/containers/storage.conf
+RUN mkdir -p /var/lib/shared/overlay-images /var/lib/shared/overlay-layers /var/lib/shared/vfs-images /var/lib/shared/vfs-layers; touch /var/lib/shared/overlay-images/images.lock; touch /var/lib/shared/overlay-layers/layers.lock; touch /var/lib/shared/vfs-images/images.lock; touch /var/lib/shared/vfs-layers/layers.lock
 
-WORKDIR /uberbase
-ADD . .
+ENV _CONTAINERS_USERNS_CONFIGURED=""
 
-# start the entire stack
-ENTRYPOINT ["supervisord", "-n", "-c", "/uberbase/supervisord/supervisord.conf"]
+COPY --from=builder /usr/local/go /usr/local/go
+ENV PATH=$PATH:/usr/local/go/bin
+
+WORKDIR /home/podman/app
+ADD caddy /home/podman/app/caddy
+ADD postgrest /home/podman/app/postgrest
+ADD functions /home/podman/app/functions
+ADD configs /home/podman/app/configs
+ADD bin /home/podman/app/bin
+ADD data /home/podman/app/data
+ADD logs /home/podman/app/logs
+ADD .env /home/podman/app/.env
+ADD docker-compose.yml /home/podman/app/docker-compose.yml
+
+RUN chown podman:podman -R /home/podman
+USER podman
+
+ENTRYPOINT ["/home/podman/app/bin/start"]

@@ -20,6 +20,6 @@ if [ ! -f ./configs/postgrest/postgrest.conf ]; then
 fi
 
 mkdir -p data/postgres
-chown 999 -R ./data/postgres
+#chown 999 -R ./data/postgres
 mkdir -p data/redis
 mkdir -p data/minio

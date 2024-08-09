@@ -12,9 +12,8 @@ volumes:
 
 services:
   redis:
-    image: redis/redis-stack:latest
+    image: docker.io/redis/redis-stack:latest
     container_name: redis
-    hostname: redis
     user: "0"
     volumes:
       - ${UBERBASE_REDIS_STORAGE}:/data:Z
@@ -29,9 +28,8 @@ services:
       - net
 
   postgres:
-    image: postgres:16.2
+    image: docker.io/library/postgres:16.2
     container_name: postgres
-    hostname: postgres
     user: "999"
     environment:
       POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
@@ -40,7 +38,6 @@ services:
     env_file:
       - .env
     ports:
-      #- ${UBERBASE_POSTGRES_PORT}:5432
       - 5432:5432
     # entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all -c log_filename=postgresql.log
     volumes:
@@ -56,9 +53,8 @@ services:
       - net
 
   minio:
-    image: quay.io/minio/minio
+    image: quay.io/minio/minio:latest
     container_name: minio
-    hostname: minio
     user: "0"
     command: server /data --console-address ":9001"
     volumes:
@@ -75,57 +71,38 @@ services:
       - net
 
   caddy:
-    image: caddy:2.8.4
+    image: docker.io/caddy:2.8.4
     container_name: caddy
-    hostname: caddy
     ports:
       - ${UBERBASE_HTTP_PORT}:80
       - ${UBERBASE_HTTPS_PORT}:443
     volumes:
       - ${PWD}/configs/caddy/Caddyfile:/etc/caddy/Caddyfile
       - ${PWD}/logs:/var/log/caddy
-    depends_on:
-      - zitadel
     env_file:
       - .env
     networks:
       - net
-  
-  zitadel:
-    image: ghcr.io/zitadel/zitadel:latest
-    container_name: zitadel
-    hostname: zitadel
-    command: start-from-init --masterkey ${UBERBASE_ZITADEL_MASTERKEY} --tlsMode disabled
-    env_file:
-      - .env
+
+  logto:
+    image: docker.io/svhd/logto:latest
+    container_name: logto
+    entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm start"]
     environment:
-      #ZITADEL_DATABASE_POSTGRES_HOST: host.docker.internal
-      ZITADEL_DATABASE_POSTGRES_HOST: postgres
-      ZITADEL_DATABASE_POSTGRES_PORT: 5432
-      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
-      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
-      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: zitadel
-      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
-      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: postgres
-      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: postgres
-      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
-      ZITADEL_EXTERNALDOMAIN: localhost
-      ZITADEL_EXTERNALSECURE: false
+      - TRUST_PROXY_HEADER=1
+      - DB_URL=postgres://postgres:postgres@postgres:5432/logto
     depends_on:
       postgres:
-        condition: 'service_healthy'
+        condition: service_healthy
     ports:
-      #- ${UBERBASE_ZITADEL_PORT}:8080
-      - 8080:8080
+      - 3001:3001
+      - 3002:3002
     networks:
       - net
-    #extra_hosts:
-    #  - "host.docker.internal:host-gateway"
-
+ 
   postgrest:
-    image: bluetongueai/postgrest:latest
+    image: docker.io/bluetongueai/postgrest:latest
     container_name: postgrest
-    hostname: postgrest
     build:
       context: ./postgrest
       args:
@@ -138,6 +115,7 @@ services:
     ports:
       - ${UBERBASE_POSTGREST_PORT}:3000
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - net

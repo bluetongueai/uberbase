@@ -16,7 +16,7 @@ var nameCounts = make(map[string]int)
 var c client
 
 type client struct {
-	dockerPath        string
+	binPath        string
 }
 
 func newClient() (client, error) {
@@ -28,14 +28,14 @@ func newClient() (client, error) {
 
 	log.Println("detecting container runtime")
 
-	// check for docker
-	path, err := exec.LookPath("docker")
+	// check for container manager runtime
+	path, err := exec.LookPath("podman")
 	if err != nil {
-		return client, fmt.Errorf("docker not found")
+		return client, fmt.Errorf("podman not found")
 	}
-	client.dockerPath = path
+	client.binPath = path
 
-	log.Printf("using paths: docker=%s", client.dockerPath)
+	log.Printf("using paths: container runtime=%s", client.binPath)
 
 	c = client
 
@@ -57,19 +57,19 @@ func (c client) command(bin string, args ...string) (string, string, error) {
 	return stdoutBuffer.String(), stderrBuffer.String(), nil
 }
 
-func (c client) docker(args ...string) (string, string, error) {
-	return c.command(c.dockerPath, args...)
+func (c client) container(args ...string) (string, string, error) {
+	return c.command(c.binPath, args...)
 }
 
-func (c client) dockerCompose(args ...string) (string, string, error) {
+func (c client) containerCompose(args ...string) (string, string, error) {
 	cmdArgs := append([]string{"compose"}, args...)
-	return c.command(c.dockerPath, cmdArgs...)
+	return c.command(c.binPath, cmdArgs...)
 }
 
 func (c client) Pull(imageName string, force bool) (string, string, error) {
 	if force || !c.imageExists(imageName) {
-		log.Printf("fetching docker image %s", imageName)
-		stdout, stderr, err := c.docker("pull", imageName)
+		log.Printf("fetching container image %s", imageName)
+		stdout, stderr, err := c.container("pull", imageName)
 		if err != nil {
 			log.Printf("failed to pull image %s: %v", imageName, err)
 			return stdout, stderr, err
@@ -81,16 +81,16 @@ func (c client) Pull(imageName string, force bool) (string, string, error) {
 }
 
 func (c client) imageExists(imageName string) bool {
-	_, _, err := c.docker("inspect", imageName)
+	_, _, err := c.container("inspect", imageName)
 	if err != nil {
 		return false
 	}
 	return true
 }
 
-func (c client) Build(imageName, dockerfile string, context string) error {
-	log.Printf("building docker image %s", imageName)
-	_, _, err := c.docker("build", "-t", imageName, "-f", dockerfile, context)
+func (c client) Build(imageName, containerfile string, context string) error {
+	log.Printf("building container image %s", imageName)
+	_, _, err := c.container("build", "-t", imageName, "-f", containerfile, context)
 	if err != nil {
 		log.Printf("failed to build image %s: %v", imageName, err)
 		return err
@@ -109,7 +109,7 @@ func (c client) Run(imageName string, detatch bool, env map[string]string, param
 		imageParams = append(imageParams, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
 	imageParams = append(append(imageParams, imageName), params...)
-	stdout, stderr, err := c.docker(imageParams...)
+	stdout, stderr, err := c.container(imageParams...)
 	if err != nil {
 		log.Printf("failed to run image %s: %v", imageName, err)
 		return stdout, stderr, err
@@ -119,7 +119,7 @@ func (c client) Run(imageName string, detatch bool, env map[string]string, param
 
 func (c client) Stop(containerId string) (string, string, error) {
 	// imageParams := append([]string{"run", "--rm", "-i", imageName}, params...)
-	stdout, stderr, err := c.docker("stop", containerId)
+	stdout, stderr, err := c.container("stop", containerId)
 	if err != nil {
 		log.Printf("failed to stop container %s: %v", containerId, err)
 		return stdout, stderr, err
