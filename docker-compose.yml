@@ -11,11 +11,9 @@ volumes:
 
 
 services:
-
   redis:
-    image: redis/redis-stack:latest
+    image: docker.io/redis/redis-stack:latest
     container_name: redis
-    hostname: redis
     user: "0"
     volumes:
       - ${UBERBASE_REDIS_STORAGE}:/data:Z
@@ -30,9 +28,8 @@ services:
       - net
 
   postgres:
-    image: postgres:16.2
+    image: docker.io/library/postgres:16.2
     container_name: postgres
-    hostname: postgres
     user: "999"
     environment:
       POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
@@ -41,7 +38,7 @@ services:
     env_file:
       - .env
     ports:
-      - ${UBERBASE_POSTGRES_PORT}:5432
+      - 5432:5432
     # entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all -c log_filename=postgresql.log
     volumes:
       - ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data:Z
@@ -56,9 +53,8 @@ services:
       - net
 
   minio:
-    image: quay.io/minio/minio
+    image: quay.io/minio/minio:latest
     container_name: minio
-    hostname: minio
     user: "0"
     command: server /data --console-address ":9001"
     volumes:
@@ -74,44 +70,39 @@ services:
     networks:
       - net
 
-  casdoor:
-    image: casbin/casdoor:v1.659.0
-    container_name: casdoor
-    hostname: casdoor
-    volumes:
-      - ${PWD}/configs/casdoor:/conf
-      - ${PWD}/logs:/var/log/casdoor
-    env_file:
-      - .env
-    ports:
-      - ${UBERBASE_CASDOOR_PORT}:8000
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - net
-
   caddy:
-    image: caddy:2.8.4
+    image: docker.io/caddy:2.8.4
     container_name: caddy
-    hostname: caddy
     ports:
       - ${UBERBASE_HTTP_PORT}:80
       - ${UBERBASE_HTTPS_PORT}:443
     volumes:
       - ${PWD}/configs/caddy/Caddyfile:/etc/caddy/Caddyfile
       - ${PWD}/logs:/var/log/caddy
-    depends_on:
-      - casdoor
     env_file:
       - .env
     networks:
       - net
 
+  logto:
+    image: docker.io/svhd/logto:latest
+    container_name: logto
+    entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm start"]
+    environment:
+      - TRUST_PROXY_HEADER=1
+      - DB_URL=postgres://postgres:postgres@postgres:5432/logto
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - 3001:3001
+      - 3002:3002
+    networks:
+      - net
+ 
   postgrest:
-    image: bluetongueai/postgrest:latest
+    image: docker.io/bluetongueai/postgrest:latest
     container_name: postgrest
-    hostname: postgrest
     build:
       context: ./postgrest
       args:
@@ -124,6 +115,7 @@ services:
     ports:
       - ${UBERBASE_POSTGREST_PORT}:3000
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - net

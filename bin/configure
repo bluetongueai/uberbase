@@ -1,15 +1,11 @@
 #!/bin/bash
 
+set -a
 source .env
+set +a
+
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 
-mkdir -p configs/casdoor
-if [ ! -f ./configs/casdoor/app.conf ]; then
-  envsubst < ./casdoor/app.template.conf > ./configs/casdoor/app.conf
-fi
-if [ ! -f ./configs/casdoor/init_data.json ]; then
-  envsubst < ./casdoor/init_data.template.json > ./configs/casdoor/init_data.json
-fi
 mkdir -p configs/caddy
 if [ ! -f ./configs/caddy/Caddyfile ]; then
   envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
@@ -24,6 +20,6 @@ if [ ! -f ./configs/postgrest/postgrest.conf ]; then
 fi
 
 mkdir -p data/postgres
-chown 999 -R ./data/postgres
+#chown 999 -R ./data/postgres
 mkdir -p data/redis
 mkdir -p data/minio

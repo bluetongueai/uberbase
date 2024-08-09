@@ -1,12 +1,10 @@
-\set pw `echo \'$UBERBASE_POSTGRES_PASSWORD\'`
-
-create role uberbase with password :pw NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
-create role casdoor with password :pw NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
+create role uberbase with password 'uberbase' NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
+create role logto with password 'logto' NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
 create role anon NOSUPERUSER LOGIN;
 
 -- create database uberbase with owner uberbase;
-create database casdoor with owner casdoor;
+create database logto with owner logto;
 
-\c casdoor
-grant all on schema public to casdoor;
-
+\c logto
+grant all on schema public to postgres;
+grant all on schema public to logto;
