@@ -12,6 +12,7 @@ volumes:
 
 services:
   redis:
+    restart: always
     image: docker.io/redis/redis-stack:latest
     container_name: redis
     user: "0"
@@ -28,6 +29,7 @@ services:
       - net
 
   postgres:
+    restart: always
     image: docker.io/library/postgres:16.2
     container_name: postgres
     user: ${UID}:${GID}
@@ -53,6 +55,7 @@ services:
       - net
 
   minio:
+    restart: always
     image: quay.io/minio/minio:latest
     container_name: minio
     user: "0"
@@ -71,6 +74,7 @@ services:
       - net
 
   caddy:
+    restart: always
     image: docker.io/caddy:2.8.4
     container_name: caddy
     ports:
@@ -85,6 +89,7 @@ services:
       - net
 
   logto:
+    restart: always
     image: docker.io/svhd/logto:latest
     container_name: logto
     entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm start"]
@@ -101,6 +106,7 @@ services:
       - net
  
   postgrest:
+    restart: always
     image: docker.io/bluetongueai/postgrest:latest
     container_name: postgrest
     build:
