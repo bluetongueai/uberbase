@@ -2,7 +2,7 @@ create role uberbase with password 'uberbase' NOSUPERUSER CREATEDB CREATEROLE IN
 create role logto with password 'logto' NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
 create role anon NOSUPERUSER LOGIN;
 
--- create database uberbase with owner uberbase;
+create database uberbase with owner uberbase;
 create database logto with owner logto;
 
 \c logto
