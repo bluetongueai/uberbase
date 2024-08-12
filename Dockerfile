@@ -22,6 +22,7 @@ COPY --from=builder /usr/local/go /usr/local/go
 ENV PATH=$PATH:/usr/local/go/bin
 
 WORKDIR /home/podman/app
+ADD postgres/_init /home/podman/app/postgres/_init
 ADD caddy /home/podman/app/caddy
 ADD postgrest /home/podman/app/postgrest
 ADD functions /home/podman/app/functions
@@ -29,7 +30,12 @@ ADD bin /home/podman/app/bin
 ADD docker-compose.yml /home/podman/app/docker-compose.yml
 ADD .env /home/podman/app/.env
 
+RUN mkdir -p /home/podman/app/configs
+RUN mkdir -p /home/podman/app/logs
 RUN mkdir -p /home/podman/app/data
+RUN mkdir -p /home/podman/app/data/postgres
+RUN mkdir -p /home/podman/app/data/redis
+RUN mkdir -p /home/podman/app/data/minio
 
 RUN chown podman:podman -R /home/podman
 
