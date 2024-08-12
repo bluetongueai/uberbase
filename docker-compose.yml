@@ -21,7 +21,6 @@ services:
       - ${PWD}/logs:/var/log/redis:Z
     ports:
       - ${UBERBASE_REDIS_PORT}:6379
-    restart: unless-stopped
     # entrypoint: redis-server --requirepass ${UBERBASE_REDIS_SECRET} --logfile /var/log/redis/redis.log --loglevel verbose
     env_file:
       - .env

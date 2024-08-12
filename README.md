@@ -6,19 +6,18 @@
  ## Features
 
   - [x] **[Postgres]()** - A powerful SQL database with JSONB support
+  - [x] **[Redis]()** - A key/value memstore with pub/sub support
   - [x] **[Postgrest]()** - A REST API for Postgres with a focus on security and performance
-  - [x] **[LLDAP]()** - LDAP authentication and authorization
-  - [x] **[Authelia]()** - Two-factor authentication and single sign-on
-  - [x] **[Caddy]()** - A powerful web server with automatic HTTPS
-  - [x] **[lima]()** - A VM platform to interactive with a containerd container runtime that is compatible with Docker
-  - [x] **[studio]()** - A custom Svelte web interface for managing the platform
+  - [x] **[Logto]()** - A Go based IdP/OpenID compatible auth service
+  - [x] **[Caddy]()** - A powerful web server with automatic HTTP
+  - [x] **[Minio]()** - An S3 compatible storage service
 
 ## Getting Started
 
 To get started with `uberbase`, you'll need to have an OCI compatible runtime such as Docker or Podman. Docker is probably
 the most beginner-friendly option. This guide assumes Docker and uses Docker Compose to manage the services.
 
-`uberbase` can be integrated either as a single Docker-outside-Docker container, or integrated piecemeal into an existing
+`uberbase` can be integrated either as a single container, or integrated piecemeal into an existing
 Docker Compose project.
 
 #### Single Container
@@ -27,12 +26,9 @@ To run `uberbase` as a single container, you can use the following `docker run` 
 
 ```bash
 docker run \
-  -e UBERBASE_ADMIN_USERNAME=admin \
-  -e UBERBASE_ADMIN_PASSWORD=password \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -p 5000:5000
-  -p 9091:9091
-  -p 3000:3000
+  --privileged
+  -p 8080:80
+  -p 8443:443
   --rm -it tgittos/uberbase:latest
 ```
 
