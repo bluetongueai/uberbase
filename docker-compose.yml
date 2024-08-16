@@ -39,7 +39,7 @@ services:
     env_file:
       - .env
     ports:
-      - 5432:5432
+      - ${UBERBASE_POSTGRES_PORT}:5432
     # entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all -c log_filename=postgresql.log
     volumes:
       - ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data:Z
@@ -77,8 +77,8 @@ services:
     image: docker.io/caddy:2.8.4
     container_name: caddy
     ports:
-      - ${UBERBASE_HTTP_PORT}:80
-      - ${UBERBASE_HTTPS_PORT}:443
+      - 80:80
+      - 443:443
     volumes:
       - ${PWD}/configs/caddy/Caddyfile:/etc/caddy/Caddyfile
       - ${PWD}/logs:/var/log/caddy
@@ -99,8 +99,8 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - 3001:3001
-      - 3002:3002
+      - ${UBERBASE_LOGTO_PUBLIC_PORT}:3001
+      - ${UBERBASE_LOGTO_ADMIN_PORT}:3002
     networks:
       - net
  
