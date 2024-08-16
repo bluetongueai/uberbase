@@ -41,6 +41,8 @@ RUN chown podman:podman -R /home/podman
 
 USER podman
 
+RUN set -a && source /home/podman/app/.env && set +a
+
 EXPOSE 80
 EXPOSE 443
 

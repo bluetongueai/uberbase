@@ -8,6 +8,7 @@ volumes:
   redis_data:
   postgres_data:
   minio_data:
+  caddy_data:
 
 
 services:
@@ -76,12 +77,16 @@ services:
     restart: always
     image: docker.io/caddy:2.8.4
     container_name: caddy
+    cap_add:
+      - NET_ADMIN
     ports:
-      - 80:80
-      - 443:443
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
     volumes:
       - ${PWD}/configs/caddy/Caddyfile:/etc/caddy/Caddyfile
       - ${PWD}/logs:/var/log/caddy
+      - ${UBERBASE_CADDY_DATA}:/data/caddy
     env_file:
       - .env
     networks:
@@ -116,7 +121,7 @@ services:
       - .env
     volumes:
       - ${PWD}/configs/postgrest/postgrest.conf:/etc/postgrest.conf
-      - ${PWD}/logs:/var/log/postgrest
+      - ${PWD}/logs:/home/podman/app/logs/postgrest
     ports:
       - ${UBERBASE_POSTGREST_PORT}:3000
     depends_on:
