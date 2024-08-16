@@ -41,4 +41,7 @@ RUN chown podman:podman -R /home/podman
 
 USER podman
 
+EXPOSE ${UBERBASE_HTTP_PORT}
+EXPOSE ${UBERBASE_HTTPS_PORT}
+
 ENTRYPOINT ["/home/podman/app/bin/start"]
