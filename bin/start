@@ -10,12 +10,13 @@ echo "Starting on $UBERBASE_PLATFORM"
 
 # start the caddy proxy
 podman run \
+  --name caddy \
   --cap-add=NET_ADMIN \
   --network=host \
   --env-file=.env \
-  --expose 80 \
-  --expose 443 \
-  --expose 443/udp \
+  -p 80:80 \
+  -p 443:443 \
+  -p 443:443/udp \
   -v ${PWD}/configs/caddy:/etc/caddy \
   -v ${PWD}/logs:/var/log/caddy \
   -v ${UBERBASE_CADDY_STORAGE:=caddy_data}:/data/caddy \

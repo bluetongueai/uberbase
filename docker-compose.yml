@@ -5,6 +5,9 @@ volumes:
   postgres_data:
   minio_data:
 
+networks:
+  net:
+    driver: bridge
 
 services:
   redis:
@@ -21,7 +24,8 @@ services:
       - .env
     #environment:
     #  REDIS_ARGS: "--logfile /var/log/redis/redis.log --loglevel verbose"
-    network_mode: host
+    networks:
+      - net
 
   postgres:
     restart: always
@@ -46,7 +50,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    network_mode: host
+    networks:
+      - net
 
   minio:
     restart: always
@@ -64,16 +69,22 @@ services:
     ports:
       - ${UBERBASE_MINIO_PORT}:9000
       - ${UBERBASE_MINIO_CONSOLE_PORT}:9001
-    network_mode: host
+    networks:
+      - net
 
   logto:
     restart: always
     image: docker.io/svhd/logto:latest
     container_name: logto
     entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm start 2>&1 > /var/log/logto/logto.log"]
+    env_file:
+      - .env
     environment:
       - TRUST_PROXY_HEADER=1
-      - DB_URL=postgres://postgres:postgres@localhost:5432/logto
+      - NODE_ENV=production
+      - DB_URL=postgres://${UBERBASE_POSTGRES_USER}:${UBERBASE_POSTGRES_PASSWORD}@${UBERBASE_POSTGRES_HOST}:${UBERBASE_POSTGRES_PORT}/logto
+      - ENDPOINT=${UBERBASE_LOGTO_ENDPOINT}
+      - ADMIN_ENDPOINT=${UBERBASE_LOGTO_ADMIN_ENDPOINT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -82,7 +93,8 @@ services:
     ports:
       - ${UBERBASE_LOGTO_PUBLIC_PORT}:3001
       - ${UBERBASE_LOGTO_ADMIN_PORT}:3002
-    network_mode: host
+    networks:
+      - net
  
   postgrest:
     restart: always
@@ -102,4 +114,5 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    network_mode: host
+    networks:
+      - net
