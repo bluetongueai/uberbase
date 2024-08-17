@@ -1,4 +1,9 @@
 FROM golang:1.22.6 AS builder
+
+ADD functions /app
+WORKDIR /app
+RUN cd api && go build -o bin/api
+
 FROM quay.io/podman/stable:latest
 
 RUN dnf -y install \
@@ -19,6 +24,7 @@ RUN mkdir -p /var/lib/shared/overlay-images /var/lib/shared/overlay-layers /var/
 ENV _CONTAINERS_USERNS_CONFIGURED=""
 
 COPY --from=builder /usr/local/go /usr/local/go
+COPY --from=builder /app/api/bin/api /home/podman/app/functions/api/bin/api
 ENV PATH=$PATH:/usr/local/go/bin
 
 WORKDIR /home/podman/app
@@ -26,9 +32,11 @@ ADD postgres/_init /home/podman/app/postgres/_init
 ADD caddy /home/podman/app/caddy
 ADD postgrest /home/podman/app/postgrest
 ADD functions /home/podman/app/functions
-ADD bin /home/podman/app/bin
 ADD docker-compose.yml /home/podman/app/docker-compose.yml
+
+ADD bin /home/podman/app/bin
 ADD .env /home/podman/app/.env
+RUN source /home/podman/app/.env && bin/configure
 
 RUN mkdir -p /home/podman/app/configs
 RUN mkdir -p /home/podman/app/logs
@@ -40,8 +48,6 @@ RUN mkdir -p /home/podman/app/data/minio
 RUN chown podman:podman -R /home/podman
 
 USER podman
-
-RUN set -a && source /home/podman/app/.env && set +a
 
 EXPOSE 80
 EXPOSE 443

@@ -7,7 +7,20 @@ echo "Starting on $UBERBASE_PLATFORM"
 
 # set up if we need it
 ./bin/configure
-./bin/build
 
-# start the uberbaes api
+# start the caddy proxy
+podman run \
+  --cap-add=NET_ADMIN \
+  --network=host \
+  --env-file=.env \
+  --expose 80 \
+  --expose 443 \
+  --expose 443/udp \
+  -v ${PWD}/configs/caddy:/etc/caddy \
+  -v ${PWD}/logs:/var/log/caddy \
+  -v ${UBERBASE_CADDY_STORAGE:=caddy_data}:/data/caddy \
+  --rm -d \
+  docker.io/caddy:2.8.4
+
+# start the uberbase api
 ./functions/api/bin/api ./configs/functions/config.json 2>&1 | tee ./logs/uberbase.log

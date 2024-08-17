@@ -1,14 +1,9 @@
 name: uberbase
 
-networks:
-  net:
-    driver: bridge
-
 volumes:
   redis_data:
   postgres_data:
   minio_data:
-  caddy_data:
 
 
 services:
@@ -25,8 +20,7 @@ services:
     # entrypoint: redis-server --requirepass ${UBERBASE_REDIS_SECRET} --logfile /var/log/redis/redis.log --loglevel verbose
     env_file:
       - .env
-    networks:
-      - net
+    network_mode: host
 
   postgres:
     restart: always
@@ -51,8 +45,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - net
+    network_mode: host
 
   minio:
     restart: always
@@ -70,27 +63,7 @@ services:
     ports:
       - ${UBERBASE_MINIO_PORT}:9000
       - ${UBERBASE_MINIO_CONSOLE_PORT}:9001
-    networks:
-      - net
-
-  caddy:
-    restart: always
-    image: docker.io/caddy:2.8.4
-    container_name: caddy
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ${PWD}/configs/caddy/Caddyfile:/etc/caddy/Caddyfile
-      - ${PWD}/logs:/var/log/caddy
-      - ${UBERBASE_CADDY_DATA}:/data/caddy
-    env_file:
-      - .env
-    networks:
-      - net
+    network_mode: host
 
   logto:
     restart: always
@@ -99,15 +72,14 @@ services:
     entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm start"]
     environment:
       - TRUST_PROXY_HEADER=1
-      - DB_URL=postgres://postgres:postgres@postgres:5432/logto
+      - DB_URL=postgres://postgres:postgres@localhost:5432/logto
     depends_on:
       postgres:
         condition: service_healthy
     ports:
       - ${UBERBASE_LOGTO_PUBLIC_PORT}:3001
       - ${UBERBASE_LOGTO_ADMIN_PORT}:3002
-    networks:
-      - net
+    network_mode: host
  
   postgrest:
     restart: always
@@ -127,5 +99,4 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - net
+    network_mode: host
