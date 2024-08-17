@@ -17,9 +17,10 @@ services:
       - ${PWD}/logs:/var/log/redis:Z
     ports:
       - ${UBERBASE_REDIS_PORT}:6379
-    # entrypoint: redis-server --requirepass ${UBERBASE_REDIS_SECRET} --logfile /var/log/redis/redis.log --loglevel verbose
     env_file:
       - .env
+    environment:
+      REDIS_ARGS: "--logfile /var/log/redis/redis.log --loglevel verbose"
     network_mode: host
 
   postgres:
@@ -35,10 +36,11 @@ services:
       - .env
     ports:
       - ${UBERBASE_POSTGRES_PORT}:5432
-    # entrypoint: postgres -c logging_collector=on -c log_directory=/var/log/postgres -c log_statement=all -c log_filename=postgresql.log
+    command: -c config_file=/etc/postgresql/postgresql.conf
     volumes:
       - ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data:Z
       - ${PWD}/configs/postgres/init:/docker-entrypoint-initdb.d
+      - ${PWD}/postgres/conf:/etc/postgresql/
       - ${PWD}/logs:/var/log/postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${UBERBASE_POSTGRES_USER}"]
