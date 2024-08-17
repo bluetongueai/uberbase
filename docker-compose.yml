@@ -71,13 +71,15 @@ services:
     restart: always
     image: docker.io/svhd/logto:latest
     container_name: logto
-    entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm start"]
+    entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm start 2>&1 > /var/log/logto/logto.log"]
     environment:
       - TRUST_PROXY_HEADER=1
       - DB_URL=postgres://postgres:postgres@localhost:5432/logto
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - ${PWD}/logs:/var/log/logto
     ports:
       - ${UBERBASE_LOGTO_PUBLIC_PORT}:3001
       - ${UBERBASE_LOGTO_ADMIN_PORT}:3002
@@ -95,7 +97,7 @@ services:
       - .env
     volumes:
       - ${PWD}/configs/postgrest/postgrest.conf:/etc/postgrest.conf
-      - ${PWD}/logs:/home/podman/app/logs/postgrest
+      - ${PWD}/logs:/var/log/postgrest
     ports:
       - ${UBERBASE_POSTGREST_PORT}:3000
     depends_on:
