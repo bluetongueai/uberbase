@@ -2,6 +2,8 @@
 
 source .env
 
+docker compose build
+
 docker build \
   --build-arg="UBERBASE_DOMAIN=$UBERBASE_DOMAIN" \
   --build-arg="UBERBASE_ADMIN_USERNAME=$UBERBASE_ADMIN_USERNAME" \
