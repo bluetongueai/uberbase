@@ -20,3 +20,4 @@ if [ ! -f ./configs/functions/config.json ]; then
 fi
 mkdir -p configs/postgrest
 envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
+mkdir -p config/fusionauth
