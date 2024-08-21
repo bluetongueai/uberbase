@@ -21,8 +21,8 @@ services:
       - ${PWD}/logs:/var/log/redis:Z
     ports:
       - ${UBERBASE_REDIS_PORT}:6379
-    #environment:
-    #  REDIS_ARGS: "--logfile /var/log/redis/redis.log --loglevel verbose"
+    environment:
+      REDIS_ARGS: "--logfile /var/log/redis/redis.log --loglevel verbose"
     networks:
       - net
 
@@ -117,6 +117,7 @@ services:
     volumes:
       - fusionauth_data:/usr/local/fusionauth/config
       - ./configs/fusionauth:/usr/local/fusionauth/kickstart
+      - ${PWD}/logs:/usr/local/fusionauth/logs
     depends_on:
       postgres:
         condition: service_healthy

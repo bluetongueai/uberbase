@@ -110,8 +110,13 @@ VOLUME /home/podman/app/configs
 VOLUME /home/podman/app/logs
 VOLUME /home/podman/app/data
 
+RUN mkdir -p /home/podman/app/configs /home/podman/app/logs /home/podman/app/data
+
 RUN source /home/podman/app/.env && bin/configure
 RUN chown podman:podman -R /home/podman/app
+
+RUN touch /home/podman/app/logs/postgresql.log
+RUN chown 999:999 /home/podman/app/logs/postgresql.log
 
 USER podman
 

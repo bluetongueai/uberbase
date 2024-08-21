@@ -28,7 +28,8 @@ podman run \
   -p 443:443/udp \
   -v ${PWD}/configs/caddy:/etc/caddy \
   -v ${PWD}/logs:/var/log/caddy \
-  -v ${UBERBASE_CADDY_STORAGE:=caddy_data}:/data/caddy \
+  -v ${UBERBASE_CADDY_DATA_STORAGE}:/data \
+  -v ${UBERBASE_CADDY_CONFIG_STORAGE}:/config \
   --rm -d \
   docker.io/caddy:2.8.4
 
