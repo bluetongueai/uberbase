@@ -96,6 +96,7 @@ services:
   fusionauth:
     image:  docker.io/fusionauth/fusionauth-app:latest
     container_name: fusionauth
+    user: root
     env_file:
       - .env
     environment:

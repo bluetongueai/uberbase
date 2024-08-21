@@ -118,6 +118,10 @@ RUN chown podman:podman -R /home/podman/app
 RUN touch /home/podman/app/logs/postgresql.log
 RUN chown 999:999 /home/podman/app/logs/postgresql.log
 
+RUN touch /home/podman/app/logs/fusionauth-app.log
+RUN touch /home/podman/app/logs/fusionauth-search.log
+RUN chown 1001:1001 /home/podman/app/logs/fusionauth*
+
 USER podman
 
 EXPOSE 80

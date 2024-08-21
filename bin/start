@@ -17,6 +17,9 @@ echo "Starting on $UBERBASE_PLATFORM"
 # set up if we need it
 ./bin/configure
 
+docker volume create caddy_data
+docker volume create caddy_config
+
 # start the caddy proxy
 podman run \
   --name caddy \
@@ -28,8 +31,10 @@ podman run \
   -p 443:443/udp \
   -v ${PWD}/configs/caddy:/etc/caddy \
   -v ${PWD}/logs:/var/log/caddy \
-  -v ${UBERBASE_CADDY_DATA_STORAGE}:/data \
-  -v ${UBERBASE_CADDY_CONFIG_STORAGE}:/config \
+  #-v ${UBERBASE_CADDY_DATA_STORAGE}:/data \
+  #-v ${UBERBASE_CADDY_CONFIG_STORAGE}:/config \
+  -v caddy_data:/data \
+  -v caddy_config:/config \
   --rm -d \
   docker.io/caddy:2.8.4
 
