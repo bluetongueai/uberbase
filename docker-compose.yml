@@ -28,7 +28,9 @@ services:
 
   postgres:
     restart: unless-stopped
-    image: docker.io/library/postgres:16.2
+    image: docker.io/bluetongueai/postgres:latest
+    build:
+      context: ./postgres/image
     container_name: postgres
     environment:
       POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
@@ -36,7 +38,6 @@ services:
       POSTGRES_DB: ${UBERBASE_POSTGRES_DATABASE}
     ports:
       - ${UBERBASE_POSTGRES_PORT}:5432
-    command: -c config_file=/etc/postgresql/postgresql.conf
     volumes:
       - ${PWD}/logs:/var/log/postgresql
       - ${PWD}/configs/postgres/init:/docker-entrypoint-initdb.d

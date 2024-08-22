@@ -98,6 +98,7 @@ ENV PATH=$PATH:/usr/local/go/bin
 WORKDIR /home/podman/app
 ADD postgres/_init /home/podman/app/postgres/_init
 ADD postgres/conf /home/podman/app/postgres/conf
+ADD postgres/image /home/podman/app/postgres/image
 ADD caddy /home/podman/app/caddy
 ADD postgrest /home/podman/app/postgrest
 ADD functions /home/podman/app/functions
