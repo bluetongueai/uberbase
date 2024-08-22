@@ -1,3 +1,4 @@
 #! /bin/bash
 
-docker push bluetongueai/uberbase:latest
+docker compose push
+docker push docker.io/bluetongueai/uberbase:latest
