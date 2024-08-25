@@ -47,9 +47,10 @@ func main() {
 	log.Printf("hooking into OS signals to gracefully shutdown")
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGINT)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGKILL)
 	go func() {
 		<-sigChan
-		log.Printf("received signal, shutting down")
 		f.Shutdown()
 		os.Exit(0)
 	}()

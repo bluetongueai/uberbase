@@ -8,31 +8,30 @@ echo "\____/____/___/_/|_/____/_/ |_/___/___/"
 echo ""
 echo ""
 
-
 platform=$(uname -m)
 echo -e "\033[33mStarting uberbase...\033[0m"
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 echo "Starting on $UBERBASE_PLATFORM"
 
-# set up if we need it
-./bin/configure
+mkdir -p /home/podman/app/data/caddy_data
+mkdir -p /home/podman/app/data/caddy_config
 
-podman volume create uberbase_caddy_data
-podman volume create uberbase_caddy_config
+./bin/configure
 
 # start the caddy proxy
 podman run \
   --name caddy \
   --cap-add=NET_ADMIN \
   --network=host \
+  --add-host=host.docker.internal:host-gateway \
   --env-file=.env \
   -p 80:80 \
   -p 443:443 \
   -p 443:443/udp \
   -v ${PWD}/configs/caddy:/etc/caddy \
   -v ${PWD}/logs:/var/log/caddy \
-  -v uberbase_caddy_data:/data \
-  -v uberbase_caddy_config:/config \
+  -v ${UBERBASE_CADDY_DATA_STORAGE}:/data \
+  -v ${UBERBASE_CADDY_CONFIG_STORAGE}:/config \
   --rm -d \
   docker.io/caddy:2.8.4
 

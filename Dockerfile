@@ -10,7 +10,8 @@ ARG UBERBASE_DOMAIN
 ARG UBERBASE_ADMIN_USERNAME
 ARG UBERBASE_ADMIN_EMAIL
 ARG UBERBASE_ADMIN_PASSWORD
-ARG UBERBASE_CADDY_STORAGE
+ARG UBERBASE_CADDY_DATA_STORAGE
+ARG UBERBASE_CADDY_CONFIG_STORAGE
 ARG UBERBASE_REDIS_HOST
 ARG UBERBASE_REDIS_PORT
 ARG UBERBASE_REDIS_SECRET
@@ -44,7 +45,8 @@ ENV UBERBASE_DOMAIN $UBERBASE_DOMAIN
 ENV UBERBASE_ADMIN_USERNAME $UBERBASE_ADMIN_USERNAME
 ENV UBERBASE_ADMIN_EMAIL $UBERBASE_ADMIN_EMAIL
 ENV UBERBASE_ADMIN_PASSWORD $UBERBASE_ADMIN_PASSWORD
-ENV UBERBASE_CADDY_STORAGE $UBERBASE_CADDY_STORAGE
+ENV UBERBASE_CADDY_DATA_STORAGE $UBERBASE_CADDY_DATA_STORAGE
+ENV UBERBASE_CADDY_CONFIG_STORAGE $UBERBASE_CADDY_CONFIG_STORAGE
 ENV UBERBASE_REDIS_HOST $UBERBASE_REDIS_HOST
 ENV UBERBASE_REDIS_PORT $UBERBASE_REDIS_PORT
 ENV UBERBASE_REDIS_SECRET $UBERBASE_REDIS_SECRET
@@ -89,6 +91,8 @@ VOLUME /home/podman/.local/share/containers
 RUN chmod 644 /etc/containers/containers.conf; sed -i -e 's|^#mount_program|mount_program|g' -e '/additionalimage.*/a "/var/lib/shared",' -e 's|^mountopt[[:space:]]*=.*$|mountopt = "nodev,fsync=0"|g' /etc/containers/storage.conf
 RUN mkdir -p /var/lib/shared/overlay-images /var/lib/shared/overlay-layers /var/lib/shared/vfs-images /var/lib/shared/vfs-layers; touch /var/lib/shared/overlay-images/images.lock; touch /var/lib/shared/overlay-layers/layers.lock; touch /var/lib/shared/vfs-images/images.lock; touch /var/lib/shared/vfs-layers/layers.lock
 
+COPY podman/storage.conf /etc/containers/storage.conf
+
 ENV _CONTAINERS_USERNS_CONFIGURED=""
 
 COPY --from=builder /usr/local/go /usr/local/go
@@ -115,13 +119,6 @@ RUN mkdir -p /home/podman/app/configs /home/podman/app/logs /home/podman/app/dat
 
 RUN source /home/podman/app/.env && bin/configure
 RUN chown podman:podman -R /home/podman/app
-
-RUN touch /home/podman/app/logs/postgresql.log
-RUN chown 999:999 /home/podman/app/logs/postgresql.log
-
-RUN touch /home/podman/app/logs/fusionauth-app.log
-RUN touch /home/podman/app/logs/fusionauth-search.log
-RUN chown 1001:1001 /home/podman/app/logs/fusionauth*
 
 USER podman
 
