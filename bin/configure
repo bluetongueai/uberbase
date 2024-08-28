@@ -3,13 +3,8 @@
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 
 mkdir -p postgres/init
-mkdir -p configs/postgres
-rm -Rf configs/postgres/init
-mkdir configs/postgres/init
-cp postgres/_init/* configs/postgres/init/.
-if [ ! -z "$( ls -A 'postgres/init/' )" ]; then
-  cp postgres/init/* configs/postgres/init/.
-fi
+cp postgres/_init/* postgres/init/.
+cp configs/postgres/init/* postgres/init/.
 mkdir -p configs/caddy
 if [ ! -f ./configs/caddy/Caddyfile ]; then
   envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile

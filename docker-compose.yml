@@ -40,7 +40,7 @@ services:
       - ${UBERBASE_POSTGRES_PORT}:5432
     volumes:
       - ${PWD}/logs:/var/log/postgresql
-      - ${PWD}/configs/postgres/init:/docker-entrypoint-initdb.d
+      - ${PWD}/postgres/init:/docker-entrypoint-initdb.d
       - ${PWD}/postgres/conf:/etc/postgresql/
       - ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data
     healthcheck:
