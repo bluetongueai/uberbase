@@ -1,7 +1,7 @@
 create role anon NOSUPERUSER NOLOGIN;
 create role admin NOSUPERUSER NOLOGIN;
 create role authenticated NOSUPERUSER NOLOGIN;
-create role authenticator noinherit login password 'postgres-secret-user-password';
+create role authenticator noinherit login password 'postgrest-secret-user-password';
 
 grant anon to authenticator;
 grant admin to authenticator;
