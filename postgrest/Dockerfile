@@ -20,5 +20,8 @@ RUN curl -fsSLO https://github.com/PostgREST/postgrest/releases/download/v12.2.3
 RUN tar -xvf postgrest-v12.2.3-linux-static-x64.tar.xz
 RUN chmod +x postgrest
 
+EXPOSE 3000
+EXPOSE 3001
+
 # ENTRYPOINT ["/app/postgrest", "/etc/postgrest.conf"]
 ENTRYPOINT ["/bin/bash", "-c", "/app/postgrest /etc/postgrest.conf 2>&1 | tee /var/log/postgrest/postgrest.log"]
