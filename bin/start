@@ -35,5 +35,9 @@ podman run \
   --rm -d \
   docker.io/caddy:2.8.4
 
+# start postgres first, cause fusionauth is dumb and can't restart a db connection
+podman compose down
+podman compose up postgres -d
+
 # start the uberbase api
 ./functions/api/bin/api ./configs/functions/config.json 2>&1 | tee ./logs/uberbase.log
