@@ -1,0 +1,1 @@
+docker run --rm -it --env-file .env -v $PWD:/home/podman/app -p 9011:9011 --privileged --entrypoint=/bin/bash bluetongueai/uberbase:latest

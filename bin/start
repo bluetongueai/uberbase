@@ -1,13 +1,43 @@
 #! /bin/bash
 
+echo ""
+echo "  __  _____  _______  ___  ___   ________"
+echo " / / / / _ )/ __/ _ \/ _ )/ _ | / __/ __/"
+echo "/ /_/ / _  / _// , _/ _  / __ |_\ \/ _/"  
+echo "\____/____/___/_/|_/____/_/ |_/___/___/"  
+echo ""
+echo ""
+
 platform=$(uname -m)
 echo -e "\033[33mStarting uberbase...\033[0m"
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 echo "Starting on $UBERBASE_PLATFORM"
 
-# set up if we need it
-./bin/configure
-./bin/build
+mkdir -p /home/podman/app/data/caddy_data
+mkdir -p /home/podman/app/data/caddy_config
 
-# start the uberbaes api
+./bin/configure
+
+# start the caddy proxy
+podman run \
+  --name caddy \
+  --cap-add=NET_ADMIN \
+  --network=host \
+  --add-host=host.docker.internal:host-gateway \
+  --env-file=.env \
+  -p 80:80 \
+  -p 443:443 \
+  -p 443:443/udp \
+  -v ${PWD}/configs/caddy:/etc/caddy \
+  -v ${PWD}/logs:/var/log/caddy \
+  -v ${UBERBASE_CADDY_DATA_STORAGE}:/data \
+  -v ${UBERBASE_CADDY_CONFIG_STORAGE}:/config \
+  --rm -d \
+  docker.io/caddy:2.8.4
+
+# start postgres first, cause fusionauth is dumb and can't restart a db connection
+podman compose down
+podman compose up postgres -d
+
+# start the uberbase api
 ./functions/api/bin/api ./configs/functions/config.json 2>&1 | tee ./logs/uberbase.log

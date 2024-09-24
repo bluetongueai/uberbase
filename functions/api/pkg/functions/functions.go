@@ -18,7 +18,7 @@ func Init(config FunctionsConfig) error {
 	var err error
 	fClient, err = newClient()
 	if err != nil {
-		log.Fatalf("could not get docker client")
+		log.Fatalf("could not get container client")
 	}
 
 	// build all images configured
@@ -29,22 +29,22 @@ func Init(config FunctionsConfig) error {
 
 		for _, imageContext := range subdirs {
 			imageName := imageContext.Name()
-			dockerfile := config.Build + "/" + imageContext.Name() + "/Dockerfile"
-			err := fClient.Build("uberbase/"+imageName, dockerfile, config.Build+"/"+imageContext.Name())
+			containerfile := config.Build + "/" + imageContext.Name() + "/Dockerfile"
+			err := fClient.Build("uberbase/"+imageName, containerfile, config.Build+"/"+imageContext.Name())
 			if err != nil {
-				log.Printf("failed to build image %s, %s, %s", imageName, dockerfile, config.Build+"/"+imageContext.Name())
+				log.Printf("failed to build image %s, %s, %s", imageName, containerfile, config.Build+"/"+imageContext.Name())
 			}
 		}
 	}
 
-	// login to docker registry if DOCKER_TOKEN set on environment
+	// login to container registry if DOCKER_TOKEN set on environment
 	if os.Getenv("DOCKER_TOKEN") != "" && os.Getenv("DOCKER_USER") != "" {
-		log.Printf("logging into docker registry")
-		stdOut, stdErr, err := fClient.docker("login", "-u", os.Getenv("DOCKER_USER"), "-p", os.Getenv("DOCKER_TOKEN"))
+		log.Printf("logging into container registry")
+		stdOut, stdErr, err := fClient.container("login", "docker.io" ,"-u", os.Getenv("DOCKER_USER"), "-p", os.Getenv("DOCKER_TOKEN"))
 		if err != nil {
-			log.Fatalf("failed to login to docker registry: %v\n%s\n%s", err, stdOut, stdErr)
+			log.Fatalf("failed to login to container registry: %v\n%s\n%s", err, stdOut, stdErr)
 		}
-		log.Printf("logged into docker registry: %s", stdOut)
+		log.Printf("logged into container registry: %s", stdOut)
 	}
 
 	for _, image := range config.Pull {
@@ -56,17 +56,17 @@ func Init(config FunctionsConfig) error {
 		log.Printf("pulled image %s: %s", image, stdOut)
 	}
 
-	// start the docker compose stack
+	// start the container compose stack
 	log.Printf("pulling compose stack")
-	fClient.dockerCompose("pull")
+	fClient.containerCompose("pull")
 	log.Printf("booting compose stack")
-	stdOut, stdErr, err := fClient.dockerCompose("up", "-d")
+	stdOut, stdErr, err := fClient.containerCompose("up", "-d")
 	if err != nil {
 		log.Fatalf("failed to start compose stack: %v\n%s\n%s", err, stdOut, stdErr)
 	}
 	log.Printf("compose stack started: %s", stdErr)
 
-	stdOut, stdErr, _ = fClient.dockerCompose("ps")
+	stdOut, stdErr, _ = fClient.containerCompose("ps")
 	log.Printf("compose stack status: %s\n%s", stdOut, stdErr)
 
 	return nil
@@ -74,7 +74,7 @@ func Init(config FunctionsConfig) error {
 
 func Shutdown() {
 	log.Printf("shutting down compose stack")
-	stdout, stderr, err := fClient.dockerCompose("down")
+	stdout, stderr, err := fClient.containerCompose("down")
 	if err != nil {
 		log.Fatalf("failed to shutdown cleanly: %v\n%s\n%s", err, stdout, stderr)
 	}

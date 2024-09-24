@@ -2,7 +2,7 @@
   debug
   # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
   log {
-		output file /var/log/caddy/caddy.log
+		output file /var/log/caddy.log
 	}
 }
 
@@ -32,35 +32,35 @@
 
 auth.${UBERBASE_DOMAIN} {
   import cors auth.${UBERBASE_DOMAIN}
-  reverse_proxy casdoor:${UBERBASE_CASDOOR_PORT}
+  reverse_proxy localhost:${UBERBASE_LOGTO_PORT}
 }
 
 # optional - expose your postgres instance (not recommended in production)
 postgres.${UBERBASE_DOMAIN} {
   import cors postgres.${UBERBASE_DOMAIN}
-  reverse_proxy postgres:${UBERBASE_POSTGRES_PORT}
+  reverse_proxy localhost:${UBERBASE_POSTGRES_PORT}
 }
 
 # optional - expose your redis instance
 redis.${UBERBASE_DOMAIN} {
   import cors redis.${UBERBASE_DOMAIN}
-  reverse_proxy redis:${UBERBASE_REDIS_PORT}
+  reverse_proxy localhost:${UBERBASE_REDIS_PORT}
 }
 
 # optional - expose your minio instance
 minio.${UBERBASE_DOMAIN} {
   import cors minio.${UBERBASE_DOMAIN}
-  reverse_proxy minio:${UBERBASE_MINIO_PORT}
+  reverse_proxy localhost:${UBERBASE_MINIO_PORT}
 }
 
 ${UBERBASE_DOMAIN} {
   import cors ${UBERBASE_DOMAIN}
 
   handle /api/v1/functions {
-    reverse_proxy 127.0.0.1:${UBERBASE_FUNCTIONS_PORT}
+    reverse_proxy localhost:${UBERBASE_FUNCTIONS_PORT}
   }
 
   handle /api/v1 {
-    reverse_proxy postgrest:${UBERBASE_POSTGREST_PORT}
+    reverse_proxy localhost:${UBERBASE_POSTGREST_PORT}
   }
 }
