@@ -72,7 +72,6 @@ services:
     restart: unless-stopped
     image: docker.io/bluetongueai/postgrest:latest
     container_name: postgrest
-    hostname: postgrest
     build:
       context: ./postgrest
       args:
