@@ -1,5 +1,0 @@
-#! /bin/bash
-
-pushd ./functions/api
-make build
-popd

@@ -3,6 +3,7 @@ FROM golang:1.22.6 AS builder
 ADD functions /app
 WORKDIR /app
 RUN cd api && go build -o bin/api
+RUN cd cli && go build -o bin/uberbase
 
 FROM quay.io/podman/stable:latest
 
@@ -129,4 +130,4 @@ USER podman
 EXPOSE 80
 EXPOSE 443
 
-ENTRYPOINT ["/home/podman/app/bin/start"]
+ENTRYPOINT ["/home/podman/app/bin/uberbase"]

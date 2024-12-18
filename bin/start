@@ -16,7 +16,6 @@ echo -e "Starting on \033[33m$UBERBASE_PLATFORM\033[0m"
 mkdir -p ./data/caddy_data
 mkdir -p ./data/caddy_config
 
-./bin/build
 ./bin/configure
 ./bin/stop
 # start postgres first, cause fusionauth is dumb and can't restart a db connection

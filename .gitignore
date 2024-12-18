@@ -4,7 +4,9 @@ keys/*
 functions/config.json
 logs/**/*.log
 functions/api/bin/*
+functions/cli/bin/*
 linux.git
 vmlinux.bin
 data
-*/**/.DS_Store
+.DS_Store
+bin/uberbase
