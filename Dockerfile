@@ -76,14 +76,18 @@ ENV UBERBASE_FUSIONAUTH_APP_URL $UBERBASE_FUSIONAUTH_APP_URL
 ENV UBERBASE_FUNCTIONS_PORT $UBERBASE_FUNCTIONS_PORT
 ENV UBERBASE_FUNCTIONS_IMAGE_PATH $UBERBASE_FUNCTIONS_IMAGE_PATH
 
+ENV PODMAN_COMPOSE_WARNING_LOGS=false
+
 RUN dnf -y install \
-    podman podman-compose fuse-overlayfs --exclude container-selinux \
-    make gettext \
+    podman podman-compose fuse-overlayfs make gettext --exclude container-selinux \
     && dnf clean all
 
 RUN useradd podman; \
 echo podman:1001:65534 > /etc/subuid; \
 echo podman:1001:65534 > /etc/subgid;
+
+ADD etc/sysctl.conf /etc/sysctl.conf
+#RUN sysctl -p /etc/sysctl.conf
 
 VOLUME /var/lib/containers
 VOLUME /home/podman/.local/share/containers

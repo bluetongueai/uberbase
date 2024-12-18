@@ -2,19 +2,22 @@
 
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 
+
 mkdir -p postgres/init
 cp postgres/_init/* postgres/init/.
-cp configs/postgres/init/* postgres/init/.
-mkdir -p configs/caddy
-if [ ! -f ./configs/caddy/Caddyfile ]; then
+
+rm -Rf ./configs
+mkdir -p ./configs/caddy
+mkdir -p ./configs/functions
+mkdir -p ./configs/postgrest
+
+if [ -f ./.env ]; then
+  source ./.env && envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
+  source ./.env && envsubst < ./functions/config.template.json > ./configs/functions/config.json
+  source ./.env && envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
+else
   envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
-fi
-mkdir -p configs/functions
-if [ ! -f ./configs/functions/config.json ]; then
   envsubst < ./functions/config.template.json > ./configs/functions/config.json
-fi
-mkdir -p configs/postgrest
-if [ ! -f ./configs/postgrest/postgrest.conf ]; then
   envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
 fi
-mkdir -p config/fusionauth
+

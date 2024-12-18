@@ -1,0 +1,1 @@
+docker run --rm -it -v $PWD:/home/podman/app -p 9011:9011 --entrypoint=/bin/bash bluetongueai/uberbase:latest
