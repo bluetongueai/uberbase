@@ -62,8 +62,9 @@ func (c client) container(args ...string) (string, string, error) {
 }
 
 func (c client) containerCompose(args ...string) (string, string, error) {
-	cmdArgs := append([]string{"compose"}, args...)
-	return c.command(c.binPath, cmdArgs...)
+	// cmdArgs := append([]string{"compose"}, args...)
+	composePath := c.binPath + "-compose"
+	return c.command(composePath, args...)
 }
 
 func (c client) Pull(imageName string, force bool) (string, string, error) {

@@ -20,7 +20,7 @@ mkdir -p ./data/caddy_config
 ./bin/configure
 ./bin/stop
 # start postgres first, cause fusionauth is dumb and can't restart a db connection
-PODMAN_COMPOSE_WARNING_LOGS=false podman compose up postgres -d
+PODMAN_COMPOSE_WARNING_LOGS=false podman-compose up postgres -d
 
 # start the uberbase api, which starts the rest of the services
 ./functions/api/bin/api ./configs/functions/config.json 2>&1 | tee ./logs/uberbase.log
