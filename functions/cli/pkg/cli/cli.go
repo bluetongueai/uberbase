@@ -244,8 +244,8 @@ func (cli *CLI) Execute() error {
 		cli.showDebugInfo()
 	}
 
-	// Check for help flags
-	if os.Args[1] == "-h" || os.Args[1] == "--help" {
+	// Only show help if it's the global help flag
+	if len(os.Args) == 2 && (os.Args[1] == "-h" || os.Args[1] == "--help") {
 		cli.ShowHelp()
 		return nil
 	}
@@ -262,22 +262,6 @@ func (cli *CLI) Execute() error {
 			}
 		}
 		args = filteredArgs
-	}
-
-	// Show help for specific command
-	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
-		if cmd, ok := cli.commands[command]; ok {
-			help := cmd.Help()
-			fmt.Printf("\n%s - %s\n", command, help.Description)
-			fmt.Printf("\nUsage: %s %s\n", os.Args[0], help.Usage)
-			if len(help.Examples) > 0 {
-				fmt.Println("\nExamples:")
-				for _, example := range help.Examples {
-					fmt.Printf("  %s %s\n", os.Args[0], example)
-				}
-			}
-			return nil
-		}
 	}
 
 	// First check if it's a registered command
