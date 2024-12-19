@@ -88,7 +88,6 @@ echo podman:1001:65534 > /etc/subuid; \
 echo podman:1001:65534 > /etc/subgid;
 
 ADD etc/sysctl.conf /etc/sysctl.conf
-#RUN sysctl -p /etc/sysctl.conf
 
 VOLUME /var/lib/containers
 VOLUME /home/podman/.local/share/containers

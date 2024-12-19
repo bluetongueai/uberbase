@@ -2,7 +2,37 @@
 
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 
+# Function to interpolate template files
+interpolate_template() {
+    local template_file=$1
+    local output_file=$2
+    local source_file
 
+    # Determine which file to use as source
+    if [ -f "$output_file" ]; then
+        source_file="$output_file"
+    else
+        source_file="$template_file"
+    fi
+    
+    # Create a temporary file for the new content
+    local temp_file=$(mktemp)
+    
+    if [ -f ./.env ]; then
+        source ./.env && envsubst < "$source_file" > "$temp_file"
+    else
+        envsubst < "$source_file" > "$temp_file"
+    fi
+
+    # Only update if content has changed
+    if ! cmp -s "$temp_file" "$output_file"; then
+        mv "$temp_file" "$output_file"
+    else
+        rm "$temp_file"
+    fi
+}
+
+# Create necessary directories
 mkdir -p postgres/init
 cp postgres/_init/* postgres/init/.
 
@@ -10,14 +40,20 @@ rm -Rf ./configs
 mkdir -p ./configs/caddy
 mkdir -p ./configs/functions
 mkdir -p ./configs/postgrest
+mkdir -p ./configs/kamal
 
-if [ -f ./.env ]; then
-  source ./.env && envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
-  source ./.env && envsubst < ./functions/config.template.json > ./configs/functions/config.json
-  source ./.env && envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
+interpolate_template "./caddy/Caddyfile.template" "./configs/caddy/Caddyfile"
+interpolate_template "./functions/config.template.json" "./configs/functions/config.json"
+interpolate_template "./postgrest/postgrest.template.conf" "./configs/postgrest/postgrest.conf"
+interpolate_template "./kamal/deploy.yml.template" "./configs/kamal/deploy.yml"
+
+# import secrets
+if [ -f ./configs/kamal/secrets ]; then
+  cp ./configs/kamal/secrets ./.kamal/secrets
 else
-  envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
-  envsubst < ./functions/config.template.json > ./configs/functions/config.json
-  envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
+  cp "./kamal/secrets.template" "./.kamal/secrets"
 fi
 
+if [ -d ./configs/kamal/hooks ]; then
+  cp -R ./configs/kamal/hooks ./.kamal/hooks
+fi

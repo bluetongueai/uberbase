@@ -37,6 +37,7 @@ docker build \
   --build-arg="UBERBASE_FUSIONAUTH_APP_URL=$UBERBASE_FUSIONAUTH_APP_URL" \
   --build-arg="UBERBASE_FUNCTIONS_PORT=$UBERBASE_FUNCTIONS_PORT" \
   --build-arg="UBERBASE_FUNCTIONS_IMAGE_PATH=$UBERBASE_FUNCTIONS_IMAGE_PATH" \
+  --no-cache \
   -t bluetongueai/uberbase:latest \
   .
 

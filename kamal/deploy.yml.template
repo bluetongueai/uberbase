@@ -1,0 +1,121 @@
+# Name of your application. Used to uniquely configure containers.
+service: uberbase
+
+# Name of the container image.
+image: bluetongueai/uberbase:latest
+
+# Deploy to these servers.
+servers:
+  web:
+    - 192.168.0.1
+  # job:
+  #   hosts:
+  #     - 192.168.0.1
+  #   cmd: bin/jobs
+
+# Credentials for your image host.
+registry:
+  # Specify the registry server, if you're not using Docker Hub
+  # server: registry.digitalocean.com / ghcr.io / ...
+  username: $UBERBASE_KAMAL_REGISTRY_USERNAME
+
+  # Always use an access token rather than real password (pulled from .kamal/secrets).
+  password:
+    - UBERBASE_KAMAL_REGISTRY_PASSWORD
+
+# Configure builder setup.
+builder:
+  arch: amd64
+  # Pass in additional build args needed for your Dockerfile.
+  # args:
+  #   RUBY_VERSION: <%= File.read('.ruby-version').strip %>
+
+# Inject ENV variables into containers (secrets come from .kamal/secrets).
+#
+env:
+  clear:
+    - UBERBASE_DOMAIN=$UBERBASE_DOMAIN
+    - UBERBASE_ADMIN_USERNAME=$UBERBASE_ADMIN_USERNAME
+    - UBERBASE_ADMIN_EMAIL=$UBERBASE_ADMIN_EMAIL
+    - UBERBASE_CADDY_DATA_STORAGE=$UBERBASE_CADDY_DATA_STORAGE
+    - UBERBASE_CADDY_CONFIG_STORAGE=$UBERBASE_CADDY_CONFIG_STORAGE
+    - UBERBASE_REDIS_HOST=$UBERBASE_REDIS_HOST
+    - UBERBASE_REDIS_PORT=$UBERBASE_REDIS_PORT
+    - UBERBASE_REDIS_STORAGE=$UBERBASE_REDIS_STORAGE
+    - UBERBASE_POSTGRES_HOST=$UBERBASE_POSTGRES_HOST
+    - UBERBASE_POSTGRES_DATABASE=$UBERBASE_POSTGRES_DATABASE
+    - UBERBASE_POSTGRES_USER=$UBERBASE_POSTGRES_USER
+    - UBERBASE_POSTGRES_PORT=$UBERBASE_POSTGRES_PORT
+    - UBERBASE_POSTGRES_STORAGE=$UBERBASE_POSTGRES_STORAGE
+    - UBERBASE_POSTGREST_VERSION=$UBERBASE_POSTGREST_VERSION
+    - UBERBASE_POSTGREST_PORT=$UBERBASE_POSTGREST_PORT
+    - UBERBASE_MINIO_HOST=$UBERBASE_MINIO_HOST
+    - UBERBASE_MINIO_PORT=$UBERBASE_MINIO_PORT
+    - UBERBASE_MINIO_CONSOLE_PORT=$UBERBASE_MINIO_CONSOLE_PORT
+    - UBERBASE_MINIO_STORAGE=$UBERBASE_MINIO_STORAGE
+    - UBERBASE_MINIO_ROOT_USER=$UBERBASE_MINIO_ROOT_USER
+    - UBERBASE_FUNCTIONS_PORT=$UBERBASE_FUNCTIONS_PORT
+    - UBERBASE_FUNCTIONS_IMAGE_PATH=$UBERBASE_FUNCTIONS_IMAGE_PATH
+    - UBERBASE_FUSIONAUTH_APP_RUNTIME_MODE=$UBERBASE_FUSIONAUTH_APP_RUNTIME_MODE
+    - UBERBASE_FUSIONAUTH_PORT=$UBERBASE_FUSIONAUTH_PORT
+    - UBERBASE_FUSIONAUTH_HOST=$UBERBASE_FUSIONAUTH_HOST
+    - UBERBASE_FUSIONAUTH_DATABASE=$UBERBASE_FUSIONAUTH_DATABASE
+    - UBERBASE_FUSIONAUTH_DATABASE_USERNAME=$UBERBASE_FUSIONAUTH_DATABASE_USERNAME
+    - UBERBASE_FUSIONAUTH_APP_MEMORY=$UBERBASE_FUSIONAUTH_APP_MEMORY
+    - UBERBASE_FUSIONAUTH_APP_URL=$UBERBASE_FUSIONAUTH_APP_URL
+    - UBERBASE_FUSIONAUTH_STORAGE=$UBERBASE_FUSIONAUTH_STORAGE
+  secret:
+    - UBERBASE_ADMIN_PASSWORD
+    - UBERBASE_REDIS_SECRET
+    - UBERBASE_POSTGRES_PASSWORD
+    - UBERBASE_POSTGREST_JWT_SECRET
+    - UBERBASE_MINIO_ROOT_PASSWORD
+    - UBERBASE_FUSIONAUTH_API_KEY
+    - UBERBASE_FUSIONAUTH_DATABASE_PASSWORD
+    - UBERBASE_KAMAL_REGISTRY_PASSWORD
+
+# Aliases are triggered with "bin/kamal <alias>". You can overwrite arguments on invocation:
+# "bin/kamal logs -r job" will tail logs from the first server in the job section.
+#
+# aliases:
+#   shell: app exec --interactive --reuse "bash"
+
+# Use a different ssh user than root
+#
+# ssh:
+#   user: app
+
+# Use a persistent storage volume.
+#
+# volumes:
+#   - "app_storage:/app/storage"
+
+# Bridge fingerprinted assets, like JS and CSS, between versions to avoid
+# hitting 404 on in-flight requests. Combines all files from new and old
+# version inside the asset_path.
+#
+# asset_path: /app/public/assets
+
+# Configure rolling deploys by setting a wait time between batches of restarts.
+#
+# boot:
+#   limit: 10 # Can also specify as a percentage of total hosts, such as "25%"
+#   wait: 2
+
+# Use accessory services (secrets come from .kamal/secrets).
+#
+accessories:
+  uberbase:
+    image: bluetongueai/uberbase:latest
+    host: 192.168.0.2
+    port: 80
+    env:
+      clear:
+        MYSQL_ROOT_HOST: '%'
+      secret:
+        - MYSQL_ROOT_PASSWORD
+    files:
+      - config/mysql/production.cnf:/etc/mysql/my.cnf
+      - db/production.sql:/docker-entrypoint-initdb.d/setup.sql
+    directories:
+      - data:/var/lib/mysql

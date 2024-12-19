@@ -1,1 +1,12 @@
-docker run --rm -it -v $PWD:/home/podman/app -p 8080:80 -p 8443:443 --privileged --entrypoint=/bin/bash bluetongueai/uberbase:latest
+docker run --rm -it \
+  -v $PWD:/home/podman/app \
+  -p 8080:80 \
+  -p 8443:443 \
+  --security-opt seccomp=unconfined \
+  --device /dev/fuse \
+  --cap-add MKNOD \
+  --cap-add SYS_ADMIN \
+  --cap-add SETUID \
+  --cap-add SETGID \
+  --entrypoint=/bin/bash \
+  bluetongueai/uberbase:latest
