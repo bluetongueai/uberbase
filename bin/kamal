@@ -2,9 +2,10 @@
 
 ./bin/configure
 
-podman run -it --rm \
-  -v /home/podman/kamal:/workdir \ # Mount the app to deploy into the /home/podman/kamal directory so Kamal sees it
-  -v "${PWD}/configs/kamal:configs/kamal" \ # Mount the kamal config directory into Uberbase's configs directory
+#podman run -it --rm \
+docker run -it --rm \
+  -v /home/podman/kamal:/workdir \
+  -v "${PWD}/configs/kamal:/workdir/config" \
   -v "${SSH_AUTH_SOCK}:/ssh-agent" \
   -v /var/run/podman/podman.sock:/var/run/docker.sock \
   -e "SSH_AUTH_SOCK=/ssh-agent" \

@@ -20,126 +20,158 @@ type CLI struct {
 
 type Command interface {
 	Execute(args []string) error
-	Help() CommandHelp
+	Help() (CommandHelp, bool)
 }
 
 type CommandHelp struct {
 	Description string
 	Usage       string
-	Examples    []string
 	Category    CommandCategory
 }
 
-// Basic command that shells out to a binary
-type ShellCommand struct {
-	binary      string
-	args        []string
-	description string
-	usage       string
-	examples    []string
-	category    CommandCategory
+type StartCommand struct {
+	binary string
 }
 
-func (c *ShellCommand) Execute(args []string) error {
-	cmd := exec.Command(c.binary, append(c.args, args...)...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	return cmd.Run()
-}
-
-func (c *ShellCommand) Help() CommandHelp {
-	return CommandHelp{
-		Description: c.description,
-		Usage:       c.usage,
-		Examples:    c.examples,
-		Category:    c.category,
+func NewStartCommand() *StartCommand {
+	return &StartCommand{
+		binary: "./bin/start",
 	}
 }
 
-// Specific commands
-type StartCommand struct {
-	ShellCommand
+func (c *StartCommand) Execute(args []string) error {
+	cmd := exec.Command(c.binary, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	if err := cmd.Run(); err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if status, ok := exitError.Sys().(syscall.WaitStatus); ok {
+				os.Exit(status.ExitStatus())
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+func (c *StartCommand) Help() (CommandHelp, bool) {
+	return CommandHelp{
+		Description: "Start Uberbase services",
+		Usage:       "start",
+		Category:    commonCategory,
+	}, true
+}
+
+type StopCommand struct {
+	binary string
+}
+
+func NewStopCommand() *StopCommand {
+	return &StopCommand{
+		binary: "./bin/stop",
+	}
+}
+
+func (c *StopCommand) Execute(args []string) error {
+	cmd := exec.Command(c.binary, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	if err := cmd.Run(); err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if status, ok := exitError.Sys().(syscall.WaitStatus); ok {
+				os.Exit(status.ExitStatus())
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+func (c *StopCommand) Help() (CommandHelp, bool) {
+	return CommandHelp{
+		Description: "Stop all services",
+		Usage:       "stop",
+		Category:    commonCategory,
+	}, true
+}
+
+type ComposeCommand struct {
+	binary string
+}
+
+func NewComposeCommand() *ComposeCommand {
+	return &ComposeCommand{
+		binary: "podman-compose",
+	}
+}
+
+func (c *ComposeCommand) Execute(args []string) error {
+	cmd := exec.Command(c.binary, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	if err := cmd.Run(); err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if status, ok := exitError.Sys().(syscall.WaitStatus); ok {
+				os.Exit(status.ExitStatus())
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+type DeployCommand struct {
+	binary string
+}
+
+func NewDeployCommand() *DeployCommand {
+	return &DeployCommand{
+		binary: "./bin/kamal",
+	}
+}
+
+func (c *DeployCommand) Execute(args []string) error {
+	cmd := exec.Command(c.binary, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	if err := cmd.Run(); err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if status, ok := exitError.Sys().(syscall.WaitStatus); ok {
+				os.Exit(status.ExitStatus())
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+func (c *DeployCommand) Help() (CommandHelp, bool) {
+	return CommandHelp{}, false
+}
+
+func (c *ComposeCommand) Help() (CommandHelp, bool) {
+	return CommandHelp{}, false
 }
 
 // Define categories
 var (
 	managementCategory = CommandCategory{
 		Name:        "Management Commands",
-		Description: "Commands to manage Uberbase services",
+			Description: "Commands to manage Uberbase services",
 	}
 	commonCategory = CommandCategory{
 		Name:        "Common Commands",
-		Description: "Most commonly used commands",
+			Description: "Most commonly used commands",
 	}
 )
-
-func NewStartCommand() *StartCommand {
-	return &StartCommand{
-		ShellCommand{
-			binary:      "./bin/start",
-			description: "Start Uberbase services",
-			usage:       "start",
-			examples:    []string{"start"},
-			category:    commonCategory,
-		},
-	}
-}
-
-type StopCommand struct {
-	ShellCommand
-}
-
-func NewStopCommand() *StopCommand {
-	return &StopCommand{
-		ShellCommand{
-			binary:      "./bin/stop",
-			description: "Stop all services",
-			usage:       "stop",
-			examples:    []string{"stop"},
-			category:    commonCategory,
-		},
-	}
-}
-
-type DeployCommand struct {
-	ShellCommand
-}
-
-func NewDeployCommand() *DeployCommand {
-	return &DeployCommand{
-		ShellCommand{
-				binary:      "./bin/kamal",
-				description: "Deploy the application",
-				usage:       "deploy [environment] [options]",
-				examples:    []string{
-					"deploy production",
-					"deploy staging --version=v1",
-				},
-				category: managementCategory,
-		},
-	}
-}
-
-type ComposeCommand struct {
-	ShellCommand
-}
-
-func NewComposeCommand() *ComposeCommand {
-	return &ComposeCommand{
-		ShellCommand{
-			binary:      "podman-compose",
-			description: "Multi-container management",
-			usage:       "compose [command] [options]",
-			examples:    []string{
-				"compose up -d",
-				"compose down",
-				"compose logs -f",
-			},
-			category: managementCategory,
-		},
-	}
-}
 
 func NewCLI() *CLI {
 	cli := &CLI{
@@ -163,8 +195,9 @@ func (cli *CLI) ShowHelp() {
 	// Group commands by category
 	categories := make(map[string][]string)
 	for name, cmd := range cli.commands {
-		help := cmd.Help()
-		categories[help.Category.Name] = append(categories[help.Category.Name], name)
+		if help, hasHelp := cmd.Help(); hasHelp {
+			categories[help.Category.Name] = append(categories[help.Category.Name], name)
+		}
 	}
 
 	// Sort category names
@@ -185,14 +218,18 @@ func (cli *CLI) ShowHelp() {
 		// Print each command in the category
 		for _, name := range commands {
 			cmd := cli.commands[name]
-			help := cmd.Help()
-			fmt.Printf("  %-15s%s\n", name, help.Description)
+			if help, hasHelp := cmd.Help(); hasHelp {
+				fmt.Printf("  %-15s%s\n", name, help.Description)
+			}
 		}
 		fmt.Println()
 	}
 
-	// Add section for commands that pass through to podman
-	fmt.Printf("Commands:\n")
+	// Add section for commands that pass through
+	fmt.Printf("Management Commands:\n")
+	fmt.Printf("  %-15s%s\n", "deploy", "Deploy using Kamal (see: deploy --help)")
+	fmt.Printf("  %-15s%s\n", "compose", "Manage containers using Podman Compose (see: compose --help)\n")
+	fmt.Printf("\nCommands:\n")
 	fmt.Printf("  All other commands are passed directly to Podman (e.g., ps, images, build)\n\n")
 
 	fmt.Printf("Run '%s COMMAND --help' for more information on a command.\n\n", os.Args[0])
@@ -266,6 +303,17 @@ func (cli *CLI) Execute() error {
 
 	// First check if it's a registered command
 	if cmd, ok := cli.commands[command]; ok {
+		// Check if user wants help
+		wantsHelp := len(args) > 0 && (args[0] == "-h" || args[0] == "--help") || len(args) == 0 && (command == "-h" || command == "--help")
+		if wantsHelp {
+			// Check if command has custom help
+			if help, hasHelp := cmd.Help(); hasHelp {
+				fmt.Printf("\n%s - %s\n", command, help.Description)
+				fmt.Printf("\nUsage: %s %s\n", os.Args[0], help.Usage)
+				return nil
+			}
+			// No custom help, fall through to execute with help flag
+		}
 		return cmd.Execute(args)
 	}
 
