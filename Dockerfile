@@ -2,8 +2,8 @@ FROM golang:1.22.6 AS builder
 
 ADD functions /app
 WORKDIR /app
-RUN cd api && GOOS=linux GOARCH=$(go env GOARCH) go build -o bin/api
-RUN cd cli && GOOS=linux GOARCH=$(go env GOARCH) go build -o bin/uberbase
+RUN cd api && go build -o bin/api && cd ..
+RUN cd cli && go build -o bin/uberbase && cd ..
 
 FROM quay.io/podman/stable:latest
 
@@ -101,6 +101,8 @@ ENV _CONTAINERS_USERNS_CONFIGURED=""
 
 COPY --from=builder /usr/local/go /usr/local/go
 COPY --from=builder /app/api/bin/api /home/podman/app/functions/api/bin/api
+COPY --from=builder /app/cli/bin/uberbase /home/podman/app/bin/uberbase
+
 ENV PATH=$PATH:/usr/local/go/bin
 
 WORKDIR /home/podman/app

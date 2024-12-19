@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"sort"
+	"strings"
 	"syscall"
 )
 
@@ -136,21 +138,44 @@ func NewDeployCommand() *DeployCommand {
 	}
 }
 
+func captureAndReplaceOutput(cmd *exec.Cmd, replacements map[string]string) (string, error) {
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	
+	err := cmd.Run()
+	
+	output := stdout.String()
+	if output == "" {
+		output = stderr.String()  // Some commands write help to stderr
+	}
+	
+	for old, new := range replacements {
+		output = strings.ReplaceAll(output, old, new)
+	}
+	
+	return output, err
+}
+
 func (c *DeployCommand) Execute(args []string) error {
 	cmd := exec.Command(c.binary, args...)
+	
+	// If this is a help request
+	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
+		replacements := map[string]string{
+			"Kamal": "deploy",
+			"kamal": "deploy",
+		}
+		output, _ := captureAndReplaceOutput(cmd, replacements)  // Ignore error for help output
+		fmt.Print(output)
+		return nil
+	}
+	
+	// Normal execution
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-
-	if err := cmd.Run(); err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			if status, ok := exitError.Sys().(syscall.WaitStatus); ok {
-				os.Exit(status.ExitStatus())
-			}
-		}
-		return err
-	}
-	return nil
+	return cmd.Run()
 }
 
 func (c *DeployCommand) Help() (CommandHelp, bool) {

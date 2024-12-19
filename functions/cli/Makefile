@@ -14,7 +14,7 @@ help: ## This help.
 .PHONY: build
 build:
 	mkdir -p bin
-	go build -buildvcs=false -o bin/uberbase .
+	GOOS=linux GOARCH=$(go env GOARCH) go build -buildvcs=false -o bin/uberbase .
 	chmod +x bin/uberbase
 
 .PHONY: install

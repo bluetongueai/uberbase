@@ -2,11 +2,25 @@
 
 ./bin/configure
 
-#podman run -it --rm \
-docker run -it --rm \
-  -v /home/podman/kamal:/workdir \
-  -v "${PWD}/configs/kamal:/workdir/config" \
-  -v "${SSH_AUTH_SOCK}:/ssh-agent" \
-  -v /var/run/podman/podman.sock:/var/run/docker.sock \
-  -e "SSH_AUTH_SOCK=/ssh-agent" \
-  ghcr.io/basecamp/kamal:latest $@
+podman pull ghcr.io/basecamp/kamal:latest
+
+if [[ ${SSH_AUTH_SOCK} == "/run/host-services/ssh-auth.sock" ]]; then
+  echo "Running kamal on MacOS host" >&2
+  podman run --rm \
+    -e "SSH_AUTH_SOCK=/run/host-services/ssh-auth.sock" \
+    -v "/run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock" \
+    -v "/var/run/docker.sock:/var/run/docker.sock" \
+    -v "/home/podman/kamal:/workdir" \
+    -v "${PWD}/configs/kamal:/workdir/config" \
+    ghcr.io/basecamp/kamal:latest $@
+else
+  echo "Running kamal on Linux host" >&2
+  podman run --rm \
+    -e "SSH_AUTH_SOCK=/ssh-agent" \
+    -v "${SSH_AUTH_SOCK}:/ssh-agent" \
+    -v "/var/run/docker.sock:/var/run/docker.sock" \
+    -v "/home/podman/kamal:/workdir" \
+    -v "${PWD}/configs/kamal:/workdir/config" \
+    ghcr.io/basecamp/kamal:latest $@
+fi
+

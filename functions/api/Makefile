@@ -14,7 +14,7 @@ help: ## This help.
 .PHONY: build
 build: ## Build the api
 	mkdir -p bin
-	go build -buildvcs=false -o bin/api .
+	GOOS=linux GOARCH=$(go env GOARCH) go build -buildvcs=false -o bin/api .
 	chmod +x bin/api
 
 .PHONY: install
