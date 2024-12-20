@@ -65,8 +65,13 @@ if [ ! -f ./configs/kamal/deploy.yml ]; then
   interpolate_template "./kamal/deploy.yml.template" "./_configs/kamal/deploy.yml"
 else
   for config in ./configs/kamal/*; do
+    # if config is a directory, skip it
+    if [ -d "$config" ]; then
+      continue
+    fi
+
     echo "Copying kamal config: $config"
-    cp "$config" "./_configs/kamal/$(basename "$config")"
+    envsubst < "$config" > "./_configs/kamal/$(basename "$config")"
   done
 fi
 
@@ -74,11 +79,18 @@ fi
 echo "Setting up kamal secrets..."
 rm -Rf ./.kamal config
 mkdir -p ./.kamal config
-if [ -f ./configs/kamal/secrets ]; then
-  echo "Copying kamal secrets: ./configs/kamal/secrets"
-  cp ./configs/kamal/secrets ./.kamal/secrets
-else
-  # Otherwise, use the template
+
+# Copy all files that start with secrets in ./configs/kamal to the .kamal directory
+for file in ./configs/kamal/*; do
+  if [[ "$file" == ./configs/kamal/secrets* ]]; then
+    echo "Copying kamal secrets: $file"
+    cp "$file" ./.kamal/secrets
+  fi
+done
+
+# If we don't have any secrets, use the template
+if [ ! -f ./.kamal/secrets ]; then
+  echo "Copying kamal secrets: ./kamal/secrets.template"
   cp "./kamal/secrets.template" "./.kamal/secrets"
 fi
 

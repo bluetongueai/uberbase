@@ -79,13 +79,21 @@ ENV UBERBASE_FUNCTIONS_IMAGE_PATH $UBERBASE_FUNCTIONS_IMAGE_PATH
 
 ENV PODMAN_COMPOSE_WARNING_LOGS=false
 
+# podman
 RUN dnf -y install \
-    podman podman-compose fuse-overlayfs make gettext --exclude container-selinux \
+    podman podman-compose fuse-overlayfs make gettext
+
+# docker (for buildx)
+RUN dnf -y install dnf-plugins-core \
+    && dnf-3 config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo \
+    && dnf -y install docker-ce docker-ce-cli docker-buildx-plugin \
+    && systemctl enable docker \
     && dnf clean all
 
 RUN useradd podman; \
-echo podman:1001:65534 > /etc/subuid; \
-echo podman:1001:65534 > /etc/subgid;
+    echo podman:1001:65534 > /etc/subuid; \
+    echo podman:1001:65534 > /etc/subgid;
+RUN usermod -aG docker podman
 
 ADD etc/sysctl.conf /etc/sysctl.conf
 
@@ -126,6 +134,8 @@ RUN mkdir -p /home/podman/app/configs /home/podman/app/logs /home/podman/app/dat
 
 RUN source /home/podman/app/.env && bin/configure
 RUN chown podman:podman -R /home/podman/app
+
+RUN ln -s /run/user/1000/podman/podman.sock /var/run/docker.sock
 
 USER podman
 

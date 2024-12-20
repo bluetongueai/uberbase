@@ -2,7 +2,11 @@
 
 source .env
 
-docker build \
+if ! docker buildx ls | grep -q kamal-local-docker-container; then
+  docker buildx create --name kamal-local-docker-container --use
+fi
+
+docker buildx build \
   --build-arg="UBERBASE_DOMAIN=$UBERBASE_DOMAIN" \
   --build-arg="UBERBASE_ADMIN_USERNAME=$UBERBASE_ADMIN_USERNAME" \
   --build-arg="UBERBASE_ADMIN_EMAIL=$UBERBASE_ADMIN_EMAIL" \
@@ -38,7 +42,9 @@ docker build \
   --build-arg="UBERBASE_FUNCTIONS_PORT=$UBERBASE_FUNCTIONS_PORT" \
   --build-arg="UBERBASE_FUNCTIONS_IMAGE_PATH=$UBERBASE_FUNCTIONS_IMAGE_PATH" \
   --no-cache \
+  --load \
   -t bluetongueai/uberbase:latest \
   .
 
+# Build local compose images
 docker compose build
