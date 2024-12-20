@@ -2,15 +2,18 @@
 
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 
+echo "Configuring Uberbase for ${UBERBASE_PLATFORM}..."
+
 # Function to interpolate template files
 interpolate_template() {
     local template_file=$1
     local output_file=$2
     local source_file
+    local user_config_file="./configs${output_file#./_configs}"
 
     # Determine which file to use as source
-    if [ -f "$output_file" ]; then
-        source_file="$output_file"
+    if [ -f "$user_config_file" ]; then
+        source_file="$user_config_file"
     else
         source_file="$template_file"
     fi
@@ -32,28 +35,57 @@ interpolate_template() {
     fi
 }
 
-# Create necessary directories
+# Smoosh our base postgres init data script
+# in with the user's provided init data
+# pray for no conflicts
+echo "Setting up postgres init.d scripts..."
 mkdir -p postgres/init
 cp postgres/_init/* postgres/init/.
 
-rm -Rf ./configs
-mkdir -p ./configs/caddy
-mkdir -p ./configs/functions
-mkdir -p ./configs/postgrest
-mkdir -p ./configs/kamal
+# Delete the previously configured configs and start fresh
+echo "Cleaning up previously configured configs..."
+rm -Rf ./_configs
+mkdir -p ./_configs/caddy
+mkdir -p ./_configs/functions
+mkdir -p ./_configs/postgrest
+mkdir -p ./_configs/kamal
 
-interpolate_template "./caddy/Caddyfile.template" "./configs/caddy/Caddyfile"
-interpolate_template "./functions/config.template.json" "./configs/functions/config.json"
-interpolate_template "./postgrest/postgrest.template.conf" "./configs/postgrest/postgrest.conf"
-interpolate_template "./kamal/deploy.yml.template" "./configs/kamal/deploy.yml"
+# Place templates interpolated with env vars into the _configs directory, or
+# use the user's provided configs if they exist
+echo "Setting up caddy config..."
+interpolate_template "./caddy/Caddyfile.template" "./_configs/caddy/Caddyfile"
+echo "Setting up functions config..."
+interpolate_template "./functions/config.template.json" "./_configs/functions/config.json"
+echo "Setting up postgrest config..."
+interpolate_template "./postgrest/postgrest.template.conf" "./_configs/postgrest/postgrest.conf"
 
-# import secrets
+# Use the user's provided kamal config if it exists, otherwise use the template
+echo "Setting up kamal config..."
+if [ ! -f ./configs/kamal/deploy.yml ]; then
+  interpolate_template "./kamal/deploy.yml.template" "./_configs/kamal/deploy.yml"
+else
+  for config in ./configs/kamal/*; do
+    echo "Copying kamal config: $config"
+    cp "$config" "./_configs/kamal/$(basename "$config")"
+  done
+fi
+
+# If the user has provided a secrets file, use it
+echo "Setting up kamal secrets..."
+rm -Rf ./.kamal config
+mkdir -p ./.kamal config
 if [ -f ./configs/kamal/secrets ]; then
+  echo "Copying kamal secrets: ./configs/kamal/secrets"
   cp ./configs/kamal/secrets ./.kamal/secrets
 else
+  # Otherwise, use the template
   cp "./kamal/secrets.template" "./.kamal/secrets"
 fi
 
+# If the user has provided a hooks directory, use it
 if [ -d ./configs/kamal/hooks ]; then
+  echo "Copying kamal hooks: ./configs/kamal/hooks"
   cp -R ./configs/kamal/hooks ./.kamal/hooks
 fi
+
+echo "Configuration complete!"

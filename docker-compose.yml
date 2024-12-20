@@ -90,7 +90,7 @@ services:
       - UBERBASE_POSTGREST_JWT_SECRET=${UBERBASE_POSTGREST_JWT_SECRET}
       - UBERBASE_POSTGREST_PORT=${UBERBASE_POSTGREST_PORT}
     volumes:
-      - ${PWD}/configs/postgrest/postgrest.conf:/etc/postgrest.conf
+      - ${PWD}/_configs/postgrest/postgrest.conf:/etc/postgrest.conf
       - ${PWD}/logs:/var/log/postgrest
     ports:
       - ${UBERBASE_POSTGREST_PORT}:3000
@@ -131,7 +131,7 @@ services:
     restart: unless-stopped
     volumes:
       - fusionauth_data:/usr/local/fusionauth/config
-      - ./configs/fusionauth:/usr/local/fusionauth/kickstart
+      - ./_configs/fusionauth:/usr/local/fusionauth/kickstart
       - ${PWD}/logs:/usr/local/fusionauth/logs
     depends_on:
       postgres:
@@ -155,7 +155,7 @@ services:
       - 80:80
       - 443:443
     volumes:
-      - ${PWD}/configs/caddy:/etc/caddy
+      - ${PWD}/_configs/caddy:/etc/caddy
       - ${PWD}/logs:/var/log/caddy
       - ${UBERBASE_CADDY_DATA_STORAGE}:/data
       - ${UBERBASE_CADDY_CONFIG_STORAGE}:/config

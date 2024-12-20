@@ -112,6 +112,7 @@ ADD postgres/image /home/podman/app/postgres/image
 ADD caddy /home/podman/app/caddy
 ADD postgrest /home/podman/app/postgrest
 ADD functions /home/podman/app/functions
+ADD kamal /home/podman/app/kamal
 COPY docker-compose.yml /home/podman/app/docker-compose.yml
 
 ADD bin /home/podman/app/bin

@@ -1,8 +1,10 @@
 #! /bin/bash
 
+podman pull ghcr.io/basecamp/kamal:latest
+
 ./bin/configure
 
-podman pull ghcr.io/basecamp/kamal:latest
+echo "Running kamal..."
 
 if [[ ${SSH_AUTH_SOCK} == "/run/host-services/ssh-auth.sock" ]]; then
   echo "Running kamal on MacOS host" >&2
@@ -11,7 +13,7 @@ if [[ ${SSH_AUTH_SOCK} == "/run/host-services/ssh-auth.sock" ]]; then
     -v "/run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock" \
     -v "/var/run/docker.sock:/var/run/docker.sock" \
     -v "/home/podman/kamal:/workdir" \
-    -v "${PWD}/configs/kamal:/workdir/config" \
+    -v "${PWD}/_configs/kamal:/workdir/config" \
     ghcr.io/basecamp/kamal:latest $@
 else
   echo "Running kamal on Linux host" >&2
@@ -20,7 +22,8 @@ else
     -v "${SSH_AUTH_SOCK}:/ssh-agent" \
     -v "/var/run/docker.sock:/var/run/docker.sock" \
     -v "/home/podman/kamal:/workdir" \
-    -v "${PWD}/configs/kamal:/workdir/config" \
+    -v "${PWD}/_configs/kamal:/workdir/config" \
     ghcr.io/basecamp/kamal:latest $@
 fi
+
 

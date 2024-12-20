@@ -1,8 +1,8 @@
 # Name of your application. Used to uniquely configure containers.
-service: uberbase
+service: your-service-name
 
 # Name of the container image.
-image: bluetongueai/uberbase:latest
+image: <your-image-name>
 
 # Deploy to these servers.
 servers:
@@ -107,15 +107,11 @@ env:
 accessories:
   uberbase:
     image: bluetongueai/uberbase:latest
-    host: 192.168.0.2
+    host: <your-host>
     port: 80
     env:
       clear:
-        MYSQL_ROOT_HOST: '%'
       secret:
-        - MYSQL_ROOT_PASSWORD
+        - 
     files:
-      - config/mysql/production.cnf:/etc/mysql/my.cnf
-      - db/production.sql:/docker-entrypoint-initdb.d/setup.sql
     directories:
-      - data:/var/lib/mysql
