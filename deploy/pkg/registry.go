@@ -8,7 +8,7 @@ import (
 )
 
 type RegistryClient struct {
-	ssh       *SSHClient
+	ssh       SSHClientInterface
 	registry  string
 	username  string
 	password  string
@@ -26,7 +26,7 @@ type ImageRef struct {
 	Tag      string
 }
 
-func NewRegistryClient(ssh *SSHClient, registry string, auth *RegistryAuth) *RegistryClient {
+func NewRegistryClient(ssh SSHClientInterface, registry string, auth *RegistryAuth) *RegistryClient {
 	client := &RegistryClient{
 		ssh:      ssh,
 		registry: registry,
@@ -42,17 +42,22 @@ func NewRegistryClient(ssh *SSHClient, registry string, auth *RegistryAuth) *Reg
 }
 
 func (r *RegistryClient) PushImage(imageRef ImageRef) error {
+	if err := r.validateImageRef(imageRef); err != nil {
+		return fmt.Errorf("invalid image reference: %w", err)
+	}
+	
 	if err := r.login(); err != nil {
 		return fmt.Errorf("registry login failed: %w", err)
 	}
 
-	fullRef := r.getFullImageRef(imageRef)
-	cmd := NewRemoteCommand(r.ssh, fmt.Sprintf("podman push %s", fullRef))
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to push image %s: %w", fullRef, err)
-	}
-
-	return nil
+	name := strings.TrimSuffix(imageRef.Name, ":latest")
+	
+	cmd := NewRemoteCommand(r.ssh, fmt.Sprintf(
+		"podman push %s/%s",
+		r.registry,
+		name,
+	))
+	return cmd.Run()
 }
 
 func (r *RegistryClient) PullImage(imageRef ImageRef) error {
@@ -187,4 +192,17 @@ func (r *RegistryClient) GetImageDigest(imageRef ImageRef) (string, error) {
 	}
 
 	return strings.TrimSpace(string(output)), nil
+}
+
+func (r *RegistryClient) validateImageRef(ref ImageRef) error {
+	if ref.Name == "" {
+		return fmt.Errorf("image name is required")
+	}
+	if ref.Registry != "" {
+		// Add registry URL validation
+		if strings.Contains(ref.Registry, " ") {
+			return fmt.Errorf("invalid registry URL")
+		}
+	}
+	return nil
 }

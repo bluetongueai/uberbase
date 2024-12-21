@@ -6,10 +6,10 @@ import (
 )
 
 type GitCloner struct {
-	ssh *SSHClient
+	ssh SSHClientInterface
 }
 
-func NewGitCloner(ssh *SSHClient) *GitCloner {
+func NewGitCloner(ssh SSHClientInterface) *GitCloner {
 	return &GitCloner{
 		ssh: ssh,
 	}
@@ -23,6 +23,10 @@ type CloneOptions struct {
 }
 
 func (g *GitCloner) Clone(opts CloneOptions) error {
+	if err := g.validateOptions(opts); err != nil {
+		return err
+	}
+
 	if err := g.validateGitInstalled(); err != nil {
 		return err
 	}
@@ -32,7 +36,7 @@ func (g *GitCloner) Clone(opts CloneOptions) error {
 		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
-	// Build clone command
+	// Build clone command with proper escaping
 	cmd := g.buildCloneCommand(opts)
 	
 	// Execute clone
@@ -89,28 +93,6 @@ func (g *GitCloner) GetRemoteURL(repoPath string) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
-func (g *GitCloner) buildCloneCommand(opts CloneOptions) string {
-	var cmdParts []string
-
-	cmdParts = append(cmdParts, "git -c advice.detachedHead=false clone --porcelain")
-
-	if opts.Branch != "" {
-		cmdParts = append(cmdParts, "-b", opts.Branch)
-	}
-
-	if opts.Depth > 0 {
-		cmdParts = append(cmdParts, fmt.Sprintf("--depth=%d", opts.Depth))
-	}
-
-	cmdParts = append(cmdParts, opts.URL)
-
-	if opts.Destination != "" {
-		cmdParts = append(cmdParts, opts.Destination)
-	}
-
-	return strings.Join(cmdParts, " ")
-}
-
 func (g *GitCloner) validateGitInstalled() error {
 	cmd := NewRemoteCommand(g.ssh, "which git")
 	if err := cmd.Run(); err != nil {
@@ -144,4 +126,53 @@ func (g *GitCloner) GetCurrentCommit(repoPath string) (string, error) {
 	}
 
 	return strings.TrimSpace(string(output)), nil
+}
+
+func (g *GitCloner) validateOptions(opts CloneOptions) error {
+	if opts.URL == "" {
+		return fmt.Errorf("URL is required")
+	}
+
+	// Basic git URL format validation
+	if !strings.HasPrefix(opts.URL, "git@") && !strings.HasPrefix(opts.URL, "https://") {
+		return fmt.Errorf("invalid git URL format: must start with git@ or https://")
+	}
+
+	// Branch name validation
+	if opts.Branch != "" && strings.ContainsAny(opts.Branch, " \t\n") {
+		return fmt.Errorf("invalid branch name: must not contain whitespace")
+	}
+
+	return nil
+}
+
+func (g *GitCloner) buildCloneCommand(opts CloneOptions) string {
+	var cmdParts []string
+
+	cmdParts = append(cmdParts, "git -c advice.detachedHead=false clone --porcelain")
+
+	if opts.Branch != "" {
+		cmdParts = append(cmdParts, "-b", opts.Branch)
+	}
+
+	if opts.Depth > 0 {
+		cmdParts = append(cmdParts, fmt.Sprintf("--depth=%d", opts.Depth))
+	}
+
+	// Only quote URLs and paths if they contain special characters
+	if strings.ContainsAny(opts.URL, " $&\"'") {
+		cmdParts = append(cmdParts, fmt.Sprintf("%q", opts.URL))
+	} else {
+		cmdParts = append(cmdParts, opts.URL)
+	}
+
+	if opts.Destination != "" {
+		if strings.ContainsAny(opts.Destination, " $&\"'") {
+			cmdParts = append(cmdParts, fmt.Sprintf("%q", opts.Destination))
+		} else {
+			cmdParts = append(cmdParts, opts.Destination)
+		}
+	}
+
+	return strings.Join(cmdParts, " ")
 }

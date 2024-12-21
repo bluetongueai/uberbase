@@ -41,6 +41,7 @@ type Service struct {
 	Domains     []string         `yaml:"domains,omitempty"`
 	SSL         bool             `yaml:"ssl,omitempty"`
 	Private     bool             `yaml:"private,omitempty"`
+	Labels      map[string]string `yaml:"labels,omitempty"`
 }
 
 type Volume struct {
@@ -60,9 +61,13 @@ type BuildConfig struct {
 }
 
 type Deployer struct {
-	config  DeployConfig
-	ssh     *pkg.SSHClient
-	workDir string
+	config   DeployConfig
+	ssh      pkg.SSHClientInterface
+	workDir  string
+	builder  *pkg.Builder
+	registry *pkg.RegistryClient
+	proxy    *pkg.ProxyManager
+	state    *pkg.StateManager
 }
 
 type DeployConfig struct {
@@ -96,40 +101,47 @@ type Healthcheck struct {
 
 type DependsOnConfig struct {
 	Condition string `yaml:"condition"`
+	Service   string `yaml:"service"`
+}
+
+type StateManager interface {
+	Load() (*State, error)
+	Save(state *State) error
+	GetLastDeployment() (*State, error)
+	ClearState() error
+}
+
+type State struct {
+	LastKnownGood map[string]Service
+	Version       string
+	Timestamp     time.Time
 }
 
 func NewDeployer(config DeployConfig) *Deployer {
 	ssh := pkg.NewSSHClient(config.SSH.Host, config.SSH.User, config.SSH.Port, config.SSH.KeyFile, config.SSH.KeyData)
+	workDir := "/tmp/deploy/" + filepath.Base(os.Getenv("PWD"))
 	return &Deployer{
-		config:  config,
-		ssh:     ssh,
-		workDir: "/tmp/deploy/" + filepath.Base(os.Getenv("PWD")),
+		config:   config,
+		ssh:      ssh,
+		workDir:  workDir,
+		builder:  pkg.NewBuilder(ssh),
+		registry: pkg.NewRegistryClient(ssh, config.Registry.Host, &pkg.RegistryAuth{
+			Username: config.Registry.Username,
+			Password: config.Registry.Password,
+		}),
+		proxy:    pkg.NewProxyManager(ssh, "./bin/kamal-proxy"),
+		state:    pkg.NewStateManager(ssh, workDir),
 	}
 }
 
 func (d *Deployer) Deploy() error {
+	// 1. Connect via SSH
 	if err := d.ssh.Connect(); err != nil {
 		return fmt.Errorf("failed to connect SSH: %w", err)
 	}
 	defer d.ssh.Close()
 
-	// Setup networks
-	netManager := pkg.NewNetworkManager(d.ssh)
-	for name, net := range d.config.Networks {
-		if err := netManager.EnsureNetwork(name, net.Internal); err != nil {
-			return fmt.Errorf("failed to setup network %s: %w", name, err)
-		}
-	}
-
-	// Setup volumes
-	volManager := pkg.NewVolumeManager(d.ssh)
-	for name := range d.config.Volumes {
-		if err := volManager.EnsureVolume(name); err != nil {
-			return fmt.Errorf("failed to setup volume %s: %w", name, err)
-		}
-	}
-
-	// Setup Git repository
+	// 2. Git clone
 	gitURL, err := d.getCurrentRepoURL()
 	if err != nil {
 		return fmt.Errorf("failed to get git URL: %w", err)
@@ -144,142 +156,190 @@ func (d *Deployer) Deploy() error {
 		return fmt.Errorf("failed to clone repository: %w", err)
 	}
 
-	// Setup registry client
-	registry := pkg.NewRegistryClient(d.ssh, d.config.Registry.Host, &pkg.RegistryAuth{
-		Username: d.config.Registry.Username,
-		Password: d.config.Registry.Password,
-	})
+	// 3. Build and push images first
+	for name, service := range d.config.Services {
+		if service.Build != nil {
+			buildOpts := pkg.BuildOptions{
+				File:         filepath.Join(d.workDir, service.Build.Dockerfile),
+				ContextPath:  filepath.Join(d.workDir, service.Build.Context),
+				Tag:          service.Image,
+				BuildArgs:    service.Build.Args,
+				Platform:     []string{"linux/amd64"},
+				Pull:         "always",
+				NetworkMode:  "host",
+				Labels:       service.Labels,
+				Memory:       service.Resources.Memory,
+				CPUShares:    service.Resources.CPU,
+				NoCache:      true,
+				ForceRm:      true,
+				SBOMOutput:   filepath.Join(d.workDir, "sbom.json"),
+			}
 
-	// Setup builder
-	builder := pkg.NewBuilder(d.ssh)
+			if err := d.builder.Build(buildOpts); err != nil {
+				return fmt.Errorf("build failed for %s: %w", name, err)
+			}
 
-	// Setup proxy manager
-	proxy := pkg.NewProxyManager(d.ssh, "/usr/local/bin/kamal-proxy")
+			if err := d.registry.PushImage(pkg.ImageRef{Name: service.Image}); err != nil {
+				return fmt.Errorf("push failed for %s: %w", name, err)
+			}
+		}
+	}
 
-	// Order services by dependencies
+	// 4. Setup networks
+	if err := d.setupNetworks(); err != nil {
+		return fmt.Errorf("failed to setup networks: %w", err)
+	}
+
+	// 5. Setup volumes
+	volManager := pkg.NewVolumeManager(d.ssh)
+	for name := range d.config.Volumes {
+		if err := volManager.EnsureVolume(name); err != nil {
+			return fmt.Errorf("failed to setup volume %s: %w", name, err)
+		}
+	}
+
+	// 6. Ensure proxy is running
+	if err := d.ensureProxyRunning(); err != nil {
+		return fmt.Errorf("failed to start proxy: %w", err)
+	}
+
+	// 7. Load and save deployment state
+	state, err := d.state.Load()
+	if err != nil {
+		return fmt.Errorf("failed to load deployment state: %w", err)
+	}
+
+	// Save current config as last known good
+	state.LastKnownGood = d.config.Services
+	if err := d.state.Save(state); err != nil {
+		return fmt.Errorf("failed to save deployment state: %w", err)
+	}
+
+	// 8. Deploy services in order
 	orderedServices := d.orderServices()
-
-	// Process each service
 	for _, name := range orderedServices {
 		service := d.config.Services[name]
-		if err := d.deployService(name, service, builder, registry, proxy); err != nil {
-			return fmt.Errorf("failed to deploy service %s: %w", name, err)
+		if err := d.deployService(name, service); err != nil {
+			// 9. Rollback on failure
+			log.Printf("Deployment failed for %s, rolling back to last known good configuration", name)
+			for rollbackName, rollbackService := range state.LastKnownGood {
+				if service, ok := rollbackService.(Service); ok {
+					if err := d.deployService(rollbackName, service); err != nil {
+						log.Printf("Rollback failed for %s: %v", rollbackName, err)
+					}
+				}
+			}
+			return fmt.Errorf("deployment failed for %s: %w", name, err)
 		}
 	}
 
 	return nil
 }
 
-func (d *Deployer) deployService(name string, service Service, builder *pkg.Builder, registry *pkg.RegistryClient, proxy *pkg.ProxyManager) error {
-	// Check dependencies
-	for dep, config := range service.DependsOn {
-		// Verify dependency exists
-		_, exists := d.config.Services[dep]
-		if !exists {
-			return fmt.Errorf("dependency %s not found", dep)
-		}
-
-		// Handle service_healthy condition
-		if config.Condition == "service_healthy" {
-			if err := d.waitForHealthy(dep); err != nil {
-				return fmt.Errorf("dependency %s failed health check: %w", dep, err)
+func (d *Deployer) deployService(name string, service Service) error {
+	// 1. Check dependencies
+	if service.DependsOn != nil {
+		for dep, config := range service.DependsOn {
+			if config.Condition == "service_healthy" {
+				if err := d.waitForHealthy(dep); err != nil {
+					return fmt.Errorf("dependency %s not healthy: %w", dep, err)
+				}
 			}
 		}
 	}
 
-	// Ensure volumes exist
-	if len(service.Volumes) > 0 {
-		volManager := pkg.NewVolumeManager(d.ssh)
-		if err := volManager.EnsureVolumes(service.Volumes); err != nil {
-			return fmt.Errorf("failed to setup volumes: %w", err)
+	// 2. Build and push if needed
+	if service.Build != nil {
+		buildOpts := pkg.BuildOptions{
+			File:         filepath.Join(d.workDir, service.Build.Dockerfile),
+			ContextPath:  filepath.Join(d.workDir, service.Build.Context),
+			Tag:          service.Image,
+			BuildArgs:    service.Build.Args,
+			Platform:     []string{"linux/amd64"},
+			Pull:         "always",
+			NetworkMode:  "host",
+			Labels:       service.Labels,
+			Memory:       service.Resources.Memory,
+			CPUShares:    service.Resources.CPU,
+			NoCache:      true,
+			ForceRm:      true,
+			SBOMOutput:   filepath.Join(d.workDir, "sbom.json"),
+		}
+
+		if err := d.builder.Build(buildOpts); err != nil {
+			return fmt.Errorf("build failed: %w", err)
+		}
+
+		if err := d.registry.PushImage(pkg.ImageRef{Name: service.Image}); err != nil {
+			return fmt.Errorf("push failed: %w", err)
 		}
 	}
 
-	// Build the image
-	buildOpts := pkg.BuildOptions{
-		Dockerfile:  filepath.Join(d.workDir, service.Build.Dockerfile),
-		ContextPath: filepath.Join(d.workDir, service.Build.Context),
-		Tag:        service.Image,
-		BuildArgs:  service.Build.Args,
-		Environment: service.Environment,
-		Volumes:    service.Volumes,
-	}
-
-	if err := builder.Build(buildOpts); err != nil {
-		return fmt.Errorf("build failed: %w", err)
-	}
-
-	// Handle healthcheck if defined
-	if len(service.Healthcheck.Test) > 0 {
-		cmd := strings.Join(service.Healthcheck.Test, " ")
-		healthCmd := pkg.NewRemoteCommand(d.ssh, cmd)
-		if err := healthCmd.Run(); err != nil {
-			return fmt.Errorf("healthcheck failed: %w", err)
-		}
-	}
-
-	// Push to registry
-	imageRef := pkg.ImageRef{
-		Name: service.Image,
-	}
-	if err := registry.PushImage(imageRef); err != nil {
-		return fmt.Errorf("push failed: %w", err)
-	}
-
-	// Create container
+	// 3. Start container first
+	containerManager := pkg.NewContainerManager(d.ssh)
 	container := pkg.Container{
-		Name:        name,
-		Image:       service.Image,
-		Command:     d.parseCommand(service.Command),
-		User:        service.User,
-		Ports:       service.Ports,
-		Volumes:     service.Volumes,
-		Environment: service.Environment,
-		EnvFile:     service.EnvFile,
+		Name:         name,
+		Image:        service.Image,
+		Command:      d.parseCommand(service.Command),
+		User:         service.User,
+		Ports:        service.Ports,
+		Volumes:      service.Volumes,
+		Environment:  service.Environment,
+		EnvFile:      service.EnvFile,
 		Capabilities: service.Capabilities,
-		ExtraHosts:  service.ExtraHosts,
-		Restart:     service.Restart,
+		ExtraHosts:   service.ExtraHosts,
+		Restart:      service.Restart,
 		Healthcheck: pkg.Healthcheck{
 			Test:     service.Healthcheck.Test,
 			Interval: service.Healthcheck.Interval,
 			Timeout:  service.Healthcheck.Timeout,
 			Retries:  service.Healthcheck.Retries,
 		},
+		Networks:    service.Networks,
+		DependsOn:   make([]pkg.DependencyConfig, 0),
 	}
 
-	// Create and start container
-	containerManager := pkg.NewContainerManager(d.ssh)
+	if service.DependsOn != nil {
+		for svc, config := range service.DependsOn {
+			container.DependsOn = append(container.DependsOn, pkg.DependencyConfig{
+				Service:   svc,
+				Condition: config.Condition,
+			})
+		}
+	}
+
+	// Connect container to networks before starting
+	if len(service.Networks) > 0 {
+		container.Networks = service.Networks
+	}
+
 	if err := containerManager.Run(container); err != nil {
 		return fmt.Errorf("failed to start container: %w", err)
 	}
 
-	// Connect container to networks
-	netManager := pkg.NewNetworkManager(d.ssh)
-	if err := netManager.ConnectContainer(name, service.Networks); err != nil {
-		return fmt.Errorf("failed to connect networks: %w", err)
-	}
-
-	// Configure proxy
-	proxyService := pkg.ProxyService{
-		Name:    name,
-		Domains: service.Domains,
-		Port:    service.Ports[0],
-		SSL:     service.SSL,
-		Networks: service.Networks,
-	}
-
-	if err := proxy.DeployService(proxyService); err != nil {
-		return fmt.Errorf("proxy configuration failed: %w", err)
-	}
-
-	// Connect to appropriate network
-	if service.Private {
-		if err := netManager.ConnectContainer(name, []string{"private"}); err != nil {
-			return fmt.Errorf("failed to connect to private network: %w", err)
+	// 4. Configure proxy routing for each domain
+	if len(service.Domains) > 0 {
+		proxyService := pkg.ProxyService{
+			Name:               name,
+			Image:             service.Image,
+			Domains:           service.Domains,
+			SSL:               service.SSL,
+			Networks:          service.Networks,
+			Private:           service.Private,
+			Port:              extractPort(service.Ports[0]),
+			Environment:       service.Environment,
+			Volumes:           service.Volumes,
+			Command:           d.parseCommand(service.Command),
+			Version:           "v1",
+			Weight:            100,
+			Labels:            service.Labels,
+			HealthCheckTimeout: 30 * time.Second,
 		}
-	} else {
-		if err := netManager.ConnectContainer(name, []string{"public"}); err != nil {
-			return fmt.Errorf("failed to connect to public network: %w", err)
+		if err := validateProxyService(proxyService); err != nil {
+			return fmt.Errorf("invalid proxy service configuration: %w", err)
+		}
+		if err := d.proxy.DeployService(proxyService); err != nil {
+			return fmt.Errorf("proxy configuration failed: %w", err)
 		}
 	}
 
@@ -433,19 +493,21 @@ func (d *Deployer) orderServices() []string {
 	return order
 }
 
-func (d *Deployer) resolveVolumes(volumes []string) []string {
-	resolved := make([]string, len(volumes))
+func (d *Deployer) resolveVolumes(volumes []string) ([]string, error) {
+	volManager := pkg.NewVolumeManager(d.ssh)
+	
+	// Handle SELinux and volume options
 	for i, vol := range volumes {
-		if strings.Contains(vol, ":") {
-			resolved[i] = os.ExpandEnv(vol)
-			continue
-		}
-		// Handle named volumes
-		if _, exists := d.config.Volumes[vol]; exists {
-			resolved[i] = vol + ":/" + vol
+		options := strings.Split(vol, ":")
+		if len(options) > 2 {
+			if err := volManager.handleSELinux(options[0], options[2:]); err != nil {
+				return nil, err
+			}
+			volumes[i] = strings.Join(volManager.handleVolumeOptions(options[0], options[2:]), ":")
 		}
 	}
-	return resolved
+	
+	return volumes, nil
 }
 
 func (d *Deployer) waitForHealthy(serviceName string) error {
@@ -473,4 +535,68 @@ func (d *Deployer) parseCommand(cmd interface{}) []string {
 	default:
 		return nil
 	}
+}
+
+func extractPort(port string) string {
+	parts := strings.Split(port, ":")
+	if len(parts) > 1 {
+		return parts[1]
+	}
+	return ""
+}
+
+func (d *Deployer) ensureProxyRunning() error {
+	// Current implementation doesn't handle proxy installation
+	// Should use the documented API:
+	proxyInstaller := pkg.NewPodmanInstaller(d.ssh)
+	if err := proxyInstaller.EnsureInstalled(); err != nil {
+		return fmt.Errorf("failed to install proxy dependencies: %w", err)
+	}
+	
+	// Check if proxy is running
+	checkCmd := pkg.NewRemoteCommand(d.ssh, "pgrep kamal-proxy")
+	if err := checkCmd.Run(); err != nil {
+		// Start proxy if not running
+		startCmd := pkg.NewRemoteCommand(d.ssh, "kamal-proxy run --http-port 80")
+		if err := startCmd.Run(); err != nil {
+			return fmt.Errorf("failed to start kamal-proxy: %w", err)
+		}
+	}
+	return nil
+}
+
+func (d *Deployer) setupNetworks() error {
+	netManager := pkg.NewNetworkManager(d.ssh)
+	
+	// List existing networks
+	existing, err := netManager.ListNetworks()
+	if err != nil {
+		return err
+	}
+	
+	// Create missing networks
+	for name, net := range d.config.Networks {
+		if !contains(existing, name) {
+			if err := netManager.EnsureNetwork(name, net.Internal); err != nil {
+				return fmt.Errorf("failed to create network %s: %w", name, err)
+			}
+		}
+	}
+	return nil
+}
+
+func validateProxyService(service pkg.ProxyService) error {
+	if service.Name == "" {
+		return fmt.Errorf("proxy service name is required")
+	}
+	if service.Image == "" {
+		return fmt.Errorf("proxy service image is required")
+	}
+	if len(service.Domains) == 0 {
+		return fmt.Errorf("proxy service domains are required")
+	}
+	if service.Port == "" {
+		return fmt.Errorf("proxy service port is required")
+	}
+	return nil
 }
