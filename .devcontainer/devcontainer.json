@@ -2,7 +2,10 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
 {
 	"name": "Uberbase Dev",
-	"image": "mcr.microsoft.com/devcontainers/universal:linux",
+	"build": {
+		"dockerfile": "../deploy/Dockerfile",
+		"context": "../deploy"
+	},
 	"runArgs": ["--privileged"],
 	"mounts": [],
 	// Features to add to the dev container. More info: https://containers.dev/features.

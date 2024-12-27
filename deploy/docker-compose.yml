@@ -1,0 +1,166 @@
+name: uberbase
+
+volumes:
+  redis_data:
+  postgres_data:
+  minio_data:
+  fusionauth_data:
+
+networks:
+  net:
+    driver: bridge
+
+services:
+  redis:
+    restart: unless-stopped
+    image: docker.io/redis/redis-stack:latest
+    container_name: redis
+    user: "0"
+    volumes:
+      - ${UBERBASE_REDIS_STORAGE}:/data:Z
+      - ${PWD}/logs:/var/log/redis:Z
+    ports:
+      - ${UBERBASE_REDIS_PORT}:6379
+    environment:
+      REDIS_ARGS: "--logfile /var/log/redis/redis.log --loglevel verbose"
+    networks:
+      - net
+    extra_hosts:
+      - uberbase:host-gateway
+
+  postgres:
+    restart: unless-stopped
+    image: docker.io/bluetongueai/postgres:latest
+    build:
+      context: ./postgres/image
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${UBERBASE_POSTGRES_DATABASE}
+    ports:
+      - ${UBERBASE_POSTGRES_PORT}:5432
+    volumes:
+      - ${PWD}/logs:/var/log/postgresql
+      - ${PWD}/postgres/init:/docker-entrypoint-initdb.d
+      - ${PWD}/postgres/conf:/etc/postgresql/
+      - ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${UBERBASE_POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - net
+    extra_hosts:
+      - uberbase:host-gateway
+
+  minio:
+    restart: unless-stopped
+    image: quay.io/minio/minio:latest
+    container_name: minio
+    user: "0"
+    command: server /data --console-address ":9001"
+    volumes:
+      - ${UBERBASE_MINIO_STORAGE}:/data:Z
+    environment:
+      MINIO_ROOT_USER: ${UBERBASE_MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${UBERBASE_MINIO_ROOT_PASSWORD}
+    ports:
+      - ${UBERBASE_MINIO_PORT}:9000
+      - ${UBERBASE_MINIO_CONSOLE_PORT}:9001
+    networks:
+      - net
+    extra_hosts:
+      - uberbase:host-gateway
+ 
+  postgrest:
+    restart: unless-stopped
+    image: docker.io/bluetongueai/postgrest:latest
+    container_name: postgrest
+    build:
+      context: ./postgrest
+      args:
+        - POSTGREST_VERSION=${UBERBASE_POSTGREST_VERSION}
+    environment:
+      - UBERBASE_POSTGRES_USER=${UBERBASE_POSTGRES_USER}
+      - UBERBASE_POSTGRES_PASSWORD=${UBERBASE_POSTGRES_PASSWORD}
+      - UBERBASE_POSTGRES_HOST=${UBERBASE_POSTGRES_HOST}
+      - UBERBASE_POSTGRES_DATABASE=${UBERBASE_POSTGRES_DATABASE}
+      - UBERBASE_POSTGREST_JWT_SECRET=${UBERBASE_POSTGREST_JWT_SECRET}
+      - UBERBASE_POSTGREST_PORT=${UBERBASE_POSTGREST_PORT}
+    volumes:
+      - ${PWD}/_configs/postgrest/postgrest.conf:/etc/postgrest.conf
+      - ${PWD}/logs:/var/log/postgrest
+    ports:
+      - ${UBERBASE_POSTGREST_PORT}:3000
+    healthcheck:
+      test: curl --silent --fail http://postgrest:3001/metrics -o /dev/null -w "%{http_code}"
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - net
+    extra_hosts:
+      - uberbase:host-gateway
+
+  fusionauth:
+    image:  docker.io/fusionauth/fusionauth-app:latest
+    container_name: fusionauth
+    user: root
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: jdbc:postgresql://${UBERBASE_POSTGRES_HOST}:${UBERBASE_POSTGRES_PORT}/${UBERBASE_FUSIONAUTH_DATABASE}
+      DATABASE_ROOT_USERNAME: ${UBERBASE_POSTGRES_USER}
+      DATABASE_ROOT_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
+      DATABASE_USERNAME: ${UBERBASE_POSTGRES_USER}
+      DATABASE_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
+      FUSIONAUTH_APP_RUNTIME_MODE: ${UBERBASE_FUSIONAUTH_APP_RUNTIME_MODE}
+      FUSIONAUTH_APP_MEMORY: ${UBERBASE_FUSIONAUTH_APP_MEMORY}
+      FUSIONAUTH_APP_URL: ${UBERBASE_FUSIONAUTH_APP_URL} 
+      FUSIONAUTH_APP_KICKSTART_FILE: /usr/local/fusionauth/kickstart/kickstart.json
+    healthcheck:
+      test: curl --silent --fail http://fusionauth:9011/api/status -o /dev/null -w "%{http_code}"
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    volumes:
+      - fusionauth_data:/usr/local/fusionauth/config
+      - ./_configs/fusionauth:/usr/local/fusionauth/kickstart
+      - ${PWD}/logs:/usr/local/fusionauth/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - ${UBERBASE_FUSIONAUTH_PORT}:9011
+    networks:
+      - net
+    extra_hosts:
+      - uberbase:host-gateway
+  
+  caddy:
+    image: docker.io/caddy:2.8.4
+    container_name: caddy
+    restart: unless-stopped
+    env_file:
+      - .env
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ${PWD}/_configs/caddy:/etc/caddy
+      - ${PWD}/logs:/var/log/caddy
+      - ${UBERBASE_CADDY_DATA_STORAGE}:/data
+      - ${UBERBASE_CADDY_CONFIG_STORAGE}:/config
+    networks:
+      - net
+    extra_hosts:
+      - uberbase:host-gateway
+    

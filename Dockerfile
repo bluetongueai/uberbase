@@ -4,7 +4,7 @@ ADD functions /app
 WORKDIR /app
 RUN cd api && go build -o bin/api && cd ..
 RUN cd cli && go build -o bin/uberbase && cd ..
-RUN cd kamal-proxy && make && cd ..
+RUN cd deploy && go build -o bin/deploy && cd ..
 
 FROM quay.io/podman/stable:latest
 
@@ -111,7 +111,7 @@ ENV _CONTAINERS_USERNS_CONFIGURED=""
 COPY --from=builder /usr/local/go /usr/local/go
 COPY --from=builder /app/api/bin/api /home/podman/app/functions/api/bin/api
 COPY --from=builder /app/cli/bin/uberbase /home/podman/app/bin/uberbase
-COPY --from=builder /app/kamal-proxy/bin/kamal-proxy /home/podman/app/bin/kamal-proxy
+COPY --from=builder /app/deploy/bin/deploy /home/podman/app/bin/deploy
 
 ENV PATH=$PATH:/usr/local/go/bin
 
