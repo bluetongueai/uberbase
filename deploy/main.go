@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -46,50 +47,33 @@ Examples:
 `
 
 func main() {
-	// Set custom usage before defining flags
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s\n", usage)
-	}
-
 	var (
+		composePath = flag.String("f", "docker-compose.yml", "Path to docker-compose.yml")
 		sshUser     = flag.String("ssh-user", "root", "SSH user")
 		sshPort     = flag.Int("ssh-port", 22, "SSH port")
 		sshKeyFile  = flag.String("i", "", "SSH private key file")
 		sshKeyEnv   = flag.String("ssh-key-env", "SSH_PRIVATE_KEY", "Environment variable containing SSH key")
-		registryURL = flag.String("registry", "docker.io", "Registry URL")
-		regUser     = flag.String("registry-user", "", "Registry username")
-		regPass     = flag.String("registry-pass", "", "Registry password")
-		composePath = flag.String("f", "docker-compose.yml", "Path to docker-compose.yml")
+		registryURL = flag.String("registry", "", "Registry URL")
+		regUser     = flag.String("reg-user", "", "Registry username")
+		regPass     = flag.String("reg-pass", "", "Registry password")
+		hostsFlag   = flag.String("hosts", "", "Comma-separated list of hosts to deploy to")
+		rollback    = flag.Bool("rollback", false, "Rollback deployment")
 	)
 
-	// Find the ssh-host argument and remove it from os.Args
-	var sshHost string
-	var newArgs []string
-	for i := 1; i < len(os.Args); i++ {
-		arg := os.Args[i]
-		if strings.HasPrefix(arg, "-") {
-			newArgs = append(newArgs, arg)
-			// If this flag expects a value, add the next argument too
-			if arg == "-i" || arg == "-f" || strings.HasPrefix(arg, "--") {
-				if i+1 < len(os.Args) {
-					i++
-					newArgs = append(newArgs, os.Args[i])
-				}
-			}
-		} else if sshHost == "" {
-			sshHost = arg
-		}
+	flag.Usage = func() {
+		fmt.Print(usage)
 	}
-
-	// Reconstruct os.Args with the program name and processed args
-	os.Args = append([]string{os.Args[0]}, newArgs...)
-
-	// Parse flags
 	flag.Parse()
 
-	// Validate we got the ssh-host
-	if sshHost == "" {
-		core.Logger.Fatal("Exactly one argument (ssh-host) is required")
+	// Parse hosts from flag or positional argument
+	var hosts []string
+	if *hostsFlag != "" {
+		hosts = strings.Split(*hostsFlag, ",")
+	} else if flag.NArg() > 0 {
+		// Backward compatibility: single host as positional argument
+		hosts = []string{flag.Arg(0)}
+	} else {
+		log.Fatal("No hosts specified")
 	}
 
 	// Read docker-compose.yml
@@ -110,17 +94,6 @@ func main() {
 		}
 	}
 
-	// Create deployer with all configuration
-	ssh, err := core.NewSession(core.SSHConfig{
-		Host: sshHost,
-		User: *sshUser,
-		Port: *sshPort,
-	})
-	if err != nil {
-		log.Fatalf("Failed to create SSH session: %v", err)
-	}
-	defer ssh.Close()
-
 	registryConfig := podman.RegistryConfig{
 		Host:     *registryURL,
 		Username: *regUser,
@@ -130,9 +103,38 @@ func main() {
 	// Generate version string based on current time
 	version := time.Now().UTC().Format("20060102-150405") // Will output like "20240319-153022"
 
-	deployer := deploy.NewDeployer(ssh, *composePath, registryConfig)
+	// Add after composePath declaration
+	workDir := filepath.Dir(*composePath)
 
-	if err := deployer.DeployCompose(composeConfig, version); err != nil {
-		log.Fatalf("Deployment failed: %v", err)
+	// Create deployer for each host
+	deployers := make([]*deploy.Deployer, len(hosts))
+	for i, host := range hosts {
+		ssh, err := core.NewSession(core.SSHConfig{
+			Host: host,
+			User: *sshUser,
+			Port: *sshPort,
+		})
+		if err != nil {
+			log.Fatalf("Failed to create SSH session for %s: %v", host, err)
+		}
+		defer ssh.Close()
+
+		deployers[i] = deploy.NewDeployer(ssh, workDir, registryConfig)
+	}
+
+	// Create coordinator with placement
+	coordinator := deploy.NewDeploymentCoordinator(deployers)
+
+	if err := coordinator.DeployCompose(composeConfig, version); err != nil {
+		log.Printf("Deployment failed: %v", err)
+		log.Println("Attempting rollback...")
+
+		if *rollback {
+			if err := coordinator.Rollback(composeConfig); err != nil {
+				log.Fatalf("Failed to rollback: %v", err)
+			}
+			return
+		}
+		os.Exit(1)
 	}
 }

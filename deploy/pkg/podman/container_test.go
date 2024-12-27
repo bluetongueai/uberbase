@@ -307,3 +307,52 @@ func TestContainerManager_Cleanup(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestContainerManager_Migration(t *testing.T) {
+	mock := core.NewMockSSH("localhost:2222")
+	go mock.ListenAndServe()
+	defer mock.Close()
+
+	conn, err := core.NewSession(core.SSHConfig{
+		Host:    "localhost:2222",
+		User:    "test-user",
+		KeyData: "dummy-key",
+	})
+	assert.NoError(t, err)
+	defer conn.Close()
+
+	manager := NewContainerManager(conn)
+
+	t.Run("Migrate Container Data", func(t *testing.T) {
+		// Mock volume creation
+		mock.SetReturnString("")
+		// Mock copy command
+		mock.SetReturnString("")
+
+		volumes := []string{"data", "config"}
+		err := manager.MigrateContainer("myapp", "v1", "v2", volumes)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Migration with Volume Creation Failure", func(t *testing.T) {
+		// Mock volume creation failure
+		mock.SetReturnString("volume creation failed")
+
+		volumes := []string{"data"}
+		err := manager.MigrateContainer("myapp", "v1", "v2", volumes)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to create new volume")
+	})
+
+	t.Run("Migration with Copy Failure", func(t *testing.T) {
+		// Mock successful volume creation
+		mock.SetReturnString("")
+		// Mock copy failure
+		mock.SetReturnString("copy failed")
+
+		volumes := []string{"data"}
+		err := manager.MigrateContainer("myapp", "v1", "v2", volumes)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to copy volume data")
+	})
+}

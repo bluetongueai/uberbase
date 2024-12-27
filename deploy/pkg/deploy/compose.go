@@ -2,10 +2,24 @@ package deploy
 
 import (
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/bluetongueai/uberbase/deploy/pkg/podman"
+)
+
+const (
+	BackupLabelPrefix = "bluetongue.backup."
+	BackupEnabled     = BackupLabelPrefix + "enabled"
+	BackupSchedule    = BackupLabelPrefix + "schedule"
+	BackupRetention   = BackupLabelPrefix + "retention"
+	BackupType        = BackupLabelPrefix + "type"
+
+	// Host placement labels
+	PlacementLabelPrefix = "bluetongue.placement."
+	PlacementHost        = PlacementLabelPrefix + "host"  // Specific host to deploy to
+	PlacementHosts       = PlacementLabelPrefix + "hosts" // Comma-separated list of hosts
 )
 
 type ComposeConfig struct {
@@ -68,4 +82,55 @@ type ComposeService struct {
 	Pod         string                            `yaml:"x-pod,omitempty"`
 	SharePID    bool                              `yaml:"x-share-pid,omitempty"`
 	IsInit      bool                              `yaml:"x-init,omitempty"`
+	Backup      *BackupConfig                     `yaml:"x-backup,omitempty"`
+}
+
+type BackupConfig struct {
+	Enabled    bool   `yaml:"enabled"`
+	Schedule   string `yaml:"schedule"`
+	Retention  string `yaml:"retention"`
+	BackupType string `yaml:"type"`
+}
+
+type PlacementConfig struct {
+	Constraints []PlacementConstraint
+}
+
+type PlacementConstraint struct {
+	Type      string
+	Value     string
+	Operation string
+}
+
+func extractPlacementConfig(labels map[string]string) *PlacementConfig {
+	if labels == nil {
+		return &PlacementConfig{}
+	}
+
+	config := &PlacementConfig{
+		Constraints: make([]PlacementConstraint, 0),
+	}
+
+	// Parse single host constraint
+	if host := labels[PlacementHost]; host != "" {
+		config.Constraints = append(config.Constraints, PlacementConstraint{
+			Type:      "host",
+			Value:     host,
+			Operation: "=",
+		})
+	}
+
+	// Parse multiple hosts
+	if hosts := labels[PlacementHosts]; hosts != "" {
+		hostList := strings.Split(hosts, ",")
+		for _, host := range hostList {
+			config.Constraints = append(config.Constraints, PlacementConstraint{
+				Type:      "host",
+				Value:     strings.TrimSpace(host),
+				Operation: "=",
+			})
+		}
+	}
+
+	return config
 }

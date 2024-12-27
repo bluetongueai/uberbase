@@ -393,6 +393,45 @@ func (c *ContainerManager) Create(container Container) error {
 	return nil
 }
 
+// MigrateContainer handles copying data between container versions
+func (c *ContainerManager) MigrateContainer(serviceName, oldVersion, newVersion string, volumes []string) error {
+	core.Logger.Info("Starting container data migration")
+
+	for _, volume := range volumes {
+		oldVolName := fmt.Sprintf("%s-%s-%s", serviceName, oldVersion, volume)
+		newVolName := fmt.Sprintf("%s-%s-%s", serviceName, newVersion, volume)
+
+		// Create new volume
+		if err := c.volumeManager.EnsureVolume(newVolName); err != nil {
+			return fmt.Errorf("failed to create new volume %s: %w", newVolName, err)
+		}
+
+		// Copy data from old to new volume using a temporary container
+		if err := c.copyVolumeData(oldVolName, newVolName); err != nil {
+			return fmt.Errorf("failed to copy volume data: %w", err)
+		}
+
+		core.Logger.Infof("Successfully migrated volume %s to %s", oldVolName, newVolName)
+	}
+
+	return nil
+}
+
+// copyVolumeData copies data between volumes using a temporary container
+func (c *ContainerManager) copyVolumeData(sourceVol, destVol string) error {
+	copyCmd := fmt.Sprintf(`podman run --rm \
+		-v %s:/source:ro \
+		-v %s:/destination \
+		alpine sh -c 'cp -a /source/. /destination/'`,
+		sourceVol, destVol)
+
+	if _, err := c.ssh.Exec(copyCmd); err != nil {
+		return fmt.Errorf("failed to copy data between volumes: %w", err)
+	}
+
+	return nil
+}
+
 type ContainerState struct {
 	Health struct {
 		Status string

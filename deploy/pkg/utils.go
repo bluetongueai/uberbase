@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func parseInt(s string) int {
+func ParseInt(s string) int {
 	i, _ := strconv.Atoi(s)
 	return i
 }

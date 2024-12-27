@@ -96,3 +96,26 @@ func (s *ServiceManager) cleanupInfrastructure(service *Service) error {
 	// Network cleanup could be added here if needed
 	return nil
 }
+
+func (s *ServiceManager) migrateVolumes(service *Service, oldVersion, newVersion string) error {
+	if len(service.Volumes) == 0 {
+		return nil
+	}
+
+	core.Logger.Info("Starting volume migration")
+
+	// Get volume names from service volumes
+	var volumeNames []string
+	for _, volume := range service.Volumes {
+		if volume.Persistent {
+			volumeNames = append(volumeNames, volume.Name)
+		}
+	}
+
+	// Use container manager to handle migration
+	if err := s.containerMgr.MigrateContainer(service.Name, oldVersion, newVersion, volumeNames); err != nil {
+		return fmt.Errorf("container migration failed: %w", err)
+	}
+
+	return nil
+}

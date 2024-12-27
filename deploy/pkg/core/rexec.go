@@ -136,3 +136,8 @@ func ParsePrivateKeyFile(keyPath string) (ssh.AuthMethod, error) {
 	}
 	return ParsePrivateKey(string(keyBytes))
 }
+
+// Add this method to the SSHConnection struct
+func (c *SSHConnection) Host() string {
+	return c.addr
+}

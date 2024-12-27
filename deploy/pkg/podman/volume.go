@@ -13,6 +13,8 @@ type VolumeManagerInterface interface {
 	EnsureVolumes(volumes []string) error
 	RemoveVolume(name string) error
 	ListVolumes() ([]string, error)
+	BackupVolume(volumeName, backupPath string) error
+	RestoreVolume(volumeName, backupPath string) error
 }
 
 type VolumeManager struct {
@@ -212,4 +214,48 @@ func (v *VolumeManager) ListVolumes() ([]string, error) {
 
 	volumes := strings.Split(strings.TrimSpace(string(output)), "\n")
 	return volumes, nil
+}
+
+func (v *VolumeManager) BackupVolume(volumeName, backupPath string) error {
+	core.Logger.Infof("Backing up volume %s to %s", volumeName, backupPath)
+
+	// Create backup directory if it doesn't exist
+	if _, err := v.ssh.Exec(fmt.Sprintf("mkdir -p %s", backupPath)); err != nil {
+		return fmt.Errorf("failed to create backup directory: %w", err)
+	}
+
+	// Create backup using tar
+	cmd := fmt.Sprintf(`podman run --rm -v %s:/source:ro -v %s:/backup alpine sh -c 'cd /source && tar czf /backup/%s.tar.gz .'`,
+		volumeName,
+		backupPath,
+		volumeName,
+	)
+
+	if _, err := v.ssh.Exec(cmd); err != nil {
+		return fmt.Errorf("failed to create volume backup: %w", err)
+	}
+
+	return nil
+}
+
+func (v *VolumeManager) RestoreVolume(volumeName, backupPath string) error {
+	core.Logger.Infof("Restoring volume %s from %s", volumeName, backupPath)
+
+	// Ensure volume exists
+	if err := v.EnsureVolume(volumeName); err != nil {
+		return fmt.Errorf("failed to ensure volume exists: %w", err)
+	}
+
+	// Restore from backup using tar
+	cmd := fmt.Sprintf(`podman run --rm -v %s:/destination -v %s:/backup alpine sh -c 'cd /destination && tar xzf /backup/%s.tar.gz'`,
+		volumeName,
+		backupPath,
+		volumeName,
+	)
+
+	if _, err := v.ssh.Exec(cmd); err != nil {
+		return fmt.Errorf("failed to restore volume backup: %w", err)
+	}
+
+	return nil
 }
