@@ -15,21 +15,20 @@ import (
 
 var (
 	// Command line flags
-	composePath  string
-	sshUser      string
-	sshPort      int
-	sshKeyFile   string
-	sshKeyEnv    string
-	registryURL  string
-	regUser      string
-	regPass      string
-	hostsFlag    string
-	rollbackFlag bool
+	composePath string
+	sshUser     string
+	sshPort     int
+	sshKeyFile  string
+	sshKeyEnv   string
+	registryURL string
+	regUser     string
+	regPass     string
+	debug       bool
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "deploy [flags] [hosts...]",
+	Use:   "deploy [flags] host",
 	Short: "A tool to deploy services from docker-compose.yml",
 	Long: `A tool to deploy services from docker-compose.yml.
 
@@ -40,38 +39,41 @@ Examples:
   # Using SSH key from environment
   SSH_PRIVATE_KEY="$(cat ~/.ssh/id_rsa)" deploy prod.example.com --ssh-user deploy
 
-  # Using custom compose file
-  deploy prod.example.com --ssh-user deploy -f docker-compose.prod.yml
-
   # Minimal usage
   deploy prod.example.com`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if debug {
+			logging.SetDebugLevel()
+		}
+
 		// Parse hosts from flag or positional arguments
 		var host string
-		if hostsFlag != "" {
-			host = hostsFlag
-		} else if len(args) > 0 {
+		if len(args) > 0 {
 			host = args[0]
 		} else {
 			return fmt.Errorf("no hosts specified")
 		}
 
-		// Get SSH key from environment if specified and no key file provided
-		logging.Logger.Debug("Determining SSH key")
+		logging.Logger.Debug("Initializing deployment",
+			"host", host,
+			"ssh_user", sshUser,
+			"ssh_port", sshPort)
+
+		// Get SSH key configuration
 		sshKeySource := bt_ssh.File
-		if sshKeyFile == "" {
-			logging.Logger.Debug("Using SSH key from environment")
-			sshKeySource = bt_ssh.Environment
-		}
 		var sshKeyData string
 		if sshKeyFile == "" {
-			logging.Logger.Debug("No SSH key file provided, using SSH data from environment")
+			sshKeySource = bt_ssh.Environment
 			sshKeyData = os.Getenv("SSH_PRIVATE_KEY")
+			logging.Logger.Debug("Using SSH key from environment")
+		} else {
+			logging.Logger.Debug("Using SSH key from file", "path", sshKeyFile)
 		}
+
 		if sshKeyData == "" && sshKeyFile == "" {
 			return fmt.Errorf("either SSH key file (-i) or SSH key environment variable (SSH_PRIVATE_KEY) must be provided")
 		}
-		logging.Logger.Debug("Loading SSH key")
+
 		sshKey := bt_ssh.SSHKey{
 			Source: sshKeySource,
 		}
@@ -79,10 +81,10 @@ Examples:
 		if err != nil {
 			return fmt.Errorf("failed to load SSH key: %w", err)
 		}
+		logging.Logger.Debug("SSH key loaded successfully", "source", sshKeySource)
 
-		// if not given a docker-compose.yml file, try to find one in the working directory
+		// Locate docker-compose file
 		if composePath == "" {
-			logging.Logger.Debugf("No docker-compose.yml file provided, searching for one in the working directory")
 			paths, err := filepath.Glob("docker-compose.yml")
 			if err != nil {
 				return fmt.Errorf("failed to find docker-compose.yml: %w", err)
@@ -91,25 +93,25 @@ Examples:
 				return fmt.Errorf("no docker-compose.yml file found in working directory")
 			}
 			composePath = paths[0]
-		} else {
-			logging.Logger.Debugf("Using docker-compose.yml file: %s", composePath)
+			logging.Logger.Debug("Found docker-compose.yml in current directory", "path", composePath)
 		}
 
 		localWorkDir := filepath.Dir(composePath)
-		logging.Logger.Infof("Using local work directory: %s", localWorkDir)
+		logging.Logger.Debug("Using work directories",
+			"local", localWorkDir,
+			"remote", "~/uberbase-deploy")
 
-		// load docker-compose.yml
-		logging.Logger.Debugf("Loading docker-compose.yml")
+		// Load docker-compose configuration
 		compose, err := containers.NewComposeProject(composePath, "uberbase-deploy")
 		if err != nil {
 			return fmt.Errorf("failed to load docker-compose.yml: %w", err)
 		}
+		logging.Logger.Debug("Loaded compose configuration",
+			"services", compose.Project.Services,
+			"project", compose.Project.Name)
 
-		logging.Logger.Debugf("Creating local executor")
+		// Initialize executors
 		localExecutor := core.NewLocalExecutor()
-		localExecutor.Verify()
-
-		logging.Logger.Debugf("Creating remote executor")
 		remoteExecutor, err := core.NewRemoteExecutor(bt_ssh.SSHConfig{
 			Host: host,
 			User: sshUser,
@@ -120,22 +122,28 @@ Examples:
 			return fmt.Errorf("failed to create remote executor: %w", err)
 		}
 
-		logging.Logger.Debugf("Creating deployer")
+		// Create and run deployer
 		deployer, err := deploy.NewDeployer(localExecutor, remoteExecutor, compose, localWorkDir, "~/uberbase-deploy")
 		if err != nil {
 			return fmt.Errorf("failed to create deployer: %w", err)
 		}
 
-		logging.Logger.Infof("Beginning deployment to %s", host)
-		deployer.DeployProject()
+		logging.Logger.Info("Starting deployment to", "host", host)
+		if err := deployer.DeployProject(); err != nil {
+			logging.Logger.Error("Deployment failed", "error", err)
+			return err
+		}
 
 		return nil
 	},
 }
 
 func init() {
+	// Initialize logging
+	logging.InitLogging()
+
 	// Define flags
-	rootCmd.PersistentFlags().StringVarP(&composePath, "file", "f", "docker-compose.yml", "Path to docker-compose.yml")
+	rootCmd.PersistentFlags().StringVarP(&composePath, "file", "f", "", "Path to docker-compose.yml (default: ./docker-compose.yml)")
 	rootCmd.PersistentFlags().StringVar(&sshUser, "ssh-user", "root", "SSH user")
 	rootCmd.PersistentFlags().IntVar(&sshPort, "ssh-port", 22, "SSH port")
 	rootCmd.PersistentFlags().StringVarP(&sshKeyFile, "identity-file", "i", "", "SSH private key file")
@@ -143,8 +151,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&registryURL, "registry", "", "Registry URL")
 	rootCmd.PersistentFlags().StringVar(&regUser, "registry-user", "", "Registry username")
 	rootCmd.PersistentFlags().StringVar(&regPass, "registry-pass", "", "Registry password")
-	rootCmd.PersistentFlags().StringVar(&hostsFlag, "hosts", "", "Comma-separated list of hosts to deploy to")
-	rootCmd.PersistentFlags().BoolVar(&rollbackFlag, "rollback", false, "Rollback deployment")
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
 }
 
 func main() {

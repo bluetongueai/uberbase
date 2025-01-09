@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -82,6 +83,10 @@ func (s *StateManager) Update(services map[string]containers.ComposeServiceOverr
 
 	// update the state's traefik config with the new dynamic configs
 	s.CurrentState.Traefik.Tag = tag
+	s.CurrentState.Traefik.Configs = make(map[string]traefik.TraefikDynamicConfiguration)
+	for name, config := range dynamicConfigs {
+		s.CurrentState.Traefik.Configs[name] = *config
+	}
 
 	return s.Save()
 }
@@ -127,4 +132,26 @@ func (s *StateManager) write(state DeploymentState) error {
 
 	logging.Logger.Info("State file updated successfully")
 	return nil
+}
+
+// Equal compares two states for equality
+func (s *DeploymentState) Equal(other *DeploymentState) bool {
+	if s.Tag != other.Tag {
+		return false
+	}
+
+	if len(s.Compose.Services) != len(other.Compose.Services) {
+		return false
+	}
+
+	// Compare services
+	for name, service := range s.Compose.Services {
+		otherService, exists := other.Compose.Services[name]
+		if !exists || service.ContainerName != otherService.ContainerName {
+			return false
+		}
+	}
+
+	// Compare Traefik configs
+	return reflect.DeepEqual(s.Traefik, other.Traefik)
 }
