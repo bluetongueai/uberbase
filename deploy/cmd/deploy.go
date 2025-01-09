@@ -54,11 +54,6 @@ Examples:
 			return fmt.Errorf("no hosts specified")
 		}
 
-		logging.Logger.Debug("Initializing deployment",
-			"host", host,
-			"ssh_user", sshUser,
-			"ssh_port", sshPort)
-
 		// Get SSH key configuration
 		sshKeySource := bt_ssh.File
 		var sshKeyData string
@@ -67,18 +62,15 @@ Examples:
 			sshKeyData = os.Getenv("SSH_PRIVATE_KEY")
 			logging.Logger.Debug("Using SSH key from environment")
 		} else {
-			logging.Logger.Debug("Using SSH key from file", "path", sshKeyFile)
+			logging.Logger.Debug("Using SSH key from filepath", sshKeyFile)
 		}
 
 		if sshKeyData == "" && sshKeyFile == "" {
 			return fmt.Errorf("either SSH key file (-i) or SSH key environment variable (SSH_PRIVATE_KEY) must be provided")
 		}
 
-		sshKey := bt_ssh.SSHKey{
-			Source: sshKeySource,
-		}
-		_, err := sshKey.Load()
-		if err != nil {
+		sshKey := bt_ssh.NewSSHKey(sshKeySource, sshKeyEnv, sshKeyFile)
+		if _, err := sshKey.Load(); err != nil {
 			return fmt.Errorf("failed to load SSH key: %w", err)
 		}
 		logging.Logger.Debug("SSH key loaded successfully", "source", sshKeySource)
@@ -95,18 +87,20 @@ Examples:
 			composePath = paths[0]
 			logging.Logger.Debug("Found docker-compose.yml in current directory", "path", composePath)
 		}
-
 		localWorkDir := filepath.Dir(composePath)
-		logging.Logger.Debug("Using work directories",
-			"local", localWorkDir,
-			"remote", "~/uberbase-deploy")
+
+		logging.LogKeyValues("Initializing deployment", map[string]string{
+			"host":           host,
+			"local workdir":  "\033[33m" + localWorkDir + "\033[0m",
+			"remote workdir": "\033[34m" + "~/uberbase-deploy" + "\033[0m",
+		})
 
 		// Load docker-compose configuration
 		compose, err := containers.NewComposeProject(composePath, "uberbase-deploy")
 		if err != nil {
 			return fmt.Errorf("failed to load docker-compose.yml: %w", err)
 		}
-		logging.Logger.Debug("Loaded compose configuration",
+		logging.Logger.Debug("Loaded compose configuration ",
 			"services", compose.Project.Services,
 			"project", compose.Project.Name)
 
@@ -116,7 +110,7 @@ Examples:
 			Host: host,
 			User: sshUser,
 			Port: sshPort,
-			Key:  sshKey,
+			Key:  *sshKey,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create remote executor: %w", err)
@@ -136,6 +130,8 @@ Examples:
 
 		return nil
 	},
+	SilenceUsage:  true,
+	SilenceErrors: true,
 }
 
 func init() {

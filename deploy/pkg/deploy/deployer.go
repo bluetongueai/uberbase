@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/bluetongueai/uberbase/deploy/pkg/containers"
@@ -32,18 +33,24 @@ type Deployer struct {
 }
 
 func NewDeployer(localExecutor core.Executor, remoteExecutor core.Executor, compose *containers.ComposeProject, localWorkDir, remoteWorkDir string) (*Deployer, error) {
-	logging.Logger.Debug("Verifying deployment environment requirements")
+	logging.Logger.Debug("Verifying local deployment environment requirements")
 	if err := localExecutor.Verify(); err != nil {
 		return nil, err
+	}
+	logging.Logger.Debug("Local environment verification complete")
+
+	logging.Logger.Debug("Verifying remote deployment environment requirements")
+	if !remoteExecutor.Test() {
+		return nil, fmt.Errorf("could not connect to remote server")
 	}
 	if err := remoteExecutor.Verify(); err != nil {
 		return nil, err
 	}
-	logging.Logger.Debug("Environment verification complete")
+	logging.Logger.Debug("Remote environment verification complete")
 
-	logging.Logger.Debug("Initializing deployment components",
-		"local_work_dir", localWorkDir,
-		"remote_work_dir", remoteWorkDir)
+	logging.Logger.Debug("Initializing deployment components: ",
+		"local_work_dir: ", localWorkDir,
+		", remote_work_dir: ", remoteWorkDir)
 
 	localContainerMgr, err := containers.NewContainerManager(localExecutor, compose, false)
 	if err != nil {
@@ -111,14 +118,18 @@ func (d *Deployer) DeployProject() (err error) {
 	}
 	containerTag := containers.ContainerTag(string(newVersion))
 
-	logging.Logger.Info("Starting deployment", "version", containerTag)
+	logging.LogKeyValues("Deploying", map[string]string{
+		"version": string(containerTag),
+	})
+
 	services := []string{}
 	for _, service := range d.compose.Project.Services {
 		services = append(services, service.Name)
 	}
-	logging.Logger.Debug("Building and pushing containers",
-		"tag", containerTag,
-		"services", services)
+	logging.LogKeyValues("Building and pushing containers", map[string]string{
+		"tag":      string(containerTag),
+		"services": strings.Join(services, ", "),
+	})
 
 	if _, err := d.localContainerMgr.Build(containerTag); err != nil {
 		return fmt.Errorf("failed to build new versions: %w", err)
@@ -130,26 +141,23 @@ func (d *Deployer) DeployProject() (err error) {
 
 	logging.Logger.Debug("Preparing remote environment",
 		"work_dir", d.remoteWorkDir)
-
-	if err := d.gitManager.Fetch(); err != nil {
-		return fmt.Errorf("failed to clone repo: %w", err)
-	}
-
-	if _, err := d.remoteContainerMgr.Pull(containerTag); err != nil {
-		return fmt.Errorf("failed to pull new versions: %w", err)
-	}
-
 	currentState, err := d.stateManager.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load current state: %w", err)
 	}
-	logging.Logger.Debug("Current state loaded",
-		"current_tag", currentState.Tag,
-		"service_count", len(currentState.Compose.Services))
+	logging.LogKeyValues("Current state loaded", map[string]string{
+		"current_tag":   string(currentState.Tag),
+		"service_count": fmt.Sprintf("%d", len(currentState.Compose.Services)),
+	})
+
+	logging.Logger.Debug("Sending docker-compose.yml to remote server")
+	if err := d.remoteExecutor.(*core.RemoteExecutor).SendFile(d.compose.FilePath, d.remoteWorkDir+"/docker-compose.yml"); err != nil {
+		return fmt.Errorf("failed to send docker-compose.yml to remote server: %w", err)
+	}
 
 	// build a dynamic override file
 	override := containers.NewComposeOverride(d.compose, containerTag)
-	overrideFilePath, err := override.WriteToFile(d.compose.FilePath + ".override")
+	overrideFilePath, err := override.WriteToFile(d.remoteExecutor.(*core.RemoteExecutor), d.remoteWorkDir, d.compose.FilePath)
 	if err != nil {
 		return fmt.Errorf("failed to write override file: %w", err)
 	}
@@ -175,9 +183,14 @@ func (d *Deployer) DeployProject() (err error) {
 
 	// bring up the new containers
 	logging.Logger.Info("Deploying new containers")
-	logging.Logger.Debug("Starting containers with override",
-		"override_path", overrideFilePath,
-		"services", override.Services)
+	overrideServices := []string{}
+	for _, service := range override.Services {
+		overrideServices = append(overrideServices, service.Name)
+	}
+	logging.LogKeyValues("Starting containers with override", map[string]string{
+		"override_path": overrideFilePath,
+		"services":      strings.Join(overrideServices, ", "),
+	})
 
 	_, err = d.remoteContainerMgr.Up(overrideFilePath)
 	if err != nil {
@@ -222,6 +235,9 @@ func (d *Deployer) DeployProject() (err error) {
 	)
 
 	logging.Logger.Info("Updating traffic routing")
+	if err := d.trafficManager.Load(); err != nil {
+		return fmt.Errorf("failed to load traffic manager: %w", err)
+	}
 	if err := d.trafficManager.Deploy(context.Background(), &currentState, containerTag); err != nil {
 		return fmt.Errorf("failed to route traffic: %w", err)
 	}
@@ -268,17 +284,20 @@ func (d *Deployer) DeployProject() (err error) {
 		return fmt.Errorf("failed to bring down old containers, environment may be inconsistent: %w, %v", err, oldContainers)
 	}
 
-	logging.Logger.Debug("Cleaning up old containers",
-		"count", len(oldContainers),
-		"containers", oldContainers)
+	logging.LogKeyValues("Cleaning up old containers", map[string]string{
+		"count":      fmt.Sprintf("%d", len(oldContainers)),
+		"containers": strings.Join(oldContainers, ", "),
+	})
 
 	if _, err := d.remoteContainerMgr.Down(oldContainers); err != nil {
 		return fmt.Errorf("failed to bring down old containers, environment may be inconsistent: %w, %v", err, oldContainers)
 	}
 
-	logging.Logger.Debug("Saving deployment state",
-		"tag", containerTag,
-		"service_count", len(override.Services))
+	logging.LogKeyValues("Saving deployment state", map[string]string{
+		"tag":             string(containerTag),
+		"service_count":   fmt.Sprintf("%d", len(override.Services)),
+		"traffic_configs": fmt.Sprintf("%d", len(d.trafficManager.GetDynamicConfigs())),
+	})
 
 	if err := d.stateManager.Update(override.Services, d.trafficManager.GetDynamicConfigs(), containerTag); err != nil {
 		return fmt.Errorf("failed to create new state: %w", err)

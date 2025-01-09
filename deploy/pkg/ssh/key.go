@@ -3,7 +3,10 @@ package ssh
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/bluetongueai/uberbase/deploy/pkg/logging"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -22,19 +25,34 @@ type SSHKey struct {
 	auth    ssh.AuthMethod
 }
 
+func NewSSHKey(source SSHKeySource, envKey string, fileKey string) *SSHKey {
+	return &SSHKey{
+		Source:  source,
+		envKey:  envKey,
+		fileKey: fileKey,
+	}
+}
+
 func (k *SSHKey) Load() (ssh.AuthMethod, error) {
 	if k.loaded {
 		return k.auth, nil
 	}
 
+	var err error
 	if k.Source == Environment {
-		return k.loadFromEnvironment()
-	}
-	if k.Source == File {
-		return k.loadFromFile()
+		k.auth, err = k.loadFromEnvironment()
+	} else if k.Source == File {
+		k.auth, err = k.loadFromFile()
+	} else {
+		return nil, fmt.Errorf("invalid key source: %d", k.Source)
 	}
 
-	return nil, fmt.Errorf("invalid key source: %d", k.Source)
+	if err != nil {
+		return nil, err
+	}
+
+	k.loaded = true
+	return k.auth, nil
 }
 
 func (k *SSHKey) IsLoaded() bool {
@@ -42,7 +60,19 @@ func (k *SSHKey) IsLoaded() bool {
 }
 
 func (k *SSHKey) loadFromFile() (ssh.AuthMethod, error) {
-	keyBytes, err := os.ReadFile(k.fileKey)
+	// turn path into absolute path while resolving ~ and etc
+	relPath := k.fileKey
+	if strings.HasPrefix(relPath, "~/") {
+		relPath = strings.Replace(relPath, "~", os.Getenv("HOME"), 1)
+	}
+	absPath, err := filepath.Abs(relPath)
+	if err != nil {
+		return nil, err
+	}
+
+	logging.Logger.Debug("Loading SSH key from file", "path", absPath)
+
+	keyBytes, err := os.ReadFile(absPath)
 	if err != nil {
 		return nil, err
 	}

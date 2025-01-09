@@ -1,6 +1,11 @@
 package containers
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/bluetongueai/uberbase/deploy/pkg"
+)
 
 func (p *ContainerManager) Build(tag ContainerTag) (string, error) {
 	output := ""
@@ -8,7 +13,25 @@ func (p *ContainerManager) Build(tag ContainerTag) (string, error) {
 		if service.Build == nil {
 			continue
 		}
-		buildOutput, err := p.executor.ExecCompose("build -f " + service.Build.Dockerfile + " --tag " + service.Image + ":" + string(tag))
+		image := pkg.StripTag(service.Image)
+		buildArgs := []string{}
+		if service.Build.Args != nil {
+			for k, v := range service.Build.Args {
+				buildArgs = append(buildArgs, "--build-arg", k+"="+*v)
+			}
+		}
+		buildArgs = append(buildArgs, "--tag", image+":"+string(tag))
+
+		if service.Build.Dockerfile != "" {
+			if !strings.HasPrefix(service.Build.Dockerfile, service.Build.Context) {
+				buildArgs = append(buildArgs, "-f", service.Build.Context+"/"+service.Build.Dockerfile)
+			} else {
+				buildArgs = append(buildArgs, "-f", service.Build.Dockerfile)
+			}
+		}
+
+		buildArgs = append(buildArgs, service.Build.Context)
+		buildOutput, err := p.executor.Exec("builder build " + strings.Join(buildArgs, " "))
 		if err != nil {
 			return "", fmt.Errorf("failed to build image: %w", err)
 		}
@@ -23,7 +46,8 @@ func (p *ContainerManager) Pull(tag ContainerTag) (string, error) {
 		if service.Image == "" {
 			continue
 		}
-		pullOutput, err := p.executor.ExecCompose("pull " + service.Image + ":" + string(tag))
+		image := pkg.StripTag(service.Image)
+		pullOutput, err := p.executor.Exec("pull " + image + ":" + string(tag))
 		if err != nil {
 			return "", fmt.Errorf("failed to pull image: %w", err)
 		}
@@ -35,10 +59,11 @@ func (p *ContainerManager) Pull(tag ContainerTag) (string, error) {
 func (p *ContainerManager) Push(tag ContainerTag) (string, error) {
 	output := ""
 	for _, service := range p.Compose.Project.Services {
-		if service.Image == "" {
+		if service.Build == nil {
 			continue
 		}
-		pushOutput, err := p.executor.ExecCompose("push " + service.Image + ":" + string(tag))
+		image := pkg.StripTag(service.Image)
+		pushOutput, err := p.executor.Exec("push " + image + ":" + string(tag))
 		if err != nil {
 			return "", fmt.Errorf("failed to push image: %w", err)
 		}

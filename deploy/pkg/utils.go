@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -21,4 +22,12 @@ func Contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+func StripTag(tag string) string {
+	split := strings.Split(tag, ":")
+	if len(split) > 1 {
+		return split[0]
+	}
+	return tag
 }

@@ -5,6 +5,7 @@ go 1.21.0
 require (
 	github.com/compose-spec/compose-go/v2 v2.4.7
 	github.com/gliderlabs/ssh v0.3.8
+	github.com/pkg/sftp v1.13.7
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 	golang.org/x/crypto v0.31.0
@@ -19,6 +20,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/mattn/go-shellwords v1.0.12 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect

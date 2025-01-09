@@ -8,7 +8,6 @@ import (
 
 	"github.com/bluetongueai/uberbase/deploy/pkg/logging"
 	bt_ssh "github.com/bluetongueai/uberbase/deploy/pkg/ssh"
-	"golang.org/x/crypto/ssh"
 )
 
 type RemoteExecutor struct {
@@ -35,42 +34,34 @@ func NewRemoteExecutor(config bt_ssh.SSHConfig) (*RemoteExecutor, error) {
 
 func (p *RemoteExecutor) Test() bool {
 	logging.Logger.Debug("Testing remote connection")
-	session, err := p.session.Connect()
+	_, err := p.session.Connect()
 	if err != nil {
 		logging.Logger.Debugf("Failed to connect to remote server: %v", err)
 		return false
 	}
-	defer session.Close()
 	logging.Logger.Debug("Connected to remote server")
-	session.Close()
 	return true
 }
 
 func (p *RemoteExecutor) Verify() error {
 	if !p.installer.HasGit() {
 		logging.Logger.Debug("Git is not installed")
-		logging.Logger.Info("Installing git")
 		if err := p.installer.InstallGit(); err != nil {
 			return fmt.Errorf("failed to install git: %w", err)
 		}
-		logging.Logger.Info("Git installed")
 	}
 	if !p.installer.HasDocker() {
 		if !p.installer.HasPodman() {
 			logging.Logger.Debug("Neither docker nor podman is installed")
-			logging.Logger.Info("Installing container runtime")
 			if err := p.installer.InstallContainerRuntime(); err != nil {
 				return fmt.Errorf("failed to install container runtime: %w", err)
 			}
-			logging.Logger.Info("Container runtime installed")
 		} else {
 			if !p.installer.HasPodmanCompose() {
 				logging.Logger.Debug("Podman compose is not installed")
-				logging.Logger.Info("Installing podman compose")
 				if err := p.installer.InstallContainerRuntime(); err != nil {
 					return fmt.Errorf("failed to install podman compose: %w", err)
 				}
-				logging.Logger.Info("Podman compose installed")
 			}
 		}
 	}
@@ -79,30 +70,23 @@ func (p *RemoteExecutor) Verify() error {
 
 func (p *RemoteExecutor) Exec(cmd string) (string, error) {
 	if p.session.IsClosed() {
-		logging.Logger.Debug("Session is closed, connecting")
-		session, err := p.session.Connect()
+		_, err := p.session.Connect()
 		if err != nil {
-			logging.Logger.Debugf("Failed to connect to remote server: %v", err)
-			return "", err
+			return "", fmt.Errorf("failed to connect to remote server: %w", err)
 		}
-		defer session.Close()
 	}
 
 	for attempt := 1; attempt <= p.maxRetries; attempt++ {
-		logging.Logger.Infof("Executing command (attempt %d/%d): %s", attempt, p.maxRetries, cmd)
 		output, err := p.execWithoutRetry(cmd)
 		if err == nil {
-			logging.Logger.Infof("%s completed successfully", cmd)
 			return string(output), nil
 		}
 
 		if strings.Contains(err.Error(), "could not get lock") && attempt < p.maxRetries {
-			logging.Logger.Warnf("Could not get lock, retrying %s... (%d/%d)", cmd, attempt, p.maxRetries)
 			time.Sleep(p.retryDelay)
 			continue
 		}
 
-		logging.Logger.Errorf("Failed to execute %s: %v", cmd, err)
 		return "", fmt.Errorf("failed to execute %s: %w", cmd, err)
 	}
 	return "", nil
@@ -113,22 +97,51 @@ func (c *RemoteExecutor) execWithoutRetry(cmd string) (string, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	var session *ssh.Session
+	// Ensure we have a valid connection
 	if c.session.IsClosed() {
-		logging.Logger.Info("Connection is closed, reconnecting")
-		var err error
-		session, err = c.session.Connect()
-		if err != nil {
-			logging.Logger.Warnf("Failed to reconnect: %v", err)
-			return "", err
+		if _, err := c.session.Connect(); err != nil {
+			return "", fmt.Errorf("failed to reconnect: %w", err)
 		}
 	}
 
-	defer c.session.Close()
-
-	output, err := session.CombinedOutput(cmd)
+	// Execute command on existing session
+	output, err := c.session.ExecuteCommand(cmd)
 	if err != nil {
-		return "", err
+		// If connection error, try to reconnect once
+		if c.session.IsClosed() {
+			if _, err := c.session.Connect(); err != nil {
+				return "", fmt.Errorf("failed to reconnect: %w", err)
+			}
+			output, err = c.session.ExecuteCommand(cmd)
+		}
 	}
-	return string(output), nil
+	return output, err
+}
+
+// SendFile transfers a local file to the remote server
+func (p *RemoteExecutor) SendFile(localPath, remotePath string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.session.IsClosed() {
+		if _, err := p.session.Connect(); err != nil {
+			return fmt.Errorf("failed to connect to remote server for file transfer: %w", err)
+		}
+	}
+
+	err := p.session.TransferFile(localPath, remotePath)
+	if err != nil {
+		// If connection error, try to reconnect once
+		if p.session.IsClosed() {
+			if _, err := p.session.Connect(); err != nil {
+				return fmt.Errorf("failed to reconnect for file transfer: %w", err)
+			}
+			err = p.session.TransferFile(localPath, remotePath)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to transfer file from %s to %s: %w", localPath, remotePath, err)
+		}
+	}
+
+	return nil
 }

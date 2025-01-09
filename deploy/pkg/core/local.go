@@ -1,8 +1,11 @@
 package core
 
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
+
+	"github.com/bluetongueai/uberbase/deploy/pkg/logging"
 )
 
 type LocalExecutor struct {
@@ -20,11 +23,26 @@ func (e *LocalExecutor) Test() bool {
 }
 
 func (e *LocalExecutor) Exec(command string) (string, error) {
+	logging.Logger.Infof("local: \033[33m%s\033[0m", command)
+
 	cmd := exec.Command("sh", "-c", command)
+
+	// Create a buffer for stderr
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	// Get stdout
 	output, err := cmd.Output()
+
+	// If there's stderr output, log it in red regardless of error
+	if stderrStr := stderr.String(); stderrStr != "" && err != nil {
+		logging.Logger.Infof("\033[31m%s\033[0m", stderrStr)
+	}
+
 	if err != nil {
 		return "", err
 	}
+
 	return string(output), nil
 }
 

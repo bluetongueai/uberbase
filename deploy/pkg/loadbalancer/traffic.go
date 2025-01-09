@@ -30,25 +30,30 @@ type TrafficManager struct {
 // NewTrafficManager creates a new TrafficManager instance with the provided container manager.
 // It loads the static and dynamic Traefik configurations and initializes the health checker.
 func NewTrafficManager(containerMgr *containers.ContainerManager) (*TrafficManager, error) {
-	staticConfig, err := traefik.LoadTraefikStaticConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load static config: %w", err)
-	}
-	dynamicConfigs, err := traefik.LoadTraefikDynamicConfigs()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load dynamic configs: %w", err)
-	}
 
 	healthChecker := health.NewHealthChecker(containerMgr)
 
 	return &TrafficManager{
-		staticConfig:   staticConfig,
-		dynamicConfigs: dynamicConfigs,
-		containerMgr:   containerMgr,
-		healthChecker:  healthChecker,
+		containerMgr:  containerMgr,
+		healthChecker: healthChecker,
 	}, nil
 }
 
+func (t *TrafficManager) Load() error {
+	staticConfig, err := traefik.LoadTraefikStaticConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load static config: %w", err)
+	}
+	dynamicConfigs, err := traefik.LoadTraefikDynamicConfigs()
+	if err != nil {
+		return fmt.Errorf("failed to load dynamic configs: %w", err)
+	}
+	t.staticConfig = staticConfig
+	t.dynamicConfigs = dynamicConfigs
+	return nil
+}
+
+// Deploy updates the traffic routing for a new deployment with the given tag.
 // Deploy updates the traffic routing for a new deployment with the given tag.
 // It ensures the new services are healthy before updating the routing configuration.
 func (t *TrafficManager) Deploy(ctx context.Context, state *state.DeploymentState, tag containers.ContainerTag) error {

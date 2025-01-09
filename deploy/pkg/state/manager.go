@@ -40,7 +40,6 @@ func NewStateManager(workDir string, executor core.Executor) *StateManager {
 		workDir:  workDir,
 		executor: executor,
 	}
-	manager.Load()
 	return manager
 }
 

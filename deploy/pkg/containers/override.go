@@ -1,16 +1,16 @@
 package containers
 
 import (
-	"os"
-
+	"github.com/bluetongueai/uberbase/deploy/pkg"
+	"github.com/bluetongueai/uberbase/deploy/pkg/core"
 	"gopkg.in/yaml.v2"
 )
 
 type ComposeServiceOverride struct {
-	RefName  string `yaml:"ref_name"`
 	Name     string `yaml:"name"`
 	Hostname string `yaml:"hostname"`
 	Image    string `yaml:"image"`
+	RefName  string `yaml:"-"`
 }
 
 type ComposeOverride struct {
@@ -28,7 +28,7 @@ func NewComposeOverride(compose *ComposeProject, containerTag ContainerTag) *Com
 				RefName:  service.Name,
 				Name:     service.Name + "-" + string(containerTag),
 				Hostname: service.Hostname + "-" + string(containerTag),
-				Image:    service.Image + ":" + string(containerTag),
+				Image:    pkg.StripTag(service.Image) + ":" + string(containerTag),
 			}
 		}
 	}
@@ -36,15 +36,16 @@ func NewComposeOverride(compose *ComposeProject, containerTag ContainerTag) *Com
 	return override
 }
 
-func (c *ComposeOverride) WriteToFile(filePath string) (string, error) {
+func (c *ComposeOverride) WriteToFile(executor *core.RemoteExecutor, remoteWorkDir, filePath string) (string, error) {
 	yaml, err := yaml.Marshal(c)
 	if err != nil {
 		return "", err
 	}
-	err = os.WriteFile(filePath, yaml, 0644)
+	overrideFile := remoteWorkDir + "/docker-compose.override.yml"
+	cmd := "cat <<EOF > " + overrideFile + "\n" + string(yaml) + "\nEOF"
+	_, err = executor.Exec(cmd)
 	if err != nil {
 		return "", err
 	}
-
-	return filePath, nil
+	return overrideFile, nil
 }

@@ -47,6 +47,7 @@ services:
     user: k8
     build:
       context: ../
+      dockerfile: proxy/Dockerfile
       target: k8-proxy
     env_file:
       - ${PWD}/../.env

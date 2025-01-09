@@ -31,16 +31,21 @@ func NewContainerManager(executor core.Executor, compose *ComposeProject, instal
 
 	if binPath, err := executor.Exec("which podman"); err == nil {
 		if composePath, err := executor.Exec("which podman-compose"); err == nil {
-			containerExecutor = NewPodmanExecutor(string(binPath), string(composePath), executor)
+			binPath = strings.TrimSpace(binPath)
+			composePath = strings.TrimSpace(composePath)
+			containerExecutor = NewPodmanExecutor(binPath, composePath, executor)
 		}
 	}
 
 	if containerExecutor == nil {
 		if binPath, err := executor.Exec("which docker"); err == nil {
 			if composePath, err := executor.Exec("which docker-compose"); err == nil {
+				binPath = strings.TrimSpace(binPath)
+				composePath = strings.TrimSpace(composePath)
 				containerExecutor = NewDockerExecutor(binPath, composePath, executor)
 			} else {
 				if _, err := executor.Exec("docker compose --version"); err == nil {
+					binPath = strings.TrimSpace(binPath)
 					containerExecutor = NewDockerExecutor(binPath, binPath+" compose", executor)
 				}
 			}
