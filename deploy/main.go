@@ -1,36 +1,37 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
 
+	"github.com/bluetongueai/uberbase/deploy/pkg/containers"
 	"github.com/bluetongueai/uberbase/deploy/pkg/core"
 	"github.com/bluetongueai/uberbase/deploy/pkg/deploy"
-	"github.com/bluetongueai/uberbase/deploy/pkg/podman"
+	"github.com/bluetongueai/uberbase/deploy/pkg/logging"
+	bt_ssh "github.com/bluetongueai/uberbase/deploy/pkg/ssh"
+	"github.com/spf13/cobra"
 )
 
-const usage = `Usage: deploy [options] <ssh-host>
+var (
+	// Command line flags
+	composePath  string
+	sshUser      string
+	sshPort      int
+	sshKeyFile   string
+	sshKeyEnv    string
+	registryURL  string
+	regUser      string
+	regPass      string
+	hostsFlag    string
+	rollbackFlag bool
+)
 
-A tool to deploy services from docker-compose.yml.
-
-Arguments:
-  <ssh-host>             SSH host to deploy to
-
-Optional:
-  -h, --help             Show this help message
-  -f <file>              Path to docker-compose.yml (default: docker-compose.yml)
-  --ssh-user <user>      SSH user (default: root)
-  --ssh-port <port>      SSH port (default: 22)
-  -i <keyfile>           SSH private key file
-  --ssh-key-env <name>   Environment variable containing SSH key (default: SSH_PRIVATE_KEY)
-  --registry <url>       Registry URL (default: docker.io)
-  --registry-user <user> Registry username
-  --registry-pass <pass> Registry password
+// rootCmd represents the base command when called without any subcommands
+var rootCmd = &cobra.Command{
+	Use:   "deploy [flags] [hosts...]",
+	Short: "A tool to deploy services from docker-compose.yml",
+	Long: `A tool to deploy services from docker-compose.yml.
 
 Examples:
   # Using SSH key file
@@ -43,98 +44,111 @@ Examples:
   deploy prod.example.com --ssh-user deploy -f docker-compose.prod.yml
 
   # Minimal usage
-  deploy prod.example.com
-`
+  deploy prod.example.com`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Parse hosts from flag or positional arguments
+		var host string
+		if hostsFlag != "" {
+			host = hostsFlag
+		} else if len(args) > 0 {
+			host = args[0]
+		} else {
+			return fmt.Errorf("no hosts specified")
+		}
 
-func main() {
-	var (
-		composePath = flag.String("f", "docker-compose.yml", "Path to docker-compose.yml")
-		sshUser     = flag.String("ssh-user", "root", "SSH user")
-		sshPort     = flag.Int("ssh-port", 22, "SSH port")
-		sshKeyFile  = flag.String("i", "", "SSH private key file")
-		sshKeyEnv   = flag.String("ssh-key-env", "SSH_PRIVATE_KEY", "Environment variable containing SSH key")
-		registryURL = flag.String("registry", "", "Registry URL")
-		regUser     = flag.String("reg-user", "", "Registry username")
-		regPass     = flag.String("reg-pass", "", "Registry password")
-		hostsFlag   = flag.String("hosts", "", "Comma-separated list of hosts to deploy to")
-		rollback    = flag.Bool("rollback", false, "Rollback deployment")
-	)
-
-	flag.Usage = func() {
-		fmt.Print(usage)
-	}
-	flag.Parse()
-
-	// Parse hosts from flag or positional argument
-	var hosts []string
-	if *hostsFlag != "" {
-		hosts = strings.Split(*hostsFlag, ",")
-	} else if flag.NArg() > 0 {
-		// Backward compatibility: single host as positional argument
-		hosts = []string{flag.Arg(0)}
-	} else {
-		log.Fatal("No hosts specified")
-	}
-
-	// Read docker-compose.yml
-	composeConfig, err := deploy.ParseComposeFile(*composePath)
-	if err != nil {
-		log.Fatalf("Failed to read %s: %v", *composePath, err)
-	}
-
-	// Get SSH key from environment if specified and no key file provided
-	var sshKeyData string
-	if *sshKeyFile == "" {
-		sshKeyData = os.Getenv(*sshKeyEnv)
-		if sshKeyData == "" {
+		// Get SSH key from environment if specified and no key file provided
+		logging.Logger.Debug("Determining SSH key")
+		sshKeySource := bt_ssh.File
+		if sshKeyFile == "" {
+			logging.Logger.Debug("Using SSH key from environment")
+			sshKeySource = bt_ssh.Environment
+		}
+		var sshKeyData string
+		if sshKeyFile == "" {
+			logging.Logger.Debug("No SSH key file provided, using SSH data from environment")
 			sshKeyData = os.Getenv("SSH_PRIVATE_KEY")
 		}
-		if sshKeyData == "" && *sshKeyFile == "" {
-			core.Logger.Fatal("Either SSH key file (-i) or SSH key environment variable (SSH_PRIVATE_KEY) must be provided")
+		if sshKeyData == "" && sshKeyFile == "" {
+			return fmt.Errorf("either SSH key file (-i) or SSH key environment variable (SSH_PRIVATE_KEY) must be provided")
 		}
-	}
+		logging.Logger.Debug("Loading SSH key")
+		sshKey := bt_ssh.SSHKey{
+			Source: sshKeySource,
+		}
+		_, err := sshKey.Load()
+		if err != nil {
+			return fmt.Errorf("failed to load SSH key: %w", err)
+		}
 
-	registryConfig := podman.RegistryConfig{
-		Host:     *registryURL,
-		Username: *regUser,
-		Password: *regPass,
-	}
+		// if not given a docker-compose.yml file, try to find one in the working directory
+		if composePath == "" {
+			logging.Logger.Debugf("No docker-compose.yml file provided, searching for one in the working directory")
+			paths, err := filepath.Glob("docker-compose.yml")
+			if err != nil {
+				return fmt.Errorf("failed to find docker-compose.yml: %w", err)
+			}
+			if len(paths) == 0 {
+				return fmt.Errorf("no docker-compose.yml file found in working directory")
+			}
+			composePath = paths[0]
+		} else {
+			logging.Logger.Debugf("Using docker-compose.yml file: %s", composePath)
+		}
 
-	// Generate version string based on current time
-	version := time.Now().UTC().Format("20060102-150405") // Will output like "20240319-153022"
+		localWorkDir := filepath.Dir(composePath)
+		logging.Logger.Infof("Using local work directory: %s", localWorkDir)
 
-	// Add after composePath declaration
-	workDir := filepath.Dir(*composePath)
+		// load docker-compose.yml
+		logging.Logger.Debugf("Loading docker-compose.yml")
+		compose, err := containers.NewComposeProject(composePath, "uberbase-deploy")
+		if err != nil {
+			return fmt.Errorf("failed to load docker-compose.yml: %w", err)
+		}
 
-	// Create deployer for each host
-	deployers := make([]*deploy.Deployer, len(hosts))
-	for i, host := range hosts {
-		ssh, err := core.NewSession(core.SSHConfig{
+		logging.Logger.Debugf("Creating local executor")
+		localExecutor := core.NewLocalExecutor()
+		localExecutor.Verify()
+
+		logging.Logger.Debugf("Creating remote executor")
+		remoteExecutor, err := core.NewRemoteExecutor(bt_ssh.SSHConfig{
 			Host: host,
-			User: *sshUser,
-			Port: *sshPort,
+			User: sshUser,
+			Port: sshPort,
+			Key:  sshKey,
 		})
 		if err != nil {
-			log.Fatalf("Failed to create SSH session for %s: %v", host, err)
+			return fmt.Errorf("failed to create remote executor: %w", err)
 		}
-		defer ssh.Close()
 
-		deployers[i] = deploy.NewDeployer(ssh, workDir, registryConfig)
-	}
-
-	// Create coordinator with placement
-	coordinator := deploy.NewDeploymentCoordinator(deployers)
-
-	if err := coordinator.DeployCompose(composeConfig, version); err != nil {
-		log.Printf("Deployment failed: %v", err)
-		log.Println("Attempting rollback...")
-
-		if *rollback {
-			if err := coordinator.Rollback(composeConfig); err != nil {
-				log.Fatalf("Failed to rollback: %v", err)
-			}
-			return
+		logging.Logger.Debugf("Creating deployer")
+		deployer, err := deploy.NewDeployer(localExecutor, remoteExecutor, compose, localWorkDir, "~/uberbase-deploy")
+		if err != nil {
+			return fmt.Errorf("failed to create deployer: %w", err)
 		}
+
+		logging.Logger.Infof("Beginning deployment to %s", host)
+		deployer.DeployProject()
+
+		return nil
+	},
+}
+
+func init() {
+	// Define flags
+	rootCmd.PersistentFlags().StringVarP(&composePath, "file", "f", "docker-compose.yml", "Path to docker-compose.yml")
+	rootCmd.PersistentFlags().StringVar(&sshUser, "ssh-user", "root", "SSH user")
+	rootCmd.PersistentFlags().IntVar(&sshPort, "ssh-port", 22, "SSH port")
+	rootCmd.PersistentFlags().StringVarP(&sshKeyFile, "identity-file", "i", "", "SSH private key file")
+	rootCmd.PersistentFlags().StringVar(&sshKeyEnv, "ssh-key-env", "SSH_PRIVATE_KEY", "Environment variable containing SSH key")
+	rootCmd.PersistentFlags().StringVar(&registryURL, "registry", "", "Registry URL")
+	rootCmd.PersistentFlags().StringVar(&regUser, "registry-user", "", "Registry username")
+	rootCmd.PersistentFlags().StringVar(&regPass, "registry-pass", "", "Registry password")
+	rootCmd.PersistentFlags().StringVar(&hostsFlag, "hosts", "", "Comma-separated list of hosts to deploy to")
+	rootCmd.PersistentFlags().BoolVar(&rollbackFlag, "rollback", false, "Rollback deployment")
+}
+
+func main() {
+	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }

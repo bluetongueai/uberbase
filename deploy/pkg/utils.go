@@ -2,7 +2,7 @@ package pkg
 
 import (
 	"strconv"
-	"strings"
+	"time"
 )
 
 func ParseInt(s string) int {
@@ -10,19 +10,15 @@ func ParseInt(s string) int {
 	return i
 }
 
-func contains(slice []string, item string) bool {
+func GenerateVersion() string {
+	return time.Now().UTC().Format("20060102-150405")
+}
+
+func Contains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {
 			return true
 		}
 	}
 	return false
-}
-
-func extractPort(port string) string {
-	parts := strings.Split(port, ":")
-	if len(parts) > 1 {
-		return parts[1]
-	}
-	return ""
 }

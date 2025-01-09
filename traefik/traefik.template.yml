@@ -1,0 +1,21 @@
+providers:
+  file:
+    directory: /etc/traefik/config/dynamic
+    watch: true
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+certificatesResolvers:
+  letsencryptresolver:
+    acme:
+      email: ${UBERBASE_ADMIN_EMAIL}
+      storage: /data/letsencrypt/acme.json
+      tlsChallenge: true
+

@@ -1,0 +1,25 @@
+http:
+  services:
+    auth:
+      loadBalancer:
+        servers:
+        - url: "http://${UBERBASE_FUSIONAUTH_HOST}:${UBERBASE_FUSIONAUTH_PORT}/"
+    api:
+      loadBalancer:
+        servers:
+        - url: "http://${UBERBASE_POSTGREST_HOST}:${UBERBASE_POSTGREST_PORT}/"
+    storage:
+      loadBalancer:
+        servers:
+        - url: "http://${UBERBASE_MINIO_HOST}:${UBERBASE_MINIO_PORT}/"
+
+  routers:
+    auth:
+      rule: "PathPrefix(`/auth`)"
+      service: auth
+    api:
+      rule: "PathPrefix(`/api`)"
+      service: api
+    storage:
+      rule: "PathPrefix(`/storage`)"
+      service: storage

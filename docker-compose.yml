@@ -5,6 +5,7 @@ volumes:
   postgres_data:
   minio_data:
   fusionauth_data:
+  traefik_data:
 
 networks:
   net:
@@ -143,24 +144,28 @@ services:
     extra_hosts:
       - uberbase:host-gateway
   
-  caddy:
-    image: docker.io/caddy:2.8.4
-    container_name: caddy
-    restart: unless-stopped
-    env_file:
-      - .env
-    cap_add:
-      - NET_ADMIN
+  traefik:
+    image: docker.io/traefik:v3.3
+    container_name: traefik
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      #- "--certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.myresolver.acme.email=postmaster@example.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/data/letsencrypt/acme.json"
     ports:
       - 80:80
       - 443:443
-    volumes:
-      - ${PWD}/_configs/caddy:/etc/caddy
-      - ${PWD}/logs:/var/log/caddy
-      - ${UBERBASE_CADDY_DATA_STORAGE}:/data
-      - ${UBERBASE_CADDY_CONFIG_STORAGE}:/config
     networks:
       - net
     extra_hosts:
       - uberbase:host-gateway
-    
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${PWD}/_configs/traefik:/etc/traefik
+      - ${PWD}/logs:/var/log/traefik
+      - traefik_data:/data

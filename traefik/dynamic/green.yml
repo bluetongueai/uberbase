@@ -1,0 +1,18 @@
+http:
+  services:
+    proxy:
+      loadBalancer:
+        servers:
+        - url: "http://proxy:8000/"
+    website:
+      loadBalancer:
+        servers:
+        - url: "http://website:3000/"
+
+  routers:
+    proxy:
+      rule: "PathPrefix(`/proxy`)"
+      service: proxy
+    website:
+      rule: "PathPrefix(`/`)"
+      service: website
