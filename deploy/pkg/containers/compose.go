@@ -8,8 +8,9 @@ import (
 )
 
 type ComposeProject struct {
-	FilePath string
-	Project  *types.Project
+	LocalFilePath  string
+	RemoteFilePath string
+	Project        *types.Project
 }
 
 func NewComposeProject(composeFilePath string, projectName string) (*ComposeProject, error) {
@@ -31,7 +32,7 @@ func NewComposeProject(composeFilePath string, projectName string) (*ComposeProj
 	}
 
 	return &ComposeProject{
-		FilePath: composeFilePath,
-		Project:  project,
+		LocalFilePath: composeFilePath,
+		Project:       project,
 	}, nil
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bluetongueai/uberbase/deploy/pkg/logging"
 	"github.com/bluetongueai/uberbase/deploy/pkg/state"
 )
 
@@ -43,12 +44,10 @@ func (rm *RollbackManager) AddRollbackStep(name string, fn RollbackFunc, verify 
 
 // Rollback executes all registered rollback functions in reverse order
 func (rm *RollbackManager) Rollback(ctx context.Context) error {
+	logging.Logger.Info("Rolling back deployment")
 	var errors []error
 
-	initialState, err := rm.state.Load()
-	if err != nil {
-		errors = append(errors, fmt.Errorf("failed to load initial state: %w", err))
-	}
+	initialState, _ := rm.state.Load()
 
 	// Execute rollbacks in reverse order
 	for i := len(rm.steps) - 1; i >= 0; i-- {

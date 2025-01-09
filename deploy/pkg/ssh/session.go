@@ -81,7 +81,7 @@ func (c *SSHSession) ExecuteCommand(cmd string) (string, error) {
 	}
 	defer session.Close()
 
-	logging.Logger.Infof("%s: \033[34m%s\033[0m", c.addr, cmd)
+	logging.Logger.Infof("%s: \033[33m%s\033[0m", c.addr, cmd)
 
 	// Create buffers for stdout and stderr
 	var stdout, stderr bytes.Buffer
@@ -118,6 +118,11 @@ func (c *SSHSession) IsClosed() bool {
 }
 
 func (s *SSHSession) TransferFile(localPath, remotePath string) error {
+	// Ensure we have an active connection
+	if _, err := s.Connect(); err != nil {
+		return fmt.Errorf("failed to establish SSH connection: %w", err)
+	}
+
 	// Create new SFTP client
 	sftpClient, err := sftp.NewClient(s.client)
 	if err != nil {
@@ -151,6 +156,5 @@ func (s *SSHSession) TransferFile(localPath, remotePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to copy file contents: %w", err)
 	}
-
 	return nil
 }

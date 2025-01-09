@@ -1,6 +1,8 @@
 package containers
 
 import (
+	"strings"
+
 	"github.com/bluetongueai/uberbase/deploy/pkg/core"
 )
 
@@ -12,6 +14,11 @@ type Docker struct {
 }
 
 func NewDockerExecutor(binPath, composePath string, executor core.Executor) *Docker {
+	// fix compose path for current executor
+	executorHome, err := executor.Exec("echo $HOME")
+	if err == nil {
+		composePath = strings.Replace(composePath, "~/", strings.TrimSpace(executorHome)+"/", 1)
+	}
 	return &Docker{
 		binPath:     binPath,
 		composePath: composePath,

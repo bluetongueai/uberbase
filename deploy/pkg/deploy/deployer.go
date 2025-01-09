@@ -3,7 +3,7 @@ package deploy
 import (
 	"context"
 	"fmt"
-	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,7 +23,6 @@ type Deployer struct {
 	localContainerMgr  *containers.ContainerManager
 	remoteContainerMgr *containers.ContainerManager
 	stateManager       *state.StateManager
-	backupManager      *BackupManager
 	healthChecker      *health.HealthChecker
 	trafficManager     *loadbalancer.TrafficManager
 	localExecutor      core.Executor
@@ -47,39 +46,24 @@ func NewDeployer(localExecutor core.Executor, remoteExecutor core.Executor, comp
 		return nil, err
 	}
 	logging.Logger.Debug("Remote environment verification complete")
-
-	logging.Logger.Debug("Initializing deployment components: ",
-		"local_work_dir: ", localWorkDir,
-		", remote_work_dir: ", remoteWorkDir)
-
-	localContainerMgr, err := containers.NewContainerManager(localExecutor, compose, false)
+	localContainerMgr, err := containers.NewContainerManager(localExecutor, compose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create local container manager: %w", err)
 	}
-
-	remoteContainerMgr, err := containers.NewContainerManager(remoteExecutor, compose, true)
+	remoteContainerMgr, err := containers.NewContainerManager(remoteExecutor, compose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create remote container manager: %w", err)
 	}
-
 	stateManager := state.NewStateManager(remoteWorkDir, remoteExecutor)
-	if _, err := stateManager.Load(); err != nil {
-		return nil, fmt.Errorf("failed to load state: %w", err)
-	}
-
 	gitManager, err := git.NewGitManager(localExecutor.(*core.LocalExecutor), remoteExecutor.(*core.RemoteExecutor), localWorkDir, remoteWorkDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create git manager: %w", err)
 	}
-
 	healthChecker := health.NewHealthChecker(remoteContainerMgr)
-
 	trafficManager, err := loadbalancer.NewTrafficManager(remoteContainerMgr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create traffic manager: %w", err)
 	}
-
-	backupManager := NewBackupManager(remoteContainerMgr)
 
 	logging.Logger.Debug("Deployment components initialized successfully")
 	return &Deployer{
@@ -88,7 +72,6 @@ func NewDeployer(localExecutor core.Executor, remoteExecutor core.Executor, comp
 		localContainerMgr:  localContainerMgr,
 		remoteContainerMgr: remoteContainerMgr,
 		stateManager:       stateManager,
-		backupManager:      backupManager,
 		healthChecker:      healthChecker,
 		trafficManager:     trafficManager,
 		localExecutor:      localExecutor,
@@ -118,17 +101,13 @@ func (d *Deployer) DeployProject() (err error) {
 	}
 	containerTag := containers.ContainerTag(string(newVersion))
 
-	logging.LogKeyValues("Deploying", map[string]string{
-		"version": string(containerTag),
-	})
-
 	services := []string{}
 	for _, service := range d.compose.Project.Services {
 		services = append(services, service.Name)
 	}
-	logging.LogKeyValues("Building and pushing containers", map[string]string{
-		"tag":      string(containerTag),
-		"services": strings.Join(services, ", "),
+	logging.LogKeyValues("Building and pushing containers", [][2]string{
+		{"tag", string(containerTag)},
+		{"services", strings.Join(services, ", ")},
 	})
 
 	if _, err := d.localContainerMgr.Build(containerTag); err != nil {
@@ -139,25 +118,23 @@ func (d *Deployer) DeployProject() (err error) {
 		return fmt.Errorf("failed to push new versions: %w", err)
 	}
 
-	logging.Logger.Debug("Preparing remote environment",
-		"work_dir", d.remoteWorkDir)
+	if _, err := d.remoteExecutor.Exec("mkdir -p " + d.remoteWorkDir); err != nil {
+		return fmt.Errorf("failed to create remote work directory: %w", err)
+	}
+
 	currentState, err := d.stateManager.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load current state: %w", err)
 	}
-	logging.LogKeyValues("Current state loaded", map[string]string{
-		"current_tag":   string(currentState.Tag),
-		"service_count": fmt.Sprintf("%d", len(currentState.Compose.Services)),
-	})
 
-	logging.Logger.Debug("Sending docker-compose.yml to remote server")
-	if err := d.remoteExecutor.(*core.RemoteExecutor).SendFile(d.compose.FilePath, d.remoteWorkDir+"/docker-compose.yml"); err != nil {
+	if err := d.remoteExecutor.SendFile(d.compose.LocalFilePath, filepath.Join(d.remoteWorkDir, "docker-compose.yml")); err != nil {
 		return fmt.Errorf("failed to send docker-compose.yml to remote server: %w", err)
 	}
+	d.compose.RemoteFilePath = filepath.Join(d.remoteWorkDir, "docker-compose.yml")
 
 	// build a dynamic override file
 	override := containers.NewComposeOverride(d.compose, containerTag)
-	overrideFilePath, err := override.WriteToFile(d.remoteExecutor.(*core.RemoteExecutor), d.remoteWorkDir, d.compose.FilePath)
+	overrideFilePath, err := override.WriteToFile(d.remoteExecutor.(*core.RemoteExecutor), d.remoteWorkDir)
 	if err != nil {
 		return fmt.Errorf("failed to write override file: %w", err)
 	}
@@ -165,32 +142,31 @@ func (d *Deployer) DeployProject() (err error) {
 	rm.AddRollbackStep(
 		"rollback-override",
 		func(ctx context.Context) error {
-			if _, err := os.Stat(overrideFilePath); os.IsNotExist(err) {
-				return nil
-			}
-			if err := os.Remove(overrideFilePath); err != nil {
+			if _, err := d.remoteExecutor.Exec("rm -f " + overrideFilePath); err != nil {
 				return fmt.Errorf("failed to remove override file: %w", err)
 			}
 			return nil
 		},
 		func(ctx context.Context) error {
-			if _, err := os.Stat(overrideFilePath); os.IsNotExist(err) {
+			if _, err := d.remoteExecutor.Exec("test -f " + overrideFilePath); err != nil {
 				return nil
 			}
 			return fmt.Errorf("override file still exists after rollback")
 		},
 	)
 
+	// pull the new containers
+	logging.Logger.Info("Pulling new containers")
+	if _, err := d.remoteContainerMgr.Pull(containerTag); err != nil {
+		return fmt.Errorf("failed to pull new containers: %w", err)
+	}
+
 	// bring up the new containers
-	logging.Logger.Info("Deploying new containers")
 	overrideServices := []string{}
 	for _, service := range override.Services {
 		overrideServices = append(overrideServices, service.Name)
 	}
-	logging.LogKeyValues("Starting containers with override", map[string]string{
-		"override_path": overrideFilePath,
-		"services":      strings.Join(overrideServices, ", "),
-	})
+	logging.Logger.Infof("Starting new containers: %s", strings.Join(overrideServices, ", "))
 
 	_, err = d.remoteContainerMgr.Up(overrideFilePath)
 	if err != nil {
@@ -219,7 +195,7 @@ func (d *Deployer) DeployProject() (err error) {
 			for _, service := range override.Services {
 				failedServices = append(failedServices, service.Name)
 			}
-			if _, err := d.remoteContainerMgr.Down(failedServices); err != nil {
+			if _, err := d.remoteContainerMgr.Down(failedServices, overrideFilePath); err != nil {
 				return fmt.Errorf("failed to bring down new containers: %w", err)
 			}
 			return nil
@@ -280,24 +256,17 @@ func (d *Deployer) DeployProject() (err error) {
 		}
 		oldContainers = append(oldContainers, service.ContainerName)
 	}
-	if _, err := d.remoteContainerMgr.Down(oldContainers); err != nil {
+	if _, err := d.remoteContainerMgr.Down(oldContainers, overrideFilePath); err != nil {
 		return fmt.Errorf("failed to bring down old containers, environment may be inconsistent: %w, %v", err, oldContainers)
 	}
 
-	logging.LogKeyValues("Cleaning up old containers", map[string]string{
-		"count":      fmt.Sprintf("%d", len(oldContainers)),
-		"containers": strings.Join(oldContainers, ", "),
-	})
+	logging.Logger.Info("Cleaning up old containers", "count", fmt.Sprintf("%d", len(oldContainers)), "containers", strings.Join(oldContainers, ", "))
 
-	if _, err := d.remoteContainerMgr.Down(oldContainers); err != nil {
+	if _, err := d.remoteContainerMgr.Down(oldContainers, overrideFilePath); err != nil {
 		return fmt.Errorf("failed to bring down old containers, environment may be inconsistent: %w, %v", err, oldContainers)
 	}
 
-	logging.LogKeyValues("Saving deployment state", map[string]string{
-		"tag":             string(containerTag),
-		"service_count":   fmt.Sprintf("%d", len(override.Services)),
-		"traffic_configs": fmt.Sprintf("%d", len(d.trafficManager.GetDynamicConfigs())),
-	})
+	logging.Logger.Info("Updating deployment state")
 
 	if err := d.stateManager.Update(override.Services, d.trafficManager.GetDynamicConfigs(), containerTag); err != nil {
 		return fmt.Errorf("failed to create new state: %w", err)

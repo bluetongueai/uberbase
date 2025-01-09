@@ -3,9 +3,8 @@ package ssh
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
+	"github.com/bluetongueai/uberbase/deploy/pkg"
 	"github.com/bluetongueai/uberbase/deploy/pkg/logging"
 	"golang.org/x/crypto/ssh"
 )
@@ -60,12 +59,7 @@ func (k *SSHKey) IsLoaded() bool {
 }
 
 func (k *SSHKey) loadFromFile() (ssh.AuthMethod, error) {
-	// turn path into absolute path while resolving ~ and etc
-	relPath := k.fileKey
-	if strings.HasPrefix(relPath, "~/") {
-		relPath = strings.Replace(relPath, "~", os.Getenv("HOME"), 1)
-	}
-	absPath, err := filepath.Abs(relPath)
+	absPath, err := pkg.ExpandTildeLocal(k.fileKey)
 	if err != nil {
 		return nil, err
 	}

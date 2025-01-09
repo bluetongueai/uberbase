@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
-	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -35,12 +34,10 @@ type StateManager struct {
 }
 
 func NewStateManager(workDir string, executor core.Executor) *StateManager {
-	logging.Logger.Debug("Creating new StateManager")
-	manager := &StateManager{
+	return &StateManager{
 		workDir:  workDir,
 		executor: executor,
 	}
-	return manager
 }
 
 func (s *StateManager) Load() (DeploymentState, error) {
@@ -48,17 +45,24 @@ func (s *StateManager) Load() (DeploymentState, error) {
 	var state DeploymentState
 	stateFile := filepath.Join(s.workDir, "deployment-state.yml")
 
-	data, err := s.executor.Exec(fmt.Sprintf("cat %s", stateFile))
+	_, err := s.executor.Exec(fmt.Sprintf("test -f %s", stateFile))
 	if err != nil {
 		logging.Logger.Info("State file not found, initializing empty state")
-		return DeploymentState{
+		state = DeploymentState{
 			Compose: &ComposeState{
 				Services: make(map[string]*ComposeServiceState),
 			},
 			Traefik: &TraefikState{
-				Tag: "",
+				Tag:     "",
+				Configs: make(map[string]traefik.TraefikDynamicConfiguration),
 			},
-		}, nil
+		}
+		return state, nil
+	}
+
+	data, err := s.executor.Exec(fmt.Sprintf("cat %s", stateFile))
+	if err != nil {
+		return DeploymentState{}, fmt.Errorf("failed to read state file: %w", err)
 	}
 
 	if err := yaml.Unmarshal([]byte(data), &state); err != nil {
@@ -100,11 +104,6 @@ func (s *StateManager) write(state DeploymentState) error {
 		return fmt.Errorf("work directory not set")
 	}
 
-	_, err := s.executor.Exec(fmt.Sprintf("mkdir -p %s", filepath.Dir(s.workDir)))
-	if err != nil {
-		return fmt.Errorf("failed to create state directory: %w", err)
-	}
-
 	logging.Logger.Info("Saving deployment state")
 
 	// Marshal state to YAML
@@ -113,20 +112,17 @@ func (s *StateManager) write(state DeploymentState) error {
 		return fmt.Errorf("failed to marshal state: %w", err)
 	}
 
-	// Write to temporary file first
-	tempFile := filepath.Join(s.workDir, fmt.Sprintf("deployment-state.yml.%d.tmp", time.Now().UnixNano()))
-	finalFile := filepath.Join(s.workDir, "deployment-state.yml")
-
-	// Write data to temp file
-	if _, err := s.executor.Exec(fmt.Sprintf("echo '%s' > %s", string(data), tempFile)); err != nil {
-		return fmt.Errorf("failed to write temporary state file: %w", err)
+	// Create the state directory if it doesn't exist
+	if _, err := s.executor.Exec(fmt.Sprintf("mkdir -p %s", filepath.Dir(s.workDir))); err != nil {
+		return fmt.Errorf("failed to create state directory: %w", err)
 	}
 
-	// Atomically rename temp file to final file
-	if _, err := s.executor.Exec(fmt.Sprintf("mv -f %s %s", tempFile, finalFile)); err != nil {
-		// Try to cleanup temp file
-		s.executor.Exec(fmt.Sprintf("rm -f %s", tempFile))
-		return fmt.Errorf("failed to atomically update state file: %w", err)
+	stateFile := filepath.Join(s.workDir, "deployment-state.yml")
+
+	// Write data using heredoc approach
+	cmd := fmt.Sprintf("cat <<'EOF' > %s\n%s\nEOF", stateFile, string(data))
+	if _, err := s.executor.Exec(cmd); err != nil {
+		return fmt.Errorf("failed to write state file: %w", err)
 	}
 
 	logging.Logger.Info("State file updated successfully")

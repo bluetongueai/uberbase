@@ -1,6 +1,8 @@
 package pkg
 
 import (
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -30,4 +32,15 @@ func StripTag(tag string) string {
 		return split[0]
 	}
 	return tag
+}
+
+func ExpandTildeLocal(relPath string) (string, error) {
+	if strings.HasPrefix(relPath, "~/") {
+		relPath = strings.Replace(relPath, "~", os.Getenv("HOME"), 1)
+	}
+	absPath, err := filepath.Abs(relPath)
+	if err != nil {
+		return "", err
+	}
+	return absPath, nil
 }

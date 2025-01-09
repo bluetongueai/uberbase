@@ -1,15 +1,17 @@
 package containers
 
 import (
+	"path/filepath"
+
 	"github.com/bluetongueai/uberbase/deploy/pkg"
 	"github.com/bluetongueai/uberbase/deploy/pkg/core"
 	"gopkg.in/yaml.v2"
 )
 
 type ComposeServiceOverride struct {
-	Name     string `yaml:"name"`
 	Hostname string `yaml:"hostname"`
 	Image    string `yaml:"image"`
+	Name     string `yaml:"-"`
 	RefName  string `yaml:"-"`
 }
 
@@ -36,12 +38,12 @@ func NewComposeOverride(compose *ComposeProject, containerTag ContainerTag) *Com
 	return override
 }
 
-func (c *ComposeOverride) WriteToFile(executor *core.RemoteExecutor, remoteWorkDir, filePath string) (string, error) {
+func (c *ComposeOverride) WriteToFile(executor *core.RemoteExecutor, remoteWorkDir string) (string, error) {
 	yaml, err := yaml.Marshal(c)
 	if err != nil {
 		return "", err
 	}
-	overrideFile := remoteWorkDir + "/docker-compose.override.yml"
+	overrideFile := filepath.Join(remoteWorkDir, "docker-compose.override.yml")
 	cmd := "cat <<EOF > " + overrideFile + "\n" + string(yaml) + "\nEOF"
 	_, err = executor.Exec(cmd)
 	if err != nil {

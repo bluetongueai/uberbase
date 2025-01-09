@@ -26,7 +26,7 @@ type ContainerManager struct {
 	executor ContainerExecutor
 }
 
-func NewContainerManager(executor core.Executor, compose *ComposeProject, installPodman bool) (*ContainerManager, error) {
+func NewContainerManager(executor core.Executor, compose *ComposeProject) (*ContainerManager, error) {
 	var containerExecutor ContainerExecutor
 
 	if binPath, err := executor.Exec("which podman"); err == nil {
@@ -69,31 +69,31 @@ func (p *ContainerManager) Auth(opts RegistryOptions) (string, error) {
 }
 
 func (p *ContainerManager) Up(composeOverrideFilePath string) (string, error) {
-	output, err := p.executor.ExecCompose("up -d -f " + p.Compose.FilePath + " -f " + composeOverrideFilePath)
+	output, err := p.executor.ExecCompose("-f " + p.Compose.RemoteFilePath + " -f " + composeOverrideFilePath + " up -d")
 	if err != nil {
 		return "", fmt.Errorf("failed to up: %w", err)
 	}
 	return string(output), nil
 }
 
-func (p *ContainerManager) Down(containers []string) (string, error) {
-	output, err := p.executor.ExecCompose("down --remove-orphans " + strings.Join(containers, " "))
+func (p *ContainerManager) Down(containers []string, composeOverrideFilePath string) (string, error) {
+	output, err := p.executor.ExecCompose("-f " + p.Compose.RemoteFilePath + " -f " + composeOverrideFilePath + " down --remove-orphans " + strings.Join(containers, " "))
 	if err != nil {
 		return "", fmt.Errorf("failed to remove: %w", err)
 	}
 	return string(output), nil
 }
 
-func (p *ContainerManager) Start(service *types.ServiceConfig) (string, error) {
-	output, err := p.executor.ExecCompose("up -d " + service.Name)
+func (p *ContainerManager) Start(service *types.ServiceConfig, composeOverrideFilePath string) (string, error) {
+	output, err := p.executor.ExecCompose("-f " + p.Compose.RemoteFilePath + " -f " + composeOverrideFilePath + " up -d " + service.Name)
 	if err != nil {
 		return "", fmt.Errorf("failed to start: %w", err)
 	}
 	return string(output), nil
 }
 
-func (p *ContainerManager) Run(service *types.ServiceConfig, command []string, persistent bool) (string, error) {
-	runCmd := "run --rm --name " + service.Name
+func (p *ContainerManager) Run(service *types.ServiceConfig, command []string, persistent bool, composeOverrideFilePath string) (string, error) {
+	runCmd := "-f " + p.Compose.RemoteFilePath + " -f " + composeOverrideFilePath + " run --rm --name " + service.Name
 	if persistent {
 		runCmd += " -d"
 	}
@@ -104,8 +104,8 @@ func (p *ContainerManager) Run(service *types.ServiceConfig, command []string, p
 	return string(output), nil
 }
 
-func (p *ContainerManager) Exec(service *types.ServiceConfig, command []string) (string, error) {
-	output, err := p.executor.ExecCompose("exec " + service.Name + " " + strings.Join(command, " "))
+func (p *ContainerManager) Exec(service *types.ServiceConfig, command []string, composeOverrideFilePath string) (string, error) {
+	output, err := p.executor.ExecCompose("-f " + p.Compose.RemoteFilePath + " -f " + composeOverrideFilePath + " exec " + service.Name + " " + strings.Join(command, " "))
 	if err != nil {
 		return "", fmt.Errorf("failed to exec: %w", err)
 	}

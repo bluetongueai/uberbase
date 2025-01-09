@@ -89,10 +89,10 @@ Examples:
 		}
 		localWorkDir := filepath.Dir(composePath)
 
-		logging.LogKeyValues("Initializing deployment", map[string]string{
-			"host":           host,
-			"local workdir":  "\033[33m" + localWorkDir + "\033[0m",
-			"remote workdir": "\033[34m" + "~/uberbase-deploy" + "\033[0m",
+		logging.LogKeyValues("Initializing deployment", [][2]string{
+			{"host", host},
+			{"local workdir", "\033[34m\"" + localWorkDir + "\"\033[0m"},
+			{"remote workdir", "\033[34m\"" + "/root/uberbase-deploy" + "\"\033[0m"},
 		})
 
 		// Load docker-compose configuration
@@ -117,7 +117,7 @@ Examples:
 		}
 
 		// Create and run deployer
-		deployer, err := deploy.NewDeployer(localExecutor, remoteExecutor, compose, localWorkDir, "~/uberbase-deploy")
+		deployer, err := deploy.NewDeployer(localExecutor, remoteExecutor, compose, localWorkDir, "/root/uberbase-deploy")
 		if err != nil {
 			return fmt.Errorf("failed to create deployer: %w", err)
 		}
@@ -130,8 +130,6 @@ Examples:
 
 		return nil
 	},
-	SilenceUsage:  true,
-	SilenceErrors: true,
 }
 
 func init() {

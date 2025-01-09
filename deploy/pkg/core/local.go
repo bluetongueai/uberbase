@@ -22,6 +22,10 @@ func (e *LocalExecutor) Test() bool {
 	return true
 }
 
+func (e *LocalExecutor) SendFile(localPath, remotePath string) error {
+	return nil
+}
+
 func (e *LocalExecutor) Exec(command string) (string, error) {
 	logging.Logger.Infof("local: \033[33m%s\033[0m", command)
 

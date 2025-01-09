@@ -46,8 +46,11 @@ func (p *ContainerManager) Pull(tag ContainerTag) (string, error) {
 		if service.Image == "" {
 			continue
 		}
-		image := pkg.StripTag(service.Image)
-		pullOutput, err := p.executor.Exec("pull " + image + ":" + string(tag))
+		image := service.Image
+		if service.Build != nil {
+			image = pkg.StripTag(service.Image) + ":" + string(tag)
+		}
+		pullOutput, err := p.executor.Exec("pull " + image)
 		if err != nil {
 			return "", fmt.Errorf("failed to pull image: %w", err)
 		}

@@ -174,17 +174,17 @@ func SetInfoLevel() {
 }
 
 // LogKeyValues logs a message followed by aligned key-value pairs
-func LogKeyValues(msg string, kvs map[string]string) {
+func LogKeyValues(msg string, kvs [][2]string) {
 	var maxKeyLen int
-	for k := range kvs {
-		if len(k) > maxKeyLen {
-			maxKeyLen = len(k)
+	for _, kv := range kvs {
+		if len(kv[0]) > maxKeyLen {
+			maxKeyLen = len(kv[0])
 		}
 	}
 
 	Logger.Info(msg)
-	for k, v := range kvs {
-		padding := strings.Repeat(" ", maxKeyLen-len(k))
-		Logger.Infof("  %s%s: %s", k, padding, v)
+	for _, kv := range kvs {
+		padding := strings.Repeat(" ", maxKeyLen-len(kv[0]))
+		Logger.Infof("%s%s: %s", kv[0], padding, kv[1])
 	}
 }

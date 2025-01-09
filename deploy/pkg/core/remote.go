@@ -82,7 +82,10 @@ func (p *RemoteExecutor) Exec(cmd string) (string, error) {
 			return string(output), nil
 		}
 
-		if strings.Contains(err.Error(), "could not get lock") && attempt < p.maxRetries {
+		// Only retry on lock conflicts or transport errors
+		if (strings.Contains(err.Error(), "could not get lock") ||
+			isTransportError(err)) && attempt < p.maxRetries {
+			logging.Logger.Debugf("Retrying command due to transport error (attempt %d): %v", attempt, err)
 			time.Sleep(p.retryDelay)
 			continue
 		}
@@ -92,26 +95,27 @@ func (p *RemoteExecutor) Exec(cmd string) (string, error) {
 	return "", nil
 }
 
-// Exec executes a command over the persistent connection
+// isTransportError checks if the error is related to transport/connection issues
+func isTransportError(err error) bool {
+	errStr := err.Error()
+	return strings.Contains(errStr, "connection refused") ||
+		strings.Contains(errStr, "no route to host") ||
+		strings.Contains(errStr, "connection reset by peer") ||
+		strings.Contains(errStr, "broken pipe") ||
+		strings.Contains(errStr, "i/o timeout") ||
+		strings.Contains(errStr, "transport") ||
+		strings.Contains(errStr, "connection closed")
+}
+
 func (c *RemoteExecutor) execWithoutRetry(cmd string) (string, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// Ensure we have a valid connection
-	if c.session.IsClosed() {
-		if _, err := c.session.Connect(); err != nil {
-			return "", fmt.Errorf("failed to reconnect: %w", err)
-		}
-	}
-
 	// Execute command on existing session
 	output, err := c.session.ExecuteCommand(cmd)
-	if err != nil {
-		// If connection error, try to reconnect once
-		if c.session.IsClosed() {
-			if _, err := c.session.Connect(); err != nil {
-				return "", fmt.Errorf("failed to reconnect: %w", err)
-			}
+	if err != nil && isTransportError(err) {
+		// Only try to reconnect if it's a transport error
+		if _, reconnErr := c.session.Connect(); reconnErr == nil {
 			output, err = c.session.ExecuteCommand(cmd)
 		}
 	}
@@ -123,24 +127,16 @@ func (p *RemoteExecutor) SendFile(localPath, remotePath string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if p.session.IsClosed() {
-		if _, err := p.session.Connect(); err != nil {
-			return fmt.Errorf("failed to connect to remote server for file transfer: %w", err)
+	err := p.session.TransferFile(localPath, remotePath)
+	if err != nil && isTransportError(err) {
+		// Only try to reconnect if it's a transport error
+		if _, reconnErr := p.session.Connect(); reconnErr == nil {
+			err = p.session.TransferFile(localPath, remotePath)
 		}
 	}
 
-	err := p.session.TransferFile(localPath, remotePath)
 	if err != nil {
-		// If connection error, try to reconnect once
-		if p.session.IsClosed() {
-			if _, err := p.session.Connect(); err != nil {
-				return fmt.Errorf("failed to reconnect for file transfer: %w", err)
-			}
-			err = p.session.TransferFile(localPath, remotePath)
-		}
-		if err != nil {
-			return fmt.Errorf("failed to transfer file from %s to %s: %w", localPath, remotePath, err)
-		}
+		return fmt.Errorf("failed to transfer file from %s to %s: %w", localPath, remotePath, err)
 	}
 
 	return nil
