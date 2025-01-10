@@ -13,35 +13,9 @@ networks:
     driver: bridge
 
 services:
-  vault:
-    image: hashicorp/vault:latest
-    container_name: vault
-    restart: unless-stopped
-    cap_add:
-      - IPC_LOCK
-    command: server
-    environment:
-      VAULT_ADDR: "http://0.0.0.0:8200"
-      VAULT_API_ADDR: "http://0.0.0.0:8200"
-    volumes:
-      - ${UBERBASE_VAULT_STORAGE}:/vault/file:Z
-      - ${PWD}/vault:/vault/config:Z
-      - ${PWD}/logs:/vault/logs:Z
-    ports:
-      - ${UBERBASE_VAULT_PORT}:8200
-    healthcheck:
-      test: ["CMD", "vault", "status"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    networks:
-      - net
-    extra_hosts:
-      - uberbase:host-gateway
-
   redis:
     restart: unless-stopped
-    image: docker.io/redis/redis-stack:latest
+    image: docker.io/bluetongueai/uberbase-redis:latest
     build:
       context: ./redis
     container_name: redis
@@ -52,28 +26,25 @@ services:
     ports:
       - ${UBERBASE_REDIS_PORT}:6379
     environment:
-      VAULT_ADDR: "http://vault:8200"
+      VAULT_ADDR: "http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT}"
       REDIS_ARGS: "--logfile /var/log/redis/redis.log --loglevel verbose"
     networks:
       - net
     extra_hosts:
       - uberbase:host-gateway
     env_file:
-      - ./vault/credentials
-    depends_on:
-      vault:
-        condition: service_healthy
+      - ${UBERBASE_VAULT_STORAGE}/credentials
 
   postgres:
     restart: unless-stopped
-    image: docker.io/bluetongueai/postgres:latest
+    image: docker.io/bluetongueai/uberbase-postgres:latest
     build:
       context: ./postgres/image
     container_name: postgres
     env_file:
-      - ./vault/credentials
+      - ${UBERBASE_VAULT_STORAGE}/credentials
     environment:
-      VAULT_ADDR: "http://vault:8200"
+      VAULT_ADDR: "http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT}"
       POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
       POSTGRES_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
       POSTGRES_DB: ${UBERBASE_POSTGRES_DATABASE}
@@ -81,7 +52,7 @@ services:
       - ${UBERBASE_POSTGRES_PORT}:5432
     volumes:
       - ${PWD}/logs:/var/log/postgresql
-      - ${PWD}/postgres/init:/docker-entrypoint-initdb.d
+      - ${PWD}/postgres/_init:/docker-entrypoint-initdb.d
       - ${PWD}/postgres/conf:/etc/postgresql/
       - ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data
     healthcheck:
@@ -93,13 +64,10 @@ services:
       - net
     extra_hosts:
       - uberbase:host-gateway
-    depends_on:
-      vault:
-        condition: service_healthy
 
   minio:
     restart: unless-stopped
-    image: quay.io/minio/minio:latest
+    image: docker.io/bluetongueai/uberbase-minio:latest
     build:
       context: ./minio
     container_name: minio
@@ -108,7 +76,7 @@ services:
     volumes:
       - ${UBERBASE_MINIO_STORAGE}:/data:Z
     environment:
-      VAULT_ADDR: "http://vault:8200"
+      VAULT_ADDR: "http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT}"
       MINIO_ROOT_USER: ${UBERBASE_MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${UBERBASE_MINIO_ROOT_PASSWORD}
     ports:
@@ -119,21 +87,18 @@ services:
     extra_hosts:
       - uberbase:host-gateway
     env_file:
-      - ./vault/credentials
-    depends_on:
-      vault:
-        condition: service_healthy
+      - ${UBERBASE_VAULT_STORAGE}/credentials
 
   postgrest:
     restart: unless-stopped
-    image: docker.io/bluetongueai/postgrest:latest
+    image: docker.io/bluetongueai/uberbase-postgrest:latest
     container_name: postgrest
     build:
       context: ./postgrest
       args:
         - POSTGREST_VERSION=${UBERBASE_POSTGREST_VERSION}
     environment:
-      VAULT_ADDR: "http://vault:8200"
+      VAULT_ADDR: "http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT}"
       UBERBASE_POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
       UBERBASE_POSTGRES_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
       UBERBASE_POSTGRES_HOST: ${UBERBASE_POSTGRES_HOST}
@@ -151,8 +116,6 @@ services:
       timeout: 5s
       retries: 5
     depends_on:
-      vault:
-        condition: service_healthy
       postgres:
         condition: service_healthy
     networks:
@@ -160,18 +123,18 @@ services:
     extra_hosts:
       - uberbase:host-gateway
     env_file:
-      - ./vault/credentials
+      - ${UBERBASE_VAULT_STORAGE}/credentials
 
   fusionauth:
-    image:  docker.io/fusionauth/fusionauth-app:latest
+    image: docker.io/bluetongueai/uberbase-fusionauth:latest
     container_name: fusionauth
     user: root
     build:
       context: ./fusionauth
     env_file:
-      - ./vault/credentials
+      - ${UBERBASE_VAULT_STORAGE}/credentials
     environment:
-      VAULT_ADDR: "http://vault:8200"
+      VAULT_ADDR: "http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT}"
       DATABASE_URL: jdbc:postgresql://${UBERBASE_POSTGRES_HOST}:${UBERBASE_POSTGRES_PORT}/${UBERBASE_FUSIONAUTH_DATABASE}
       DATABASE_ROOT_USERNAME: ${UBERBASE_POSTGRES_USER}
       DATABASE_ROOT_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
@@ -192,8 +155,6 @@ services:
       - ./_configs/fusionauth:/usr/local/fusionauth/kickstart
       - ${PWD}/logs:/usr/local/fusionauth/logs
     depends_on:
-      vault:
-        condition: service_healthy
       postgres:
         condition: service_healthy
     ports:
@@ -204,7 +165,7 @@ services:
       - uberbase:host-gateway
 
   traefik:
-    image: docker.io/traefik:v3.3
+    image: docker.io/bluetongueai/uberbase-traefik:latest
     build:
       context: ./traefik
     container_name: traefik
@@ -229,11 +190,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${PWD}/_configs/traefik:/etc/traefik
       - ${PWD}/logs:/var/log/traefik
-      - traefik_data:/data
+      - ${UBERBASE_TRAEFIK_STORAGE}:/data
     env_file:
-      - ./vault/credentials
+      - ${UBERBASE_VAULT_STORAGE}/credentials
     environment:
-      VAULT_ADDR: "http://vault:8200"
-    depends_on:
-      vault:
-        condition: service_healthy
+      VAULT_ADDR: "http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT}"

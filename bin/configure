@@ -35,12 +35,14 @@ interpolate_template() {
     fi
 }
 
+
 # Smoosh our base postgres init data script
 # in with the user's provided init data
 # pray for no conflicts
 echo "Setting up postgres init.d scripts..."
-mkdir -p postgres/init
-cp postgres/_init/* postgres/init/.
+if [ -d "postgres/init" ]; then
+    cp postgres/init/* postgres/_init/.
+fi
 
 # Delete the previously configured configs and start fresh
 echo "Cleaning up previously configured configs..."
@@ -52,11 +54,11 @@ mkdir -p ./_configs/vault
 
 # Place templates interpolated with env vars into the _configs directory, or
 # use the user's provided configs if they exist
-echo "Setting up vault config..."
-interpolate_template "./vault/local.json.template" "./_configs/vault/local.json"
 echo "Setting up traefik config..."
 interpolate_template "./traefik/traefik.template.yml" "./_configs/traefik/traefik.yml"
 echo "Setting up functions config..."
 interpolate_template "./functions/config.template.json" "./_configs/functions/config.json"
 echo "Setting up postgrest config..."
 interpolate_template "./postgrest/postgrest.template.conf" "./_configs/postgrest/postgrest.conf"
+echo "Setting up vault config..."
+interpolate_template "./vault/vault-server.template.hcl" "./_configs/vault/vault-server.hcl"
