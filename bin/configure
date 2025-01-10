@@ -45,13 +45,15 @@ cp postgres/_init/* postgres/init/.
 # Delete the previously configured configs and start fresh
 echo "Cleaning up previously configured configs..."
 rm -Rf ./_configs
-mkdir -p ./_configs/caddy
+mkdir -p ./_configs/traefik
 mkdir -p ./_configs/functions
 mkdir -p ./_configs/postgrest
-mkdir -p ./_configs/kamal
+mkdir -p ./_configs/vault
 
 # Place templates interpolated with env vars into the _configs directory, or
 # use the user's provided configs if they exist
+echo "Setting up vault config..."
+interpolate_template "./vault/local.json.template" "./_configs/vault/local.json"
 echo "Setting up traefik config..."
 interpolate_template "./traefik/traefik.template.yml" "./_configs/traefik/traefik.yml"
 echo "Setting up functions config..."

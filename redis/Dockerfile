@@ -1,4 +1,4 @@
-FROM postgres:15
+FROM docker.io/redis/redis-stack:latest
 
 RUN apt-get update && apt-get install -y curl jq
 

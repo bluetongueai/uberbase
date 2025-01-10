@@ -1,10 +1,12 @@
 FROM golang:1.22.6 AS builder
 
-ADD functions /app
 WORKDIR /app
+ADD functions/api /app/api
+ADD functions/cli /app/cli
+ADD deploy/ /app/deploy
 RUN cd api && go build -o bin/api && cd ..
 RUN cd cli && go build -o bin/uberbase && cd ..
-RUN cd deploy && go build -o bin/deploy && cd ..
+RUN cd deploy && go build -o bin/deploy cmd/deploy.go && cd ..
 
 FROM quay.io/podman/stable:latest
 
@@ -12,8 +14,8 @@ ARG UBERBASE_DOMAIN
 ARG UBERBASE_ADMIN_USERNAME
 ARG UBERBASE_ADMIN_EMAIL
 ARG UBERBASE_ADMIN_PASSWORD
-ARG UBERBASE_CADDY_DATA_STORAGE
-ARG UBERBASE_CADDY_CONFIG_STORAGE
+ARG UBERBASE_TRAEFIK_DATA_STORAGE
+ARG UBERBASE_TRAEFIK_CONFIG_STORAGE
 ARG UBERBASE_REDIS_HOST
 ARG UBERBASE_REDIS_PORT
 ARG UBERBASE_REDIS_SECRET
@@ -47,8 +49,8 @@ ENV UBERBASE_DOMAIN $UBERBASE_DOMAIN
 ENV UBERBASE_ADMIN_USERNAME $UBERBASE_ADMIN_USERNAME
 ENV UBERBASE_ADMIN_EMAIL $UBERBASE_ADMIN_EMAIL
 ENV UBERBASE_ADMIN_PASSWORD $UBERBASE_ADMIN_PASSWORD
-ENV UBERBASE_CADDY_DATA_STORAGE $UBERBASE_CADDY_DATA_STORAGE
-ENV UBERBASE_CADDY_CONFIG_STORAGE $UBERBASE_CADDY_CONFIG_STORAGE
+ENV UBERBASE_TRAEFIK_DATA_STORAGE $UBERBASE_TRAEFIK_DATA_STORAGE
+ENV UBERBASE_TRAEFIK_CONFIG_STORAGE $UBERBASE_TRAEFIK_CONFIG_STORAGE
 ENV UBERBASE_REDIS_HOST $UBERBASE_REDIS_HOST
 ENV UBERBASE_REDIS_PORT $UBERBASE_REDIS_PORT
 ENV UBERBASE_REDIS_SECRET $UBERBASE_REDIS_SECRET
@@ -88,8 +90,15 @@ RUN dnf -y install \
 RUN dnf -y install dnf-plugins-core \
     && dnf-3 config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo \
     && dnf -y install docker-ce docker-ce-cli docker-buildx-plugin \
-    && systemctl enable docker \
-    && dnf clean all
+    && systemctl enable docker
+
+# vault
+RUN dnf install -y dnf-plugins-core \
+    && dnf config-manager addrepo --from-repofile=https://rpm.releases.hashicorp.com/fedora/hashicorp.repo \
+    && dnf -y install vault
+
+# clean
+RUN dnf clean all
 
 RUN useradd podman; \
     echo podman:1001:65534 > /etc/subuid; \
@@ -119,10 +128,11 @@ WORKDIR /home/podman/app
 ADD postgres/_init /home/podman/app/postgres/_init
 ADD postgres/conf /home/podman/app/postgres/conf
 ADD postgres/image /home/podman/app/postgres/image
-ADD caddy /home/podman/app/caddy
 ADD postgrest /home/podman/app/postgrest
 ADD functions /home/podman/app/functions
-ADD kamal /home/podman/app/kamal
+ADD vault /home/podman/app/vault
+ADD traefik /home/podman/app/traefik
+
 COPY docker-compose.yml /home/podman/app/docker-compose.yml
 
 ADD bin /home/podman/app/bin

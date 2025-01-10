@@ -13,11 +13,13 @@ echo -e "Starting \033[33muberbase\033[0m..."
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 echo -e "Starting on \033[33m$UBERBASE_PLATFORM\033[0m"
 
-mkdir -p ./data/caddy_data
-mkdir -p ./data/caddy_config
+mkdir -p ./data/vault_data
+mkdir -p ./data/postgres_data
 
-./bin/configure
 ./bin/stop
+./bin/configure
+./bin/vault
+
 # start postgres first, cause fusionauth is dumb and can't restart a db connection
 PODMAN_COMPOSE_WARNING_LOGS=false podman-compose up postgres -d
 

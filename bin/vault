@@ -1,0 +1,97 @@
+#!/bin/bash
+set -e
+
+# Configuration
+SECRET_PATH="secret/data/uberbase"
+VAULT_PREFIXES=("UBERBASE_" ${UBERBASE_VAULT_PREFIXES:-})
+
+# If vault isn't running, start it
+if ! podman exec vault vault status > /dev/null 2>&1; then
+    echo "Starting Vault..."
+    podman-compose up vault -d
+fi
+
+# Initialize Vault if needed
+if ! podman exec vault vault status > /dev/null 2>&1; then
+    echo "Initializing Vault..."
+    podman exec -it vault vault operator init \
+        -key-shares=1 \
+        -key-threshold=1 \
+        -format=json > ./vault/keys.json
+
+    # Unseal and login
+    UNSEAL_KEY=$(cat ./vault/keys.json | jq -r ".unseal_keys_b64[0]")
+    ROOT_TOKEN=$(cat ./vault/keys.json | jq -r ".root_token")
+    
+    podman exec -it vault vault operator unseal $UNSEAL_KEY
+    podman exec -it vault vault login $ROOT_TOKEN
+
+    # Enable secret engines
+    echo "Enabling secret engines..."
+    podman exec -it vault vault secrets enable -path=secret kv-v2
+
+    # Create single policy for all services
+    echo "Creating service policy..."
+    podman exec -it vault vault policy write service-policy - <<EOF
+path "${SECRET_PATH}/*" {
+    capabilities = ["read"]
+}
+EOF
+
+    # Enable AppRole auth
+    echo "Enabling AppRole authentication..."
+    podman exec -it vault vault auth enable approle
+
+    # Create single role for all services
+    echo "Creating service role..."
+    podman exec -it vault vault write auth/approle/role/service \
+        secret_id_ttl=0 \
+        token_num_uses=0 \
+        token_ttl=20m \
+        token_max_ttl=30m \
+        policies="service-policy"
+
+    # Store all matching environment variables
+    echo "Storing environment variables..."
+    
+    # Create a temporary file to hold our secrets
+    SECRETS_FILE=$(mktemp)
+    
+    # Find all environment variables matching our prefixes
+    for prefix in "${VAULT_PREFIXES[@]}"; do
+        # Get all env vars with this prefix
+        env | grep "^${prefix}" | while IFS='=' read -r key value; do
+            # Convert env var name to lowercase for secret path
+            secret_key=$(echo "$key" | tr '[:upper:]' '[:lower:]')
+            echo "\"$secret_key\": \"$value\"," >> "$SECRETS_FILE"
+        done
+    done
+
+    # Remove trailing comma from the last line
+    sed -i '$ s/,$//' "$SECRETS_FILE"
+    
+    # Wrap the contents in JSON format
+    echo "{" > "$SECRETS_FILE.json"
+    cat "$SECRETS_FILE" >> "$SECRETS_FILE.json"
+    echo "}" >> "$SECRETS_FILE.json"
+
+    # Store all secrets in Vault
+    podman exec -i vault vault kv put "$SECRET_PATH/config" @- < "$SECRETS_FILE.json"
+
+    # Clean up temporary files
+    rm "$SECRETS_FILE" "$SECRETS_FILE.json"
+
+    # Generate and store service credentials
+    echo "Generating service credentials..."
+    ROLE_ID=$(podman exec -it vault vault read -field=role_id auth/approle/role/service/role-id)
+    SECRET_ID=$(podman exec -it vault vault write -f -field=secret_id auth/approle/role/service/secret-id)
+    
+    # Store credentials where services can find them
+    echo "VAULT_ROLE_ID=$ROLE_ID" > ./vault/credentials
+    echo "VAULT_SECRET_ID=$SECRET_ID" >> ./vault/credentials
+
+else
+    echo "Unsealing existing Vault..."
+    UNSEAL_KEY=$(cat ./vault/keys.json | jq -r ".unseal_keys_b64[0]")
+    podman exec -it vault vault operator unseal $UNSEAL_KEY
+fi 

@@ -1,6 +1,6 @@
-FROM postgres:15
+FROM docker.io/traefik:v3.3
 
-RUN apt-get update && apt-get install -y curl jq
+RUN apk add --no-cache curl jq
 
 COPY uberbase-docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/uberbase-docker-entrypoint.sh
