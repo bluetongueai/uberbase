@@ -65,7 +65,7 @@ if [ $? -ne 0 ]; then
         echo "Creating vault data volume..."
         podman volume create vault_data
         echo "Creating vault raft directory..."
-        podman run --rm -it --user vault -v vault_data:/opt/data/vault:Z --entrypoint="/bin/sh" docker.io/hashicorp/vault:latest -c "mkdir -p /opt/data/vault/raft"
+        podman run --rm --user vault -v vault_data:/opt/data/vault:Z --entrypoint="/bin/sh" docker.io/hashicorp/vault:latest -c "mkdir -p /opt/data/vault/raft"
     fi
     echo "Starting Vault..."
     podman run \
@@ -86,11 +86,10 @@ if [ $? -ne 0 ]; then
 fi
 
 # Wait for vault to start
-sleep 1
+sleep 2
 
 # Initialize Vault if needed
-vault_status=$(podman exec vault vault status 2>&1)
-if [ "$?" -eq 2 ]; then
+if [ ! -f ${UBERBASE_VAULT_STORAGE}/keys.json ]; then
     echo "Initializing Vault..."
     podman exec \
         --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \

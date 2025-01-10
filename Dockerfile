@@ -148,11 +148,11 @@ ADD docker-compose.yml /home/podman/app/docker-compose.yml
 ADD bin /home/podman/app/bin
 ADD .env /home/podman/app/.env
 
-VOLUME /home/podman/app/_configs
+#VOLUME /home/podman/app/_configs
 VOLUME /home/podman/app/logs
 VOLUME /home/podman/app/data
 
-RUN mkdir -p /home/podman/app/configs /home/podman/app/logs /home/podman/app/data
+RUN mkdir -p /home/podman/app/_configs /home/podman/app/logs /home/podman/app/data
 
 RUN source /home/podman/app/.env && bin/configure
 RUN chown podman:podman -R /home/podman/app
