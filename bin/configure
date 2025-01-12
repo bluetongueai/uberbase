@@ -2,19 +2,83 @@
 
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 
-mkdir -p postgres/init
-cp postgres/_init/* postgres/init/.
-cp configs/postgres/init/* postgres/init/.
-mkdir -p configs/caddy
-if [ ! -f ./configs/caddy/Caddyfile ]; then
-  envsubst < ./caddy/Caddyfile.template > ./configs/caddy/Caddyfile
+echo "Configuring Uberbase for ${UBERBASE_PLATFORM}..."
+
+# Function to interpolate template files
+interpolate_template() {
+    local template_file=$1
+    local output_file=$2
+    local source_file
+    local user_config_file="./configs${output_file#./_configs}"
+
+    # Determine which file to use as source
+    if [ -f "$user_config_file" ]; then
+        source_file="$user_config_file"
+    else
+        source_file="$template_file"
+    fi
+    
+    # Create a temporary file for the new content
+    local temp_file=$(mktemp)
+    
+    if [ -f ./.env ]; then
+        source ./.env && envsubst < "$source_file" > "$temp_file"
+    else
+        envsubst < "$source_file" > "$temp_file"
+    fi
+
+    # Only update if content has changed
+    if ! cmp -s "$temp_file" "$output_file"; then
+        mv "$temp_file" "$output_file"
+    else
+        rm "$temp_file"
+    fi
+}
+
+# Create certificates
+if [ ! -d "./data/certs/ca.pem" ]; then
+    echo "Creating certificates..."
+    ./bin/certificates
 fi
-mkdir -p configs/functions
-if [ ! -f ./configs/functions/config.json ]; then
-  envsubst < ./functions/config.template.json > ./configs/functions/config.json
+
+# Smoosh our base postgres init data script
+# in with the user's provided init data
+# pray for no conflicts
+echo "Setting up postgres init.d scripts..."
+if [ -d "postgres/init" ]; then
+    cp postgres/init/* postgres/_init/.
 fi
-mkdir -p configs/postgrest
-if [ ! -f ./configs/postgrest/postgrest.conf ]; then
-  envsubst < ./postgrest/postgrest.template.conf > ./configs/postgrest/postgrest.conf
+
+# Delete the previously configured configs and start fresh
+echo "Cleaning up previously configured configs..."
+rm -Rf ./_configs/*
+mkdir -p ./_configs/traefik/static
+mkdir -p ./_configs/traefik/dynamic
+mkdir -p ./_configs/functions
+mkdir -p ./_configs/postgrest
+mkdir -p ./_configs/vault
+mkdir -p ./_configs/registry
+mkdir -p ./_configs/fusionauth
+
+# Place templates interpolated with env vars into the _configs directory, or
+# use the user's provided configs if they exist
+echo "Setting up traefik config..."
+interpolate_template "./traefik/static/traefik.template.yml" "./_configs/traefik/static/traefik.yml"
+interpolate_template "./traefik/dynamic/uberbase.template.yml" "./_configs/traefik/dynamic/uberbase.yml"
+echo "Setting up functions config..."
+interpolate_template "./functions/config.template.json" "./_configs/functions/config.json"
+echo "Setting up postgrest config..."
+interpolate_template "./postgrest/postgrest.template.conf" "./_configs/postgrest/postgrest.conf"
+echo "Setting up vault config..."
+interpolate_template "./vault/vault-server.template.hcl" "./_configs/vault/vault-server.hcl"
+if [ -f "./fusionauth/kickstart.json" ]; then
+    echo "Setting up fusionauth config..."
+    interpolate_template "./fusionauth/kickstart.json" "./_configs/fusionauth/kickstart.json"
 fi
-mkdir -p config/fusionauth
+
+chmod -R 777 ./_configs
+
+# Create the registry password file
+echo "Creating registry password file..."
+echo "${UBERBASE_REGISTRY_USERNAME}:${UBERBASE_REGISTRY_PASSWORD}" > ./_configs/registry/registry.password
+

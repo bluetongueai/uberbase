@@ -1,0 +1,17 @@
+#! /bin/bash
+
+podman run \
+    -d \
+    --user 0 \
+    --restart unless-stopped \
+    --name redis \
+    --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
+    --env VAULT_ADDR=http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
+    --env REDIS_ARGS="--logfile /var/log/redis/redis.log --loglevel verbose" \
+    -v ${UBERBASE_REDIS_STORAGE}:/data:Z \
+    -v ${PWD}/logs:/var/log/redis:Z \
+    -p ${UBERBASE_REDIS_PORT}:6379 \
+    localhost:5000/uberbase-redis-stack:latest
+
+
+

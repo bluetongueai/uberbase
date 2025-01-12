@@ -1,0 +1,4 @@
+#! /bin/bash
+
+podman stop -a
+podman system prune -f

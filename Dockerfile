@@ -1,8 +1,9 @@
-FROM golang:1.22.6 AS builder
+FROM golang:1.23-alpine AS builder
 
-ADD functions /app
 WORKDIR /app
-RUN cd api && go build -o bin/api
+ADD uberbase/ /app/uberbase
+WORKDIR /app/uberbase
+RUN go build -o bin/uberbase ./cmd/uberbase/*
 
 FROM quay.io/podman/stable:latest
 
@@ -10,8 +11,7 @@ ARG UBERBASE_DOMAIN
 ARG UBERBASE_ADMIN_USERNAME
 ARG UBERBASE_ADMIN_EMAIL
 ARG UBERBASE_ADMIN_PASSWORD
-ARG UBERBASE_CADDY_DATA_STORAGE
-ARG UBERBASE_CADDY_CONFIG_STORAGE
+ARG UBERBASE_TRAEFIK_STORAGE
 ARG UBERBASE_REDIS_HOST
 ARG UBERBASE_REDIS_PORT
 ARG UBERBASE_REDIS_SECRET
@@ -38,15 +38,22 @@ ARG UBERBASE_FUSIONAUTH_APP_MEMORY
 ARG UBERBASE_FUSIONAUTH_APP_RUNTIME_MODE
 ARG UBERBASE_FUSIONAUTH_PORT
 ARG UBERBASE_FUSIONAUTH_APP_URL
+ARG UBERBASE_FUSIONAUTH_STORAGE
 ARG UBERBASE_FUNCTIONS_PORT
 ARG UBERBASE_FUNCTIONS_IMAGE_PATH
+ARG UBERBASE_VAULT_HOST
+ARG UBERBASE_VAULT_PORT
+ARG UBERBASE_VAULT_STORAGE
+ARG UBERBASE_REGISTRY_STORAGE
+ARG UBERBASE_REGISTRY_PORT
+ARG UBERBASE_REGISTRY_USERNAME
+ARG UBERBASE_REGISTRY_PASSWORD
 
 ENV UBERBASE_DOMAIN $UBERBASE_DOMAIN
 ENV UBERBASE_ADMIN_USERNAME $UBERBASE_ADMIN_USERNAME
 ENV UBERBASE_ADMIN_EMAIL $UBERBASE_ADMIN_EMAIL
 ENV UBERBASE_ADMIN_PASSWORD $UBERBASE_ADMIN_PASSWORD
-ENV UBERBASE_CADDY_DATA_STORAGE $UBERBASE_CADDY_DATA_STORAGE
-ENV UBERBASE_CADDY_CONFIG_STORAGE $UBERBASE_CADDY_CONFIG_STORAGE
+ENV UBERBASE_TRAEFIK_STORAGE $UBERBASE_TRAEFIK_STORAGE
 ENV UBERBASE_REDIS_HOST $UBERBASE_REDIS_HOST
 ENV UBERBASE_REDIS_PORT $UBERBASE_REDIS_PORT
 ENV UBERBASE_REDIS_SECRET $UBERBASE_REDIS_SECRET
@@ -73,17 +80,43 @@ ENV UBERBASE_FUSIONAUTH_APP_MEMORY $UBERBASE_FUSIONAUTH_APP_MEMORY
 ENV UBERBASE_FUSIONAUTH_APP_RUNTIME_MODE $UBERBASE_FUSIONAUTH_APP_RUNTIME_MODE
 ENV UBERBASE_FUSIONAUTH_PORT $UBERBASE_FUSIONAUTH_PORT
 ENV UBERBASE_FUSIONAUTH_APP_URL $UBERBASE_FUSIONAUTH_APP_URL
+ENV UBERBASE_FUSIONAUTH_STORAGE $UBERBASE_FUSIONAUTH_STORAGE
 ENV UBERBASE_FUNCTIONS_PORT $UBERBASE_FUNCTIONS_PORT
 ENV UBERBASE_FUNCTIONS_IMAGE_PATH $UBERBASE_FUNCTIONS_IMAGE_PATH
+ENV UBERBASE_VAULT_HOST $UBERBASE_VAULT_HOST
+ENV UBERBASE_VAULT_PORT $UBERBASE_VAULT_PORT
+ENV UBERBASE_VAULT_STORAGE $UBERBASE_VAULT_STORAGE
+ENV UBERBASE_REGISTRY_STORAGE $UBERBASE_REGISTRY_STORAGE
+ENV UBERBASE_REGISTRY_PORT $UBERBASE_REGISTRY_PORT
+ENV UBERBASE_REGISTRY_USERNAME $UBERBASE_REGISTRY_USERNAME
+ENV UBERBASE_REGISTRY_PASSWORD $UBERBASE_REGISTRY_PASSWORD
 
+ENV PODMAN_COMPOSE_WARNING_LOGS=false
+
+# podman
 RUN dnf -y install \
-    podman podman-compose fuse-overlayfs --exclude container-selinux \
-    make gettext \
-    && dnf clean all
+    podman podman-compose fuse-overlayfs make gettext
+
+# docker (for buildx)
+RUN dnf -y install dnf-plugins-core \
+    && dnf-3 config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo \
+    && dnf -y install docker-ce docker-ce-cli docker-buildx-plugin \
+    && systemctl enable docker
+
+# vault
+RUN dnf install -y dnf-plugins-core \
+    && dnf config-manager addrepo --from-repofile=https://rpm.releases.hashicorp.com/fedora/hashicorp.repo \
+    && dnf -y install vault jq
+
+# clean
+RUN dnf clean all
 
 RUN useradd podman; \
-echo podman:1001:65534 > /etc/subuid; \
-echo podman:1001:65534 > /etc/subgid;
+    echo podman:1001:65534 > /etc/subuid; \
+    echo podman:1001:65534 > /etc/subgid;
+RUN usermod -aG docker podman
+
+ADD etc/sysctl.conf /etc/sysctl.conf
 
 VOLUME /var/lib/containers
 VOLUME /home/podman/.local/share/containers
@@ -96,33 +129,73 @@ COPY podman/storage.conf /etc/containers/storage.conf
 ENV _CONTAINERS_USERNS_CONFIGURED=""
 
 COPY --from=builder /usr/local/go /usr/local/go
-COPY --from=builder /app/api/bin/api /home/podman/app/functions/api/bin/api
+COPY --from=builder /app/uberbase/bin/uberbase /home/podman/app/bin/uberbase
+
 ENV PATH=$PATH:/usr/local/go/bin
 
 WORKDIR /home/podman/app
+
+# uberbase built in functions
+ADD functions /home/podman/app/functions
+
+# postgres
 ADD postgres/_init /home/podman/app/postgres/_init
 ADD postgres/conf /home/podman/app/postgres/conf
 ADD postgres/image /home/podman/app/postgres/image
-ADD caddy /home/podman/app/caddy
-ADD postgrest /home/podman/app/postgrest
-ADD functions /home/podman/app/functions
-COPY docker-compose.yml /home/podman/app/docker-compose.yml
+
+# postgrest
+ADD postgrest/postgrest.template.conf /home/podman/app/postgrest/postgrest.template.conf
+
+# traefik
+ADD traefik/static/traefik.template.yml /home/podman/app/traefik/static/traefik.template.yml
+ADD traefik/dynamic /home/podman/app/traefik/dynamic
+
+# vault
+ADD vault/vault-server.template.hcl /home/podman/app/vault/vault-server.template.hcl
+
+# dockerfiles
+ADD vault/uberbase-vault-wrapper.sh vault/uberbase-vault-wrapper.sh
+ADD postgres/image/Dockerfile /home/podman/app/postgres/image/Dockerfile
+ADD postgres/image/uberbase-docker-entrypoint.sh /home/podman/app/postgres/image/uberbase-docker-entrypoint.sh
+ADD postgrest/Dockerfile /home/podman/app/postgrest/Dockerfile
+ADD minio/Dockerfile /home/podman/app/minio/Dockerfile
+ADD fusionauth/Dockerfile /home/podman/app/fusionauth/Dockerfile
+ADD redis/Dockerfile /home/podman/app/redis/Dockerfile
+ADD traefik/Dockerfile /home/podman/app/traefik/Dockerfile
 
 ADD bin /home/podman/app/bin
 ADD .env /home/podman/app/.env
 
-VOLUME /home/podman/app/configs
 VOLUME /home/podman/app/logs
 VOLUME /home/podman/app/data
 
-RUN mkdir -p /home/podman/app/configs /home/podman/app/logs /home/podman/app/data
+RUN mkdir -p /home/podman/app/_configs /home/podman/app/logs /home/podman/app/data
 
 RUN source /home/podman/app/.env && bin/configure
 RUN chown podman:podman -R /home/podman/app
 
+RUN ln -s /run/user/1000/podman/podman.sock /var/run/docker.sock
+
+# add podman to sudoers
+RUN echo "podman ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
 USER podman
+
+RUN mkdir -p /home/podman/app/data/postgres_data
+RUN mkdir -p /home/podman/app/data/registry_data
+RUN mkdir -p /home/podman/app/data/redis_data
+RUN mkdir -p /home/podman/app/data/minio_data
+RUN mkdir -p /home/podman/app/data/fusionauth_data
+RUN mkdir -p /home/podman/app/data/vault_data
+RUN mkdir -p /home/podman/app/data/traefik_data
+RUN mkdir -p /home/podman/app/data/postgrest_data
 
 EXPOSE 80
 EXPOSE 443
 
-ENTRYPOINT ["/home/podman/app/bin/start"]
+RUN systemctl --user enable podman.socket
+#RUN systemctl --user start podman.socket
+
+ENTRYPOINT ["/home/podman/app/bin/uberbase"]
+
+CMD ["start"]

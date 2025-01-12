@@ -5,6 +5,8 @@ volumes:
   postgres_data:
   minio_data:
   fusionauth_data:
+  traefik_data:
+  vault_data:
 
 networks:
   net:
@@ -13,7 +15,9 @@ networks:
 services:
   redis:
     restart: unless-stopped
-    image: docker.io/redis/redis-stack:latest
+    image: docker.io/bluetongueai/uberbase-redis:latest
+    build:
+      context: ./redis
     container_name: redis
     user: "0"
     volumes:
@@ -22,17 +26,25 @@ services:
     ports:
       - ${UBERBASE_REDIS_PORT}:6379
     environment:
+      VAULT_ADDR: "http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT}"
       REDIS_ARGS: "--logfile /var/log/redis/redis.log --loglevel verbose"
     networks:
       - net
+    extra_hosts:
+      - uberbase:host-gateway
+    env_file:
+      - ${UBERBASE_VAULT_STORAGE}/credentials
 
   postgres:
     restart: unless-stopped
-    image: docker.io/bluetongueai/postgres:latest
+    image: docker.io/bluetongueai/uberbase-postgres:latest
     build:
       context: ./postgres/image
     container_name: postgres
+    env_file:
+      - ${UBERBASE_VAULT_STORAGE}/credentials
     environment:
+      VAULT_ADDR: "http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT}"
       POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
       POSTGRES_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
       POSTGRES_DB: ${UBERBASE_POSTGRES_DATABASE}
@@ -40,7 +52,7 @@ services:
       - ${UBERBASE_POSTGRES_PORT}:5432
     volumes:
       - ${PWD}/logs:/var/log/postgresql
-      - ${PWD}/postgres/init:/docker-entrypoint-initdb.d
+      - ${PWD}/postgres/_init:/docker-entrypoint-initdb.d
       - ${PWD}/postgres/conf:/etc/postgresql/
       - ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data
     healthcheck:
@@ -48,18 +60,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - net
 
   minio:
     restart: unless-stopped
-    image: quay.io/minio/minio:latest
+    image: docker.io/bluetongueai/uberbase-minio:latest
+    build:
+      context: ./minio
     container_name: minio
     user: "0"
     command: server /data --console-address ":9001"
     volumes:
       - ${UBERBASE_MINIO_STORAGE}:/data:Z
     environment:
+      VAULT_ADDR: "http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT}"
       MINIO_ROOT_USER: ${UBERBASE_MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${UBERBASE_MINIO_ROOT_PASSWORD}
     ports:
@@ -67,24 +80,29 @@ services:
       - ${UBERBASE_MINIO_CONSOLE_PORT}:9001
     networks:
       - net
- 
+    extra_hosts:
+      - uberbase:host-gateway
+    env_file:
+      - ${UBERBASE_VAULT_STORAGE}/credentials
+
   postgrest:
     restart: unless-stopped
-    image: docker.io/bluetongueai/postgrest:latest
+    image: docker.io/bluetongueai/uberbase-postgrest:latest
     container_name: postgrest
     build:
       context: ./postgrest
       args:
         - POSTGREST_VERSION=${UBERBASE_POSTGREST_VERSION}
     environment:
-      - UBERBASE_POSTGRES_USER=${UBERBASE_POSTGRES_USER}
-      - UBERBASE_POSTGRES_PASSWORD=${UBERBASE_POSTGRES_PASSWORD}
-      - UBERBASE_POSTGRES_HOST=${UBERBASE_POSTGRES_HOST}
-      - UBERBASE_POSTGRES_DATABASE=${UBERBASE_POSTGRES_DATABASE}
-      - UBERBASE_POSTGREST_JWT_SECRET=${UBERBASE_POSTGREST_JWT_SECRET}
-      - UBERBASE_POSTGREST_PORT=${UBERBASE_POSTGREST_PORT}
+      VAULT_ADDR: "http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT}"
+      UBERBASE_POSTGRES_USER: ${UBERBASE_POSTGRES_USER}
+      UBERBASE_POSTGRES_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
+      UBERBASE_POSTGRES_HOST: ${UBERBASE_POSTGRES_HOST}
+      UBERBASE_POSTGRES_DATABASE: ${UBERBASE_POSTGRES_DATABASE}
+      UBERBASE_POSTGREST_JWT_SECRET: ${UBERBASE_POSTGREST_JWT_SECRET}
+      UBERBASE_POSTGREST_PORT: ${UBERBASE_POSTGREST_PORT}
     volumes:
-      - ${PWD}/configs/postgrest/postgrest.conf:/etc/postgrest.conf
+      - ${PWD}/_configs/postgrest/postgrest.conf:/etc/postgrest.conf
       - ${PWD}/logs:/var/log/postgrest
     ports:
       - ${UBERBASE_POSTGREST_PORT}:3000
@@ -98,14 +116,21 @@ services:
         condition: service_healthy
     networks:
       - net
+    extra_hosts:
+      - uberbase:host-gateway
+    env_file:
+      - ${UBERBASE_VAULT_STORAGE}/credentials
 
   fusionauth:
-    image:  docker.io/fusionauth/fusionauth-app:latest
+    image: docker.io/bluetongueai/uberbase-fusionauth:latest
     container_name: fusionauth
     user: root
+    build:
+      context: ./fusionauth
     env_file:
-      - .env
+      - ${UBERBASE_VAULT_STORAGE}/credentials
     environment:
+      VAULT_ADDR: "http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT}"
       DATABASE_URL: jdbc:postgresql://${UBERBASE_POSTGRES_HOST}:${UBERBASE_POSTGRES_PORT}/${UBERBASE_FUSIONAUTH_DATABASE}
       DATABASE_ROOT_USERNAME: ${UBERBASE_POSTGRES_USER}
       DATABASE_ROOT_PASSWORD: ${UBERBASE_POSTGRES_PASSWORD}
@@ -123,7 +148,7 @@ services:
     restart: unless-stopped
     volumes:
       - fusionauth_data:/usr/local/fusionauth/config
-      - ./configs/fusionauth:/usr/local/fusionauth/kickstart
+      - ./_configs/fusionauth:/usr/local/fusionauth/kickstart
       - ${PWD}/logs:/usr/local/fusionauth/logs
     depends_on:
       postgres:
@@ -132,3 +157,52 @@ services:
       - ${UBERBASE_FUSIONAUTH_PORT}:9011
     networks:
       - net
+    extra_hosts:
+      - uberbase:host-gateway
+
+  traefik:
+    image: docker.io/bluetongueai/uberbase-traefik:latest
+    build:
+      context: ./traefik
+    container_name: traefik
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      #- "--certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.myresolver.acme.email=postmaster@example.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/data/letsencrypt/acme.json"
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - net
+    extra_hosts:
+      - uberbase:host-gateway
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${PWD}/_configs/traefik:/etc/traefik
+      - ${PWD}/logs:/var/log/traefik
+      - ${UBERBASE_TRAEFIK_STORAGE}:/data
+    env_file:
+      - ${UBERBASE_VAULT_STORAGE}/credentials
+    environment:
+      VAULT_ADDR: "http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT}"
+
+  registry:
+    image: docker.io/registry:latest
+    environment:
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/registry.password
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
+    volumes:
+      # Mount the password file
+      - ./registry/registry.password:/auth/registry.password
+      # Mount the data directory
+      - ./registry/data:/data
+    ports:
+      - 5000
