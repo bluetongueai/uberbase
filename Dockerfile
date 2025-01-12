@@ -1,12 +1,11 @@
 FROM golang:1.22.6 AS builder
 
 WORKDIR /app
-ADD functions/api /app/api
-ADD functions/cli /app/cli
-ADD deploy/ /app/deploy
-RUN cd api && go build -o bin/api && cd ..
-RUN cd cli && go build -o bin/uberbase && cd ..
-RUN cd deploy && go build -o bin/deploy cmd/deploy.go && cd ..
+ADD uberbase/ /app/uberbase
+WORKDIR /app/uberbase
+RUN go build -o bin/cli ./cmd/cli.go
+RUN go build -o bin/deploy ./cmd/deploy.go
+RUN go build -o bin/api ./cmd/api.go
 
 FROM quay.io/podman/stable:latest
 
