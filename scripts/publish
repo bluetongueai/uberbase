@@ -53,6 +53,35 @@ docker buildx build \
   --build-arg="UBERBASE_REGISTRY_PASSWORD=$UBERBASE_REGISTRY_PASSWORD" \
   --push \
   -t bluetongueai/uberbase:latest \
+  --provenance=true --sbom=true \
   .
 
-docker compose build --push
+docker buildx build \
+  --push \
+  -t localhost:5000/uberbase-redis:latest \
+  --provenance=true --sbom=true \
+  .
+
+docker buildx build \
+  --push \
+  -t localhost:5000/uberbase-postgres:latest \
+  --provenance=true --sbom=true \
+  .
+
+docker buildx build \
+  --push \
+  -t localhost:5000/uberbase-minio:latest \
+  --provenance=true --sbom=true \
+  .
+
+docker buildx build \
+    --push \
+    -t localhost:5000/uberbase-fusionauth:latest \
+    --provenance=true --sbom=true \
+    .
+
+docker buildx build \
+  --push \
+  -t localhost:5000/uberbase-traefik:latest \
+  --provenance=true --sbom=true \
+  .
