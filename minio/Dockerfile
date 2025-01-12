@@ -1,13 +1,14 @@
-FROM alpine:latest AS base
+FROM debian:bullseye-slim AS base
 
-RUN apk add --no-cache curl jq
-
-COPY uberbase-docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/uberbase-docker-entrypoint.sh
+RUN apt-get update && apt-get install -y curl jq
 
 COPY --from=quay.io/minio/minio:latest /usr/bin/minio /usr/bin/minio
 COPY --from=quay.io/minio/minio:latest /usr/bin/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
-VOLUME ["/data"]
 
-ENTRYPOINT ["uberbase-docker-entrypoint.sh"]
-CMD ["docker-entrypoint.sh", "minio"]
+ADD uberbase-docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/uberbase-docker-entrypoint.sh
+
+EXPOSE 9000 9001
+
+ENTRYPOINT ["/usr/local/bin/uberbase-docker-entrypoint.sh"]
+CMD ["/usr/bin/docker-entrypoint.sh", "minio"]

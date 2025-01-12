@@ -1,4 +1,4 @@
 #! /bin/bash
 
-podman-compose down
+podman stop -a
 podman system prune -f

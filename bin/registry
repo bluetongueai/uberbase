@@ -1,0 +1,20 @@
+#! /bin/bash
+
+set -x
+
+podman run \
+    -d \
+    --name registry \
+    --env REGISTRY_AUTH=htpasswd \
+    --env REGISTRY_AUTH_HTPASSWD_REALM="uberbase-registry" \
+    --env REGISTRY_AUTH_HTPASSWD_PATH=/auth/registry.password \
+    --env REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/data \
+    --env REGISTRY_HTTP_TLS_CERTIFICATE=/certs/registry-cert.pem \
+    --env REGISTRY_HTTP_TLS_KEY=/certs/registry-key.pem \
+    --env REGISTRY_HTTP_TLS_CLIENTCAS='["/ca/ca.pem"]' \
+    -v ${PWD}/_configs/registry/registry.password:/auth/registry.password \
+    -v ${UBERBASE_REGISTRY_STORAGE}:/data \
+    -v ${UBERBASE_REGISTRY_STORAGE}/certs:/certs \
+    -v ./data/certs:/ca:ro \
+    -p ${UBERBASE_REGISTRY_PORT}:5000 \
+    docker.io/registry:latest

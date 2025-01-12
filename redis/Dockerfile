@@ -2,8 +2,8 @@ FROM docker.io/redis/redis-stack:latest
 
 RUN apt-get update && apt-get install -y curl jq
 
-COPY uberbase-docker-entrypoint.sh /usr/local/bin/
+ADD uberbase-docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/uberbase-docker-entrypoint.sh
 
-ENTRYPOINT ["uberbase-docker-entrypoint.sh"]
-CMD ["docker-entrypoint.sh", "postgres"]
+ENTRYPOINT ["/usr/local/bin/uberbase-docker-entrypoint.sh"]
+CMD ["/entrypoint.sh"]

@@ -2,6 +2,7 @@
 
 docker run --rm -it \
   -v ${PWD}:/home/podman/app \
+  -v uberbase_test_data:/home/podman/app/data \
   -p 8080:80 \
   -p 8443:443 \
   --security-opt seccomp=unconfined \

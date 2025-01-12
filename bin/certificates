@@ -1,0 +1,89 @@
+#! /bin/bash
+
+rm -rf ./data/certs
+rm -rf ${UBERBASE_VAULT_STORAGE}/certs
+rm -rf ${UBERBASE_REGISTRY_STORAGE}/certs
+
+mkdir -p ./data/certs
+mkdir -p ${UBERBASE_VAULT_STORAGE}/certs
+mkdir -p ${UBERBASE_REGISTRY_STORAGE}/certs
+
+# Create CA certificate with proper extensions
+openssl ecparam \
+    -out ./data/certs/ca-key.pem \
+    -name prime256v1 \
+    -genkey \
+    -noout
+openssl req -x509 -new -sha256 \
+    -key ./data/certs/ca-key.pem \
+    -out ./data/certs/ca.pem \
+    -days 365 \
+    -subj "/CN=uberbase-ca" \
+    -extensions v3_ca \
+    -config <(echo "[req]"; \
+              echo "distinguished_name=req"; \
+              echo "[v3_ca]"; \
+              echo "basicConstraints=critical,CA:TRUE"; \
+              echo "keyUsage=critical,digitalSignature,keyCertSign,cRLSign"; \
+              echo "subjectKeyIdentifier=hash"; \
+              echo "subjectAltName=DNS:uberbase-ca,IP:127.0.0.1")
+
+# Generate certs for Vault
+openssl ecparam \
+    -out ${UBERBASE_VAULT_STORAGE}/certs/vault-key.pem \
+    -name prime256v1 \
+    -genkey \
+    -noout
+openssl req -new -sha256 \
+    -key ${UBERBASE_VAULT_STORAGE}/certs/vault-key.pem \
+    -out ${UBERBASE_VAULT_STORAGE}/certs/vault.csr \
+    -subj "/CN=uberbase-vault"
+openssl x509 -req -sha256 \
+    -CA ./data/certs/ca.pem \
+    -CAkey ./data/certs/ca-key.pem \
+    -in ${UBERBASE_VAULT_STORAGE}/certs/vault.csr \
+    -out ${UBERBASE_VAULT_STORAGE}/certs/vault-cert.pem \
+    -CAcreateserial \
+    -days 365 \
+    -extfile <(echo "subjectAltName=DNS:localhost,IP:127.0.0.1"; \
+                echo "keyUsage=critical,digitalSignature,keyEncipherment"; \
+                echo "extendedKeyUsage=serverAuth")
+
+# Generate certs for Registry
+openssl ecparam \
+    -out ${UBERBASE_REGISTRY_STORAGE}/certs/registry-key.pem \
+    -name prime256v1 \
+    -genkey \
+    -noout
+openssl req -new -sha256 \
+    -subj "/CN=uberbase-registry" \
+    -key ${UBERBASE_REGISTRY_STORAGE}/certs/registry-key.pem \
+    -out ${UBERBASE_REGISTRY_STORAGE}/certs/registry.csr
+openssl x509 -req -sha256 \
+    -CA ./data/certs/ca.pem \
+    -CAkey ./data/certs/ca-key.pem \
+    -in ${UBERBASE_REGISTRY_STORAGE}/certs/registry.csr \
+    -out ${UBERBASE_REGISTRY_STORAGE}/certs/registry-cert.pem \
+    -CAcreateserial \
+    -days 365 \
+    -extfile <(echo "subjectAltName=DNS:localhost,IP:127.0.0.1"; \
+                echo "keyUsage=critical,digitalSignature,keyEncipherment"; \
+                echo "extendedKeyUsage=serverAuth")
+
+# Set permissions
+sudo chown root:root ./data/certs/ca.pem ./data/certs/ca-key.pem
+sudo chmod 0644 ./data/certs/ca.pem ./data/certs/ca-key.pem
+sudo chown root:vault ${UBERBASE_VAULT_STORAGE}/certs/vault-key.pem
+sudo chmod 0644 ${UBERBASE_VAULT_STORAGE}/certs/vault-key.pem ${UBERBASE_VAULT_STORAGE}/certs/vault-cert.pem
+sudo chown root:root ${UBERBASE_REGISTRY_STORAGE}/certs/registry-key.pem
+sudo chmod 0644 ${UBERBASE_REGISTRY_STORAGE}/certs/registry-key.pem ${UBERBASE_REGISTRY_STORAGE}/certs/registry-cert.pem
+
+# Make podman trust the registry CA
+sudo mkdir -p /etc/containers/certs.d/localhost:${UBERBASE_REGISTRY_PORT}
+sudo cp ./data/certs/ca.pem /etc/containers/certs.d/localhost:${UBERBASE_REGISTRY_PORT}/ca.crt
+sudo chmod 0644 /etc/containers/certs.d/localhost:${UBERBASE_REGISTRY_PORT}/ca.crt
+
+# Make podman trust the vault CA
+sudo mkdir -p /etc/containers/certs.d/localhost:${UBERBASE_VAULT_PORT}
+sudo cp ./data/certs/ca.pem /etc/containers/certs.d/localhost:${UBERBASE_VAULT_PORT}/ca.crt
+sudo chmod 0644 /etc/containers/certs.d/localhost:${UBERBASE_VAULT_PORT}/ca.crt

@@ -10,4 +10,4 @@ RUN chmod +x /usr/local/bin/uberbase-docker-entrypoint.sh
 USER fusionauth
 
 ENTRYPOINT ["uberbase-docker-entrypoint.sh"]
-CMD ["docker-entrypoint.sh", "fusionauth"]
+CMD ["/usr/local/fusionauth/fusionauth-app/bin/start.sh"]

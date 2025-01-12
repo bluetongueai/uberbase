@@ -1,9 +1,11 @@
 FROM docker.io/traefik:v3.3
 
-RUN apk add --no-cache curl jq
+# Install dependencies using the correct package manager for the base image
+RUN apk add --no-cache curl jq bash
 
-COPY uberbase-docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/uberbase-docker-entrypoint.sh
+# Copy and set up entrypoint script
+COPY uberbase-docker-entrypoint.sh /uberbase/docker-entrypoint.sh
+RUN chmod +x /uberbase/docker-entrypoint.sh
 
-ENTRYPOINT ["uberbase-docker-entrypoint.sh"]
-CMD ["docker-entrypoint.sh", "postgres"]
+ENTRYPOINT ["/uberbase/docker-entrypoint.sh"]
+CMD ["/traefik"]

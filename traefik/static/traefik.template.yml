@@ -2,9 +2,6 @@ providers:
   file:
     directory: /etc/traefik/config/dynamic
     watch: true
-  docker:
-    endpoint: "unix:///var/run/docker.sock"
-    exposedByDefault: false
 
 entryPoints:
   web:
@@ -16,6 +13,6 @@ certificatesResolvers:
   letsencryptresolver:
     acme:
       email: ${UBERBASE_ADMIN_EMAIL}
-      storage: /data/letsencrypt/acme.json
+      storage: /data/acme.json
       tlsChallenge: true
 

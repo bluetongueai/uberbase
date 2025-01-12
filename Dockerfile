@@ -41,11 +41,16 @@ ARG UBERBASE_FUSIONAUTH_APP_MEMORY
 ARG UBERBASE_FUSIONAUTH_APP_RUNTIME_MODE
 ARG UBERBASE_FUSIONAUTH_PORT
 ARG UBERBASE_FUSIONAUTH_APP_URL
+ARG UBERBASE_FUSIONAUTH_STORAGE
 ARG UBERBASE_FUNCTIONS_PORT
 ARG UBERBASE_FUNCTIONS_IMAGE_PATH
 ARG UBERBASE_VAULT_HOST
 ARG UBERBASE_VAULT_PORT
 ARG UBERBASE_VAULT_STORAGE
+ARG UBERBASE_REGISTRY_STORAGE
+ARG UBERBASE_REGISTRY_PORT
+ARG UBERBASE_REGISTRY_USERNAME
+ARG UBERBASE_REGISTRY_PASSWORD
 
 ENV UBERBASE_DOMAIN $UBERBASE_DOMAIN
 ENV UBERBASE_ADMIN_USERNAME $UBERBASE_ADMIN_USERNAME
@@ -78,11 +83,16 @@ ENV UBERBASE_FUSIONAUTH_APP_MEMORY $UBERBASE_FUSIONAUTH_APP_MEMORY
 ENV UBERBASE_FUSIONAUTH_APP_RUNTIME_MODE $UBERBASE_FUSIONAUTH_APP_RUNTIME_MODE
 ENV UBERBASE_FUSIONAUTH_PORT $UBERBASE_FUSIONAUTH_PORT
 ENV UBERBASE_FUSIONAUTH_APP_URL $UBERBASE_FUSIONAUTH_APP_URL
+ENV UBERBASE_FUSIONAUTH_STORAGE $UBERBASE_FUSIONAUTH_STORAGE
 ENV UBERBASE_FUNCTIONS_PORT $UBERBASE_FUNCTIONS_PORT
 ENV UBERBASE_FUNCTIONS_IMAGE_PATH $UBERBASE_FUNCTIONS_IMAGE_PATH
 ENV UBERBASE_VAULT_HOST $UBERBASE_VAULT_HOST
 ENV UBERBASE_VAULT_PORT $UBERBASE_VAULT_PORT
 ENV UBERBASE_VAULT_STORAGE $UBERBASE_VAULT_STORAGE
+ENV UBERBASE_REGISTRY_STORAGE $UBERBASE_REGISTRY_STORAGE
+ENV UBERBASE_REGISTRY_PORT $UBERBASE_REGISTRY_PORT
+ENV UBERBASE_REGISTRY_USERNAME $UBERBASE_REGISTRY_USERNAME
+ENV UBERBASE_REGISTRY_PASSWORD $UBERBASE_REGISTRY_PASSWORD
 
 ENV PODMAN_COMPOSE_WARNING_LOGS=false
 
@@ -129,6 +139,8 @@ COPY --from=builder /app/deploy/bin/deploy /home/podman/app/bin/deploy
 ENV PATH=$PATH:/usr/local/go/bin
 
 WORKDIR /home/podman/app
+
+# functions api
 ADD functions /home/podman/app/functions
 
 # postgres
@@ -140,9 +152,22 @@ ADD postgres/image /home/podman/app/postgres/image
 ADD postgrest/postgrest.template.conf /home/podman/app/postgrest/postgrest.template.conf
 
 # traefik
-ADD traefik/traefik.template.yml /home/podman/app/traefik/traefik.template.yml
+ADD traefik/static/traefik.template.yml /home/podman/app/traefik/static/traefik.template.yml
 ADD traefik/dynamic /home/podman/app/traefik/dynamic
 
+# dockerfiles
+ADD postgres/image/Dockerfile /home/podman/app/postgres/image/Dockerfile
+ADD postgres/image/uberbase-docker-entrypoint.sh /home/podman/app/postgres/image/uberbase-docker-entrypoint.sh
+ADD postgrest/Dockerfile /home/podman/app/postgrest/Dockerfile
+ADD postgrest/uberbase-docker-entrypoint.sh /home/podman/app/postgrest/uberbase-docker-entrypoint.sh
+ADD minio/Dockerfile /home/podman/app/minio/Dockerfile
+ADD minio/uberbase-docker-entrypoint.sh /home/podman/app/minio/uberbase-docker-entrypoint.sh
+ADD fusionauth/Dockerfile /home/podman/app/fusionauth/Dockerfile
+ADD fusionauth/uberbase-docker-entrypoint.sh /home/podman/app/fusionauth/uberbase-docker-entrypoint.sh
+ADD redis/Dockerfile /home/podman/app/redis/Dockerfile
+ADD redis/uberbase-docker-entrypoint.sh /home/podman/app/redis/uberbase-docker-entrypoint.sh
+ADD traefik/Dockerfile /home/podman/app/traefik/Dockerfile
+ADD traefik/uberbase-docker-entrypoint.sh /home/podman/app/traefik/uberbase-docker-entrypoint.sh
 ADD docker-compose.yml /home/podman/app/docker-compose.yml
 
 ADD bin /home/podman/app/bin
@@ -165,9 +190,22 @@ RUN echo "podman ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 USER podman
 
 RUN mkdir -p /home/podman/app/data/postgres_data
+RUN mkdir -p /home/podman/app/data/registry_data
+RUN mkdir -p /home/podman/app/data/redis_data
+RUN mkdir -p /home/podman/app/data/minio_data
+RUN mkdir -p /home/podman/app/data/fusionauth_data
+RUN mkdir -p /home/podman/app/data/vault_data
+RUN mkdir -p /home/podman/app/data/traefik_data
+RUN mkdir -p /home/podman/app/data/postgrest_data
+
+RUN 
 
 EXPOSE 80
 EXPOSE 443
 
+RUN systemctl --user enable podman.socket
+#RUN systemctl --user start podman.socket
+
 ENTRYPOINT ["/home/podman/app/bin/uberbase"]
+
 

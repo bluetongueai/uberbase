@@ -35,6 +35,11 @@ interpolate_template() {
     fi
 }
 
+# Create certificates
+if [ ! -d "./data/certs/ca.pem" ]; then
+    echo "Creating certificates..."
+    ./bin/certificates
+fi
 
 # Smoosh our base postgres init data script
 # in with the user's provided init data
@@ -47,20 +52,31 @@ fi
 # Delete the previously configured configs and start fresh
 echo "Cleaning up previously configured configs..."
 rm -Rf ./_configs/*
-mkdir -p ./_configs/traefik
+mkdir -p ./_configs/traefik/static
+mkdir -p ./_configs/traefik/dynamic
 mkdir -p ./_configs/functions
 mkdir -p ./_configs/postgrest
 mkdir -p ./_configs/vault
+mkdir -p ./_configs/registry
+mkdir -p ./_configs/fusionauth
 
 # Place templates interpolated with env vars into the _configs directory, or
 # use the user's provided configs if they exist
 echo "Setting up traefik config..."
-interpolate_template "./traefik/traefik.template.yml" "./_configs/traefik/traefik.yml"
+interpolate_template "./traefik/static/traefik.template.yml" "./_configs/traefik/static/traefik.yml"
+interpolate_template "./traefik/dynamic/uberbase.template.yml" "./_configs/traefik/dynamic/uberbase.yml"
 echo "Setting up functions config..."
 interpolate_template "./functions/config.template.json" "./_configs/functions/config.json"
 echo "Setting up postgrest config..."
 interpolate_template "./postgrest/postgrest.template.conf" "./_configs/postgrest/postgrest.conf"
 echo "Setting up vault config..."
 interpolate_template "./vault/vault-server.template.hcl" "./_configs/vault/vault-server.hcl"
+echo "Setting up fusionauth config..."
+interpolate_template "./fusionauth/kickstart.json" "./_configs/fusionauth/kickstart.json"
 
 chmod -R 777 ./_configs
+
+# Create the registry password file
+echo "Creating registry password file..."
+echo "${UBERBASE_REGISTRY_USERNAME}:${UBERBASE_REGISTRY_PASSWORD}" > ./_configs/registry/registry.password
+

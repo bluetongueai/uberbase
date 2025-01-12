@@ -6,57 +6,7 @@
 SECRET_PATH="secret/data/uberbase"
 VAULT_PREFIXES=("UBERBASE_" ${UBERBASE_VAULT_PREFIXES:-})
 
-# If we don't have keys, we need to create them
-if ! [ -d ${UBERBASE_VAULT_STORAGE}/keys ]; then
-    mkdir -p ${UBERBASE_VAULT_STORAGE}/keys
-    echo "Creating CA..."
-    # Generate CA private key
-    openssl ecparam -out ${UBERBASE_VAULT_STORAGE}/keys/vault-ca-key.pem -name prime256v1 -genkey -noout
-    
-    # Create CA certificate with proper extensions
-    openssl req -x509 -new -sha256 \
-        -key ${UBERBASE_VAULT_STORAGE}/keys/vault-ca-key.pem \
-        -out ${UBERBASE_VAULT_STORAGE}/keys/vault-ca.pem \
-        -days 365 \
-        -subj "/CN=uberbase-vault-ca" \
-        -extensions v3_ca \
-        -config <(echo "[req]"; \
-                 echo "distinguished_name=req"; \
-                 echo "[v3_ca]"; \
-                 echo "basicConstraints=critical,CA:TRUE"; \
-                 echo "keyUsage=critical,digitalSignature,keyCertSign,cRLSign"; \
-                 echo "subjectKeyIdentifier=hash"; \
-                 echo "subjectAltName=DNS:uberbase-vault-ca,IP:127.0.0.1")
-
-    echo "Creating server certificate..."
-    # Generate server private key
-    openssl ecparam -out ${UBERBASE_VAULT_STORAGE}/keys/vault-key.pem -name prime256v1 -genkey -noout
-    
-    # Create and sign server certificate with proper extensions
-    openssl req -new -sha256 \
-        -key ${UBERBASE_VAULT_STORAGE}/keys/vault-key.pem \
-        -subj "/CN=uberbase-vault" \
-        -out ${UBERBASE_VAULT_STORAGE}/keys/vault.csr
-
-    openssl x509 -req -sha256 \
-        -in ${UBERBASE_VAULT_STORAGE}/keys/vault.csr \
-        -CA ${UBERBASE_VAULT_STORAGE}/keys/vault-ca.pem \
-        -CAkey ${UBERBASE_VAULT_STORAGE}/keys/vault-ca-key.pem \
-        -CAcreateserial \
-        -out ${UBERBASE_VAULT_STORAGE}/keys/vault-cert.pem \
-        -days 365 \
-        -extfile <(echo "subjectAltName=DNS:uberbase-vault,IP:127.0.0.1"; \
-                   echo "keyUsage=critical,digitalSignature,keyEncipherment"; \
-                   echo "extendedKeyUsage=serverAuth")
-
-    echo "Setting permissions..."
-    sudo chown root:root ${UBERBASE_VAULT_STORAGE}/keys/vault-ca.pem ${UBERBASE_VAULT_STORAGE}/keys/vault-cert.pem
-    sudo chown root:vault ${UBERBASE_VAULT_STORAGE}/keys/vault-key.pem
-    sudo chmod 0644 ${UBERBASE_VAULT_STORAGE}/keys/vault-cert.pem ${UBERBASE_VAULT_STORAGE}/keys/vault-ca.pem
-    sudo chmod 0644 ${UBERBASE_VAULT_STORAGE}/keys/vault-key.pem
-fi
-
-VAULT_CACERT=/vault/keys/vault-ca.pem
+VAULT_CACERT=/vault/ca/ca.pem
 
 # If vault isn't running, start it
 vault_status=$(podman exec --env VAULT_CACERT=${VAULT_CACERT} vault vault status 2>&1)
@@ -79,7 +29,8 @@ if [ $? -ne 0 ]; then
         --cap-add CAP_SETFCAP \
         -v vault_data:/opt/data/vault:Z \
         -v ${PWD}/_configs/vault:/vault/config:z \
-        -v ${UBERBASE_VAULT_STORAGE}/keys:/vault/keys:z \
+        -v ${UBERBASE_VAULT_STORAGE}/certs:/vault/certs:z \
+        -v ./data/certs:/vault/ca:z \
         -p ${UBERBASE_VAULT_PORT}:8200 \
         docker.io/hashicorp/vault:latest \
         vault server -config=/vault/config/vault-server.hcl
