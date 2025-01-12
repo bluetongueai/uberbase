@@ -135,7 +135,7 @@ ENV PATH=$PATH:/usr/local/go/bin
 
 WORKDIR /home/podman/app
 
-# functions api
+# uberbase built in functions
 ADD functions /home/podman/app/functions
 
 # postgres
@@ -154,19 +154,14 @@ ADD traefik/dynamic /home/podman/app/traefik/dynamic
 ADD vault/vault-server.template.hcl /home/podman/app/vault/vault-server.template.hcl
 
 # dockerfiles
+ADD vault/uberbase-vault-wrapper.sh vault/uberbase-vault-wrapper.sh
 ADD postgres/image/Dockerfile /home/podman/app/postgres/image/Dockerfile
 ADD postgres/image/uberbase-docker-entrypoint.sh /home/podman/app/postgres/image/uberbase-docker-entrypoint.sh
 ADD postgrest/Dockerfile /home/podman/app/postgrest/Dockerfile
-ADD postgrest/uberbase-docker-entrypoint.sh /home/podman/app/postgrest/uberbase-docker-entrypoint.sh
 ADD minio/Dockerfile /home/podman/app/minio/Dockerfile
-ADD minio/uberbase-docker-entrypoint.sh /home/podman/app/minio/uberbase-docker-entrypoint.sh
 ADD fusionauth/Dockerfile /home/podman/app/fusionauth/Dockerfile
-ADD fusionauth/uberbase-docker-entrypoint.sh /home/podman/app/fusionauth/uberbase-docker-entrypoint.sh
 ADD redis/Dockerfile /home/podman/app/redis/Dockerfile
-ADD redis/uberbase-docker-entrypoint.sh /home/podman/app/redis/uberbase-docker-entrypoint.sh
 ADD traefik/Dockerfile /home/podman/app/traefik/Dockerfile
-ADD traefik/uberbase-docker-entrypoint.sh /home/podman/app/traefik/uberbase-docker-entrypoint.sh
-ADD docker-compose.yml /home/podman/app/docker-compose.yml
 
 ADD bin /home/podman/app/bin
 ADD .env /home/podman/app/.env

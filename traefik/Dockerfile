@@ -4,8 +4,8 @@ FROM docker.io/traefik:v3.3
 RUN apk add --no-cache curl jq bash
 
 # Copy and set up entrypoint script
-COPY uberbase-docker-entrypoint.sh /uberbase/docker-entrypoint.sh
-RUN chmod +x /uberbase/docker-entrypoint.sh
+ADD vault/uberbase-vault-wrapper.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/uberbase-vault-wrapper.sh
 
-ENTRYPOINT ["/uberbase/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/uberbase-vault-wrapper.sh"]
 CMD ["/traefik"]

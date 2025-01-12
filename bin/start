@@ -16,13 +16,19 @@ echo -e "Starting on \033[33m$UBERBASE_PLATFORM\033[0m"
 ./bin/stop
 ./bin/configure
 
-./bin/vault
-./bin/registry
-./bin/postgres
-./bin/redis
-./bin/minio
-./bin/fusionauth
-./bin/traefik
+./bin/build/postgres
+./bin/build/redis
+./bin/build/minio
+./bin/build/fusionauth
+./bin/build/traefik
+
+./bin/run/vault
+./bin/run/registry
+./bin/run/postgres
+./bin/run/redis
+./bin/run/minio
+./bin/run/fusionauth
+./bin/run/traefik
 
 # start the uberbase api, which starts the rest of the services
 ./bin/uberbase serve ./_configs/functions/config.json 2>&1 | tee ./logs/uberbase.log

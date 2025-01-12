@@ -1,0 +1,6 @@
+#! /bin/bash
+
+podman build \
+    --tls-verify=false \
+    -t localhost:5000/uberbase-minio:latest \
+    .

@@ -1,11 +1,5 @@
 #! /bin/bash
 
-
-podman build \
-    --tls-verify=false \
-    -t localhost:5000/uberbase-fusionauth:latest \
-    fusionauth/
-
 podman run \
     -d \
     --user root \

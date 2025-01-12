@@ -53,5 +53,27 @@ docker buildx build \
   -t bluetongueai/uberbase:latest \
   .
 
-# Build local compose images
-docker compose build
+docker buildx build \
+  -t localhost:5000/uberbase-redis:latest \
+  --load \
+  .
+
+docker buildx build \
+  -t localhost:5000/uberbase-postgres:latest \
+  --load \
+  .
+
+docker buildx build \
+  -t localhost:5000/uberbase-minio:latest \
+  --load \
+  .
+
+docker buildx build \
+    -t localhost:5000/uberbase-fusionauth:latest \
+    --load \
+    .
+
+docker buildx build \
+  -t localhost:5000/uberbase-traefik:latest \
+  --load \
+  .

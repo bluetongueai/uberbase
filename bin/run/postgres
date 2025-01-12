@@ -1,10 +1,5 @@
 #! /bin/bash
 
-podman build \
-    --tls-verify=false \
-    -t localhost:5000/uberbase-postgres:latest \
-    postgres/image
-
 podman run \
     -d \
     --user 0 \
