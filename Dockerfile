@@ -3,9 +3,7 @@ FROM golang:1.22.6 AS builder
 WORKDIR /app
 ADD uberbase/ /app/uberbase
 WORKDIR /app/uberbase
-RUN go build -o bin/cli ./cmd/cli.go
-RUN go build -o bin/deploy ./cmd/deploy.go
-RUN go build -o bin/api ./cmd/api.go
+RUN go build -o bin/uberbase ./cmd/uberbase/*
 
 FROM quay.io/podman/stable:latest
 
@@ -130,10 +128,8 @@ COPY podman/storage.conf /etc/containers/storage.conf
 
 ENV _CONTAINERS_USERNS_CONFIGURED=""
 
-# COPY --from=builder /usr/local/go /usr/local/go
-COPY --from=builder /app/api/bin/api /home/podman/app/functions/api/bin/api
-COPY --from=builder /app/cli/bin/uberbase /home/podman/app/bin/uberbase
-COPY --from=builder /app/deploy/bin/deploy /home/podman/app/bin/deploy
+COPY --from=builder /usr/local/go /usr/local/go
+COPY --from=builder /app/uberbase/bin/uberbase /home/podman/app/bin/uberbase
 
 ENV PATH=$PATH:/usr/local/go/bin
 
@@ -154,6 +150,9 @@ ADD postgrest/postgrest.template.conf /home/podman/app/postgrest/postgrest.templ
 ADD traefik/static/traefik.template.yml /home/podman/app/traefik/static/traefik.template.yml
 ADD traefik/dynamic /home/podman/app/traefik/dynamic
 
+# vault
+ADD vault/vault-server.template.hcl /home/podman/app/vault/vault-server.template.hcl
+
 # dockerfiles
 ADD postgres/image/Dockerfile /home/podman/app/postgres/image/Dockerfile
 ADD postgres/image/uberbase-docker-entrypoint.sh /home/podman/app/postgres/image/uberbase-docker-entrypoint.sh
@@ -172,7 +171,6 @@ ADD docker-compose.yml /home/podman/app/docker-compose.yml
 ADD bin /home/podman/app/bin
 ADD .env /home/podman/app/.env
 
-#VOLUME /home/podman/app/_configs
 VOLUME /home/podman/app/logs
 VOLUME /home/podman/app/data
 
@@ -197,8 +195,6 @@ RUN mkdir -p /home/podman/app/data/vault_data
 RUN mkdir -p /home/podman/app/data/traefik_data
 RUN mkdir -p /home/podman/app/data/postgrest_data
 
-RUN 
-
 EXPOSE 80
 EXPOSE 443
 
@@ -207,4 +203,4 @@ RUN systemctl --user enable podman.socket
 
 ENTRYPOINT ["/home/podman/app/bin/uberbase"]
 
-
+CMD ["start"]
