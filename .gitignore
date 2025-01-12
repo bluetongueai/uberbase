@@ -2,12 +2,9 @@ configs/*
 _configs/*
 */**/node_modules
 keys/*
-functions/config.json
 logs/**/*.log
-functions/api/bin/*
-functions/cli/bin/*
 linux.git
 vmlinux.bin
 data
 .DS_Store
-bin/uberbase
+uberbase/bin
