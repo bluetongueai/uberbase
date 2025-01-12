@@ -2,5 +2,6 @@
 
 podman build \
     --tls-verify=false \
+    -f redis/Dockerfile \
     -t localhost:5000/uberbase-redis-stack:latest \
     .

@@ -97,12 +97,6 @@ ENV PODMAN_COMPOSE_WARNING_LOGS=false
 RUN dnf -y install \
     podman podman-compose fuse-overlayfs make gettext
 
-# docker (for buildx)
-RUN dnf -y install dnf-plugins-core \
-    && dnf-3 config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo \
-    && dnf -y install docker-ce docker-ce-cli docker-buildx-plugin \
-    && systemctl enable docker
-
 # vault
 RUN dnf install -y dnf-plugins-core \
     && dnf config-manager addrepo --from-repofile=https://rpm.releases.hashicorp.com/fedora/hashicorp.repo \
@@ -114,7 +108,6 @@ RUN dnf clean all
 RUN useradd podman; \
     echo podman:1001:65534 > /etc/subuid; \
     echo podman:1001:65534 > /etc/subgid;
-RUN usermod -aG docker podman
 
 ADD etc/sysctl.conf /etc/sysctl.conf
 
