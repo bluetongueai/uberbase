@@ -17,6 +17,16 @@
 - An OCI compatible runtime such as [Docker](https://docker.com) or [Podman](https://podman.io)
 - A Linux host running an SSH server and a set of SSH keys (for deployment)
 
+## Demos
+
+### Production ready Svelte marketing blog
+
+Go from a concept to a fully deployed marketing blog in minutes.
+
+### Production ready local AI assisted hosted code editor
+
+Go from a concept to a fully deployed AI assisted code editor in hours.
+
 ## Getting Started
 
 You can start building on top of `uberbase` immediately by starting the `uberbase` container in a containerized environment.
@@ -265,11 +275,15 @@ Given the isolated, containerized nature of `uberbase`, along with it's environm
 
 ### Vertically
 
+Scaling vertically is the easiest and simplest way to scale `uberbase`. Simply install `uberbase` on a well provisioned server and `uberbase` will manage the scaling of it's own services. `uberbase` allows `podman` to manage the scaling of it's services, and you can easily scale `uberbase` by adding more CPU and memory to the host. Function OCI images are removed from the host after running, so the limit to the number of functions you can run is the number of CPU and memory you have available.
 
 ### Horizontally
 
-By leveraging edge computing and geo-ip routing based solutions, you can host multiple `uberbase` nodes that all
-talk to a central/sharded database and shift most heavy computing to OCI images. The edge `uberbase` nodes 
+As `uberbase` is containerized and managed by environment variables, you can easily scale `uberbase` horizontally by running various `uberbase` services externally on different hosts, and ensuring that the `uberbase` services are configured to talk to each other through the relevant environment variables.
+
+It should be possible to run `postgres`, `redis`, `minio`, `fusionauth`, and `postgrest` externally on different hosts, and simply configure the `uberbase` services to talk to these services through the relevant environment variables. A [Tailscale](https://tailscale.com/) VPN can be used to securely connect the `uberbase` hosts together.
+
+Efficient edge computing can be achieved by configuring a [geo-ip routing solution](https://plugins.traefik.io/plugins/671fb517573cd7803d65cb17/geo-ip) for Traefik to route traffic to an `uberbase` node in the relevant region.
 
 Alternatively, you can install `uberbase` into a Kubernetes (K8's) cluster and manage scaling that way.
 
@@ -279,7 +293,63 @@ Alternatively, you can install `uberbase` into a Kubernetes (K8's) cluster and m
 
 However, eventually a software platform will either die or grow to a size that `uberbase` is no longer a good fit.
 
-`uberbase` is also designed to be painless and easy to migrate off of. Depending on how tightly you've integrated
+`uberbase` is also designed to be painless and easy to migrate off of. You can simply remove the `uberbase` container and replace the services it provides with your own services. `uberbase` does not provide tools for migrating data directly, but you can use the `postgres`, `redis`, and `minio` services to migrate data to your own services. This replacement can be performed piecemeal, or all at once.
 
 ## Implementation Details
 
+`uberbase` is built on top of a number of well supported open source projects.
+
+- [Postgres](https://www.postgresql.org/)
+- [Postgrest](https://postgrest.org/)
+- [FusionAuth](https://fusionauth.io/)
+- [Minio](https://min.io/)
+- [Registry](https://github.com/distribution/distribution)
+- [Redis](https://redis.io/)
+- [Traefik](https://traefik.io/)
+- [Vault](https://www.vaultproject.io/)
+
+This is all tied together and managed by [Podman](https://podman.io/) and a combination of custom scripts and Go code. A single `uberbase` binary is provided inside the image to manage the platform.
+
+### Podman
+
+`uberbase` is built on top of [Podman](https://podman.io/) and uses it's containerized approach to managing services. The `uberbase` `Podman` installation is configured in rootless mode. On startup, `uberbase` will build a local copy of each service and run it in a container. This local copy is a wrapper around the base service that provides access to environment variables and secrets through `Vault`.
+
+### Vault
+
+`uberbase` uses `Vault` to manage secrets and encryption. The `Vault` installation is configured to use a self-generated CA and certificate. Upon first run, `Vault` will generate a root token and a set of keys for the root token. These credentials are cached and mounted into each service's container. It will also ingest all `UBERBASE_*` environment variables, and other environment variables prefixed with your configured `UBERBASE_VAULT_PREFIXES` availble in the `uberbase` container into the `Vault` server.
+
+### Registry
+
+`uberbase` uses a custom `Registry` implementation to manage OCI images. This implementation is designed to be compatible with the [OCI distribution spec](https://github.com/opencontainers/distribution-spec) and is designed to be compatible with the `docker` CLI.
+
+The primary use of the `Registry` is to host the custom wrapped versions of the `postgres`, `redis`, `minio`, `fusionauth`, and `postgrest` images. These images are used by the `uberbase` services to provide the relevant services. The `Registry` also plays a role in the `deploy` command, where it's used to host tagged versions of the application being deployed.
+
+### Postgres
+
+`uberbase` uses Postgres as the database backend. The server will be configured with the credentials specified in the `.env` file. All `uberbase` services that require a database will use this server, and will be automatically configured with the relevant credentials and URLs as defined in the `.env` file.
+
+As long as your application services are running in the same network as the `postgres` service, you can connect to the `postgres` service directly using the credentials and URLs defined in the `.env` file. Postgres is exposed via it's default port of `5432` on the `uberbase` container.
+
+### FusionAuth
+
+`uberbase` uses FusionAuth as an identity and access management service. The server will be configured with the credentials specified in the `.env` file. All `uberbase` services that require a FusionAuth server will use this server, and will be automatically configured with the relevant credentials and URLs as defined in the `.env` file.
+
+FusionAuth's kickstart system can be used to bootstrap your application with users, roles, and applications. In the official documentation, this is discouraged for non-development environments, however the containerized nature of `uberbase` lessens the risk of this approach and makes it easier to manage. `uberbase` does not ship with a default FusionAuth kickstart script however.
+
+### Postgrest
+
+`uberbase` uses Postgrest as a REST API for Postgres. Postgrest will automatically obtain necessary PKI information from `fusionauth` and use it to secure the API. Data security is handled by `postgrest` and `fusionauth`. By default, `fusionauth` will add a `role` attribute to the JWT token with the `fusionauth` application role for the user. This role is used by `postgrest` to enforce data access permissions through it's row level security policies.
+
+It's up to you to define the roles and security policies for your application. `fusionauth` can be configured to execute arbitrary Node.js code to populate the JWT token however you need. The use of `fusionauth` users, applications, and roles combined with `postgrest`'s row level security policies should provide all security requirements for your application.
+
+### Redis
+
+`uberbase` uses Redis as a key/value store and message broker. The server will be configured with the credentials specified in the `.env` file. All `uberbase` services that require a Redis server will use this server, and will be automatically configured with the relevant credentials and URLs as defined in the `.env` file.
+
+As long as your application services are running in the same network as the `redis` service, you can connect to the `redis` service directly using the credentials and URLs defined in the `.env` file. Redis is exposed via it's default port of `6379` on the `uberbase` container.
+
+### Minio
+
+`uberbase` uses Minio as an S3 compatible object storage service. The server will be configured with the credentials specified in the `.env` file. All `uberbase` services that require a Minio server will use this server, and will be automatically configured with the relevant credentials and URLs as defined in the `.env` file.
+
+As long as your application services are running in the same network as the `minio` service, you can connect to the `minio` service directly using the credentials and URLs defined in the `.env` file. Minio is exposed via it's default port of `9000` on the `uberbase` container.
