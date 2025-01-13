@@ -14,6 +14,7 @@ export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 echo -e "Starting on \033[33m$UBERBASE_PLATFORM\033[0m"
 
 ./bin/stop
+
 ./bin/configure
 
 ./bin/build/postgres
@@ -30,5 +31,5 @@ echo -e "Starting on \033[33m$UBERBASE_PLATFORM\033[0m"
 ./bin/run/fusionauth
 ./bin/run/traefik
 
-# start the uberbase api, which starts the rest of the services
-./bin/uberbase serve ./_configs/functions/config.json 2>&1 | tee ./logs/uberbase.log
+# Start the uberbase api
+exec ./bin/uberbase serve ./_configs/functions/config.json

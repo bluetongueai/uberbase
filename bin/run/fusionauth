@@ -5,6 +5,7 @@ podman run \
     --user root \
     --restart unless-stopped \
     --name fusionauth \
+    --replace \
     --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
     --env VAULT_ADDR=http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
     --env DATABASE_URL=jdbc:postgresql://${UBERBASE_POSTGRES_HOST}:${UBERBASE_POSTGRES_PORT}/${UBERBASE_FUSIONAUTH_DATABASE} \

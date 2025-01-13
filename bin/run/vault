@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#set -x
-
 # Configuration
 SECRET_PATH="secret/data/uberbase"
 VAULT_PREFIXES=("UBERBASE_" ${UBERBASE_VAULT_PREFIXES:-})
@@ -33,7 +31,7 @@ if [ $? -ne 0 ]; then
         -v ./data/certs:/vault/ca:z \
         -p ${UBERBASE_VAULT_PORT}:8200 \
         docker.io/hashicorp/vault:latest \
-        vault server -config=/vault/config/vault-server.hcl
+        vault server -config=/vault/config/vault-server.hcl > /dev/null 2>&1
 fi
 
 # Wait for vault to start
@@ -55,27 +53,19 @@ if [ ! -f ${UBERBASE_VAULT_STORAGE}/keys.json ]; then
     UNSEAL_KEY=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".unseal_keys_b64[0]")
     ROOT_TOKEN=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".root_token")
    
-
-    # Unseal and login
-    UNSEAL_KEY=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".unseal_keys_b64[0]")
-    ROOT_TOKEN=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".root_token")
-
-    echo "UNSEAL_KEY: $UNSEAL_KEY"
-    echo "ROOT_TOKEN: $ROOT_TOKEN"
-    
     echo "Unsealing Vault..."
     podman exec \
         --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault operator unseal $UNSEAL_KEY
+        vault operator unseal $UNSEAL_KEY > /dev/null 2>&1
 
     echo "Logging in to Vault..."
     podman exec \
         --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault login $ROOT_TOKEN
+        vault login $ROOT_TOKEN > /dev/null 2>&1
 
     # Enable secret engines
     echo "Enabling secret engines..."
@@ -83,7 +73,7 @@ if [ ! -f ${UBERBASE_VAULT_STORAGE}/keys.json ]; then
         --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault secrets enable -path=secret kv-v2
+        vault secrets enable -path=secret kv-v2 > /dev/null 2>&1
 
     # Create single policy for all services
     echo "Creating service policy..."
@@ -97,7 +87,7 @@ EOF
         --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault policy write service-policy /vault/config/service-policy.hcl
+        vault policy write service-policy /vault/config/service-policy.hcl > /dev/null 2>&1
 
     # Enable AppRole auth
     echo "Enabling AppRole authentication..."
@@ -105,7 +95,7 @@ EOF
         --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault auth enable approle
+        vault auth enable approle > /dev/null 2>&1
 
     # Create single role for all services
     echo "Creating service role..."
@@ -118,7 +108,7 @@ EOF
         token_num_uses=0 \
         token_ttl=20m \
         token_max_ttl=30m \
-        policies="service-policy"
+        policies="service-policy" > /dev/null 2>&1
 
     # Store all matching environment variables
     echo "Storing environment variables..."
@@ -157,7 +147,7 @@ EOF
         --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault kv put "$SECRET_PATH/config" "data=@/vault/config/secrets.json"
+        vault kv put "$SECRET_PATH/config" "data=@/vault/config/secrets.json" > /dev/null 2>&1
 
     # Clean up
     rm "${PWD}/_configs/vault/secrets.json"
@@ -175,10 +165,10 @@ EOF
         vault \
         vault write -f -field=secret_id auth/approle/role/service/secret-id)
     
-    # Store credentials where services can find them
     echo "VAULT_ROLE_ID=$ROLE_ID" > ${UBERBASE_VAULT_STORAGE}/credentials
     echo "VAULT_SECRET_ID=$SECRET_ID" >> ${UBERBASE_VAULT_STORAGE}/credentials
 
+    echo "Vault setup complete"
 else
     echo "Unsealing existing Vault..."
     UNSEAL_KEY=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".unseal_keys_b64[0]")
@@ -186,5 +176,5 @@ else
         --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault operator unseal $UNSEAL_KEY
+        vault operator unseal $UNSEAL_KEY > /dev/null 2>&1
 fi 

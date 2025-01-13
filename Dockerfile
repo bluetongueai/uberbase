@@ -187,8 +187,7 @@ EXPOSE 80
 EXPOSE 443
 
 RUN systemctl --user enable podman.socket
-#RUN systemctl --user start podman.socket
 
 ENTRYPOINT ["/home/podman/app/bin/uberbase"]
 
-CMD ["start"]
+CMD ["/home/podman/app/bin/uberbase", "start"]

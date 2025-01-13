@@ -2,6 +2,7 @@
 
 podman run \
     -d \
+    --replace \
     --user 0 \
     --restart unless-stopped \
     --name redis \

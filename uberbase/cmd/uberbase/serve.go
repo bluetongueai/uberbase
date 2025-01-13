@@ -53,7 +53,9 @@ func getServeCmd() *cobra.Command {
 			})
 			s.AddRoute("POST", "/api/v1/functions/stop", stopHandler)
 			s.AddRoute("POST", "/api/v1/functions/run/*name", functionHandler)
+
 			s.Start()
+
 			return nil
 		},
 	}

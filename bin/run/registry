@@ -2,6 +2,7 @@
 
 podman run \
     -d \
+    --replace \
     --name registry \
     --env REGISTRY_AUTH=htpasswd \
     --env REGISTRY_AUTH_HTPASSWD_REALM="uberbase-registry" \
