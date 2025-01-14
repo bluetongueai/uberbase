@@ -42,11 +42,9 @@ func (s *Server) Start() {
 		Handler: s.gin,
 	}
 
-	go func() {
-		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("Failed to start server: %v", err)
-		}
-	}()
+	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Printf("Failed to start server: %v", err)
+	}
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {

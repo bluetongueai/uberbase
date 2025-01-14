@@ -3,7 +3,7 @@
 docker run --rm -it \
   --name uberbase \
   -v uberbase_test_data:/home/podman/app/data \
-  -v podman_data:/var/lib/podman \
+  -v k8_podman_data:/var/lib/podman \
   -p 8080:80 \
   -p 8443:443 \
   --security-opt seccomp=unconfined \

@@ -91,11 +91,9 @@ ENV UBERBASE_REGISTRY_PORT $UBERBASE_REGISTRY_PORT
 ENV UBERBASE_REGISTRY_USERNAME $UBERBASE_REGISTRY_USERNAME
 ENV UBERBASE_REGISTRY_PASSWORD $UBERBASE_REGISTRY_PASSWORD
 
-ENV PODMAN_COMPOSE_WARNING_LOGS=false
-
 # podman
 RUN dnf -y install \
-    podman podman-compose fuse-overlayfs make gettext
+    podman fuse-overlayfs make gettext
 
 # vault
 RUN dnf install -y dnf-plugins-core \
@@ -164,7 +162,6 @@ VOLUME /home/podman/app/data
 
 RUN mkdir -p /home/podman/app/_configs /home/podman/app/logs /home/podman/app/data
 
-RUN source /home/podman/app/.env && bin/configure
 RUN chown podman:podman -R /home/podman/app
 
 RUN ln -s /run/user/1000/podman/podman.sock /var/run/docker.sock
@@ -187,7 +184,5 @@ EXPOSE 80
 EXPOSE 443
 
 RUN systemctl --user enable podman.socket
-
-ENTRYPOINT ["/home/podman/app/bin/uberbase"]
 
 CMD ["/home/podman/app/bin/uberbase", "start"]

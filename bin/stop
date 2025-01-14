@@ -3,9 +3,6 @@
 # stop all containers
 podman stop -a
 
-# remove all containers
-podman container prune -f
-
 # prune all volumes
 podman system prune -f
 
