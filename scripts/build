@@ -49,7 +49,6 @@ docker buildx build \
   --build-arg="UBERBASE_REGISTRY_USERNAME=$UBERBASE_REGISTRY_USERNAME" \
   --build-arg="UBERBASE_REGISTRY_PASSWORD=$UBERBASE_REGISTRY_PASSWORD" \
   --target uberbase \
-  --no-cache \
   --load \
   -t bluetongueai/uberbase:latest \
   .

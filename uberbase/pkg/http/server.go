@@ -3,9 +3,9 @@ package http
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 
+	"github.com/bluetongueai/uberbase/uberbase/pkg/logging"
 	"github.com/gin-gonic/gin"
 )
 
@@ -43,7 +43,7 @@ func (s *Server) Start() {
 	}
 
 	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Printf("Failed to start server: %v", err)
+		logging.Logger.Errorf("Failed to start server: %v", err)
 	}
 }
 

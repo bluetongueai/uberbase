@@ -64,4 +64,6 @@ if [ ! "$UBERBASE_DISABLE_TRAEFIK" = true ]; then
 fi
 
 echo "Starting Uberbase Functions"
+echo ""
+export GIN_MODE=release
 ./bin/uberbase serve ./_configs/functions/config.json

@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
 
 	f "github.com/bluetongueai/uberbase/uberbase/pkg/functions"
 	h "github.com/bluetongueai/uberbase/uberbase/pkg/http"
+	"github.com/bluetongueai/uberbase/uberbase/pkg/logging"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 )
@@ -40,6 +40,7 @@ func getServeCmd() *cobra.Command {
 			configPath := args[0]
 			apiConfig, err := readConfigFile(configPath)
 			if err != nil {
+				logging.Logger.Errorf("Failed to read config file: %v", err)
 				return fmt.Errorf("failed to read config file: %v", err)
 			}
 
@@ -54,6 +55,7 @@ func getServeCmd() *cobra.Command {
 			s.AddRoute("POST", "/api/v1/functions/stop", stopHandler)
 			s.AddRoute("POST", "/api/v1/functions/run/*name", functionHandler)
 
+			logging.Logger.Infof("Starting server on port %d", apiConfig.Port)
 			s.Start()
 
 			return nil
@@ -65,17 +67,18 @@ func getServeCmd() *cobra.Command {
 
 func readConfigFile(configPath string) (ApiConfig, error) {
 	configFileBytes, _ := os.ReadFile(configPath)
-	log.Printf("config file: %s", string(configFileBytes))
+	logging.Logger.Debugf("Config file: %s", string(configFileBytes))
 	var data ApiConfig
 	err := json.Unmarshal(configFileBytes, &data)
 	if err != nil {
-		log.Printf("reading config file failed: %v", err)
+		logging.Logger.Errorf("Reading config file failed: %v", err)
 		return data, err
 	}
 	return data, nil
 }
 
 func stopHandler(c *gin.Context) {
+	logging.Logger.Info("Stopping container")
 	var request StopRequest
 	err := c.BindJSON(&request)
 	if err != nil && err != io.EOF {
@@ -96,6 +99,8 @@ func stopHandler(c *gin.Context) {
 		})
 		return
 	}
+
+	logging.Logger.Infof("Successfully stopped container %s", request.ContainerId)
 
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
@@ -120,7 +125,7 @@ func functionHandler(c *gin.Context) {
 	if request.Args != nil {
 		args = *request.Args
 	}
-	log.Printf("running image %s with args %v", name, args)
+	logging.Logger.Infof("Running image %s with args %v", name, args)
 	detatch := false
 	if request.Detatch != nil {
 		detatch = *request.Detatch
@@ -140,6 +145,8 @@ func functionHandler(c *gin.Context) {
 		})
 		return
 	}
+
+	logging.Logger.Infof("Successfully ran image %s", name)
 
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
