@@ -1,0 +1,21 @@
+#! /bin/bash
+
+echo -n "Starting PostgREST..."
+curl -s "http://localhost:9011/.well-known/jwks.json" > jwks.json
+podman run \
+    -d \
+    --replace \
+    --restart unless-stopped \
+    --name postgrest \
+    --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
+    --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
+    -v ${PWD}/logs:/var/log/postgrest:Z \
+    -v ${PWD}/_configs/postgrest/postgrest.conf:/etc/postgrest.conf:Z \
+    -v ${PWD}/jwks.json:/jwks.json:Z \
+    --network host \
+    --add-host uberbase:0.0.0.0 \
+    uberbase.local/uberbase-postgrest:latest > /dev/null 2>&1
+
+#podman logs -f postgrest
+
+echo -e " \033[1;32mdone.\033[0m"

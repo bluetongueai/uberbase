@@ -1,21 +1,39 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
 {
 	"name": "Uberbase Dev",
 	"build": {
-		"dockerfile": "../deploy/Dockerfile",
-		"context": "../deploy"
+		"dockerfile": "../Dockerfile",
+		"target": "uberbase-dev"
 	},
-	"runArgs": ["--privileged"],
-	"mounts": [],
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
-	// Uncomment the next line to run commands after the container is created.
-	//"postCreateCommand": "/uberbase/bin/setup",
-	// Configure tool-specific properties.
-	// "customizations": {},
-	// Uncomment to connect as an existing user other than the container default. More info: https://aka.ms/dev-containers-non-root.
-	"remoteUser": "root"
+	"runArgs": [
+		"--security-opt",
+		"seccomp=unconfined",
+		"--device",
+		"/dev/fuse",
+		"--device",
+		"/dev/net/tun",
+		"--cap-add",
+		"MKNOD",
+		"--cap-add",
+		"SYS_ADMIN",
+		"--cap-add",
+		"NET_ADMIN",
+		"--cap-add",
+		"SETUID",
+		"--cap-add",
+		"SETGID"
+	],
+	"mounts": [
+		{
+			"type": "volume",
+			"source": "uberbase_dev_data",
+			"target": "/home/podman/app/data"
+		},
+		{
+			"type": "volume",
+			"source": "podman_data",
+			"target": "/var/lib/podman"
+		}
+	],
+	"workspaceFolder": "/home/podman/app",
+	"remoteUser": "podman"
 }

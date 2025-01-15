@@ -13,22 +13,57 @@ echo -e "Starting \033[33muberbase\033[0m..."
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 echo -e "Starting on \033[33m$UBERBASE_PLATFORM\033[0m"
 
-./bin/stop
 ./bin/configure
 
-./bin/build/postgres
-./bin/build/redis
-./bin/build/minio
-./bin/build/fusionauth
-./bin/build/traefik
+if [ ! "$UBERBASE_DISABLE_POSTGRES" = true ]; then
+    ./bin/build/postgres
+fi
+
+if [ ! "$UBERBASE_DISABLE_REDIS" = true ]; then
+    ./bin/build/redis
+fi
+
+if [ ! "$UBERBASE_DISABLE_MINIO" = true ]; then
+    ./bin/build/minio
+fi
+
+if [ ! "$UBERBASE_DISABLE_FUSIONAUTH" = true ] && [ ! "$UBERBASE_DISABLE_POSTGRES" = true ]; then
+    ./bin/build/fusionauth
+fi
+
+if [ ! "$UBERBASE_DISABLE_POSTGREST" = true ] && [ ! "$UBERBASE_DISABLE_POSTGRES" = true ]; then
+    ./bin/build/postgrest
+fi
 
 ./bin/run/vault
 ./bin/run/registry
-./bin/run/postgres
-./bin/run/redis
-./bin/run/minio
-./bin/run/fusionauth
-./bin/run/traefik
 
-# start the uberbase api, which starts the rest of the services
-./bin/uberbase serve ./_configs/functions/config.json 2>&1 | tee ./logs/uberbase.log
+if [ ! "$UBERBASE_DISABLE_POSTGRES" = true ]; then
+    ./bin/run/postgres
+fi
+
+if [ ! "$UBERBASE_DISABLE_FUSIONAUTH" = true ] && [ ! "$UBERBASE_DISABLE_POSTGRES" = true ]; then
+    ./bin/run/fusionauth
+fi
+
+if [ ! "$UBERBASE_DISABLE_REDIS" = true ]; then
+    ./bin/run/redis
+fi
+
+if [ ! "$UBERBASE_DISABLE_MINIO" = true ]; then
+    ./bin/run/minio
+fi
+
+if [ ! "$UBERBASE_DISABLE_POSTGREST" = true ] && [ ! "$UBERBASE_DISABLE_POSTGRES" = true ]; then
+    sleep 5
+    ./bin/run/postgrest
+fi
+
+if [ ! "$UBERBASE_DISABLE_TRAEFIK" = true ]; then
+    ./bin/run/traefik
+fi
+
+echo "Starting Uberbase Functions"
+echo ""
+export GIN_MODE=release
+./bin/uberbase serve ./_configs/functions/config.json

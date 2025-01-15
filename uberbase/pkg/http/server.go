@@ -1,8 +1,11 @@
 package http
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 
+	"github.com/bluetongueai/uberbase/uberbase/pkg/logging"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,18 +28,33 @@ func NewServer(c ServerConfig) Server {
 }
 
 type Server struct {
-	gin *gin.Engine
+	gin    *gin.Engine
+	server *http.Server
 }
 
-func (s Server) AddRoute(method string, path string, handler func(c *gin.Context)) {
+func (s *Server) AddRoute(method string, path string, handler func(c *gin.Context)) {
 	s.gin.Handle(method, path, handler)
 }
 
-func (s Server) Start() {
-	s.gin.Run(fmt.Sprintf("0.0.0.0:%d", config.Port))
+func (s *Server) Start() {
+	s.server = &http.Server{
+		Addr:    fmt.Sprintf("0.0.0.0:%d", config.Port),
+		Handler: s.gin,
+	}
+
+	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		logging.Logger.Errorf("Failed to start server: %v", err)
+	}
 }
 
-func (s Server) RegisterGlobalMiddleware(middleware ...gin.HandlerFunc) {
+func (s *Server) Shutdown(ctx context.Context) error {
+	if s.server != nil {
+		return s.server.Shutdown(ctx)
+	}
+	return nil
+}
+
+func (s *Server) RegisterGlobalMiddleware(middleware ...gin.HandlerFunc) {
 	s.gin.Use(middleware...)
 }
 

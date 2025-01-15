@@ -5,7 +5,7 @@ ADD uberbase/ /app/uberbase
 WORKDIR /app/uberbase
 RUN go build -o bin/uberbase ./cmd/uberbase/*
 
-FROM quay.io/podman/stable:latest
+FROM quay.io/podman/stable:latest AS uberbase
 
 ARG UBERBASE_DOMAIN
 ARG UBERBASE_ADMIN_USERNAME
@@ -91,11 +91,9 @@ ENV UBERBASE_REGISTRY_PORT $UBERBASE_REGISTRY_PORT
 ENV UBERBASE_REGISTRY_USERNAME $UBERBASE_REGISTRY_USERNAME
 ENV UBERBASE_REGISTRY_PASSWORD $UBERBASE_REGISTRY_PASSWORD
 
-ENV PODMAN_COMPOSE_WARNING_LOGS=false
-
 # podman
 RUN dnf -y install \
-    podman podman-compose fuse-overlayfs make gettext
+    podman fuse-overlayfs make gettext procps which
 
 # vault
 RUN dnf install -y dnf-plugins-core \
@@ -110,6 +108,7 @@ RUN useradd podman; \
     echo podman:1001:65534 > /etc/subgid;
 
 ADD etc/sysctl.conf /etc/sysctl.conf
+ADD etc/hosts /etc/hosts
 
 VOLUME /var/lib/containers
 VOLUME /home/podman/.local/share/containers
@@ -134,7 +133,6 @@ ADD functions /home/podman/app/functions
 # postgres
 ADD postgres/_init /home/podman/app/postgres/_init
 ADD postgres/conf /home/podman/app/postgres/conf
-ADD postgres/image /home/podman/app/postgres/image
 
 # postgrest
 ADD postgrest/postgrest.template.conf /home/podman/app/postgrest/postgrest.template.conf
@@ -146,25 +144,28 @@ ADD traefik/dynamic /home/podman/app/traefik/dynamic
 # vault
 ADD vault/vault-server.template.hcl /home/podman/app/vault/vault-server.template.hcl
 
+# fusionauth
+ADD fusionauth/kickstart /home/podman/app/fusionauth/kickstart
+ADD fusionauth/config /home/podman/app/fusionauth/config
+ADD fusionauth/uberbase-docker-entrypoint.sh /home/podman/app/fusionauth/uberbase-docker-entrypoint.sh
+
 # dockerfiles
 ADD vault/uberbase-vault-wrapper.sh vault/uberbase-vault-wrapper.sh
-ADD postgres/image/Dockerfile /home/podman/app/postgres/image/Dockerfile
-ADD postgres/image/uberbase-docker-entrypoint.sh /home/podman/app/postgres/image/uberbase-docker-entrypoint.sh
+ADD postgres/Dockerfile /home/podman/app/postgres/Dockerfile
+ADD postgres/uberbase-docker-entrypoint.sh /home/podman/app/postgres//uberbase-docker-entrypoint.sh
 ADD postgrest/Dockerfile /home/podman/app/postgrest/Dockerfile
 ADD minio/Dockerfile /home/podman/app/minio/Dockerfile
+ADD minio/uberbase-docker-entrypoint.sh /home/podman/app/minio/uberbase-docker-entrypoint.sh
 ADD fusionauth/Dockerfile /home/podman/app/fusionauth/Dockerfile
+ADD fusionauth/uberbase-docker-entrypoint.sh /home/podman/app/fusionauth/uberbase-docker-entrypoint.sh
 ADD redis/Dockerfile /home/podman/app/redis/Dockerfile
 ADD traefik/Dockerfile /home/podman/app/traefik/Dockerfile
 
 ADD bin /home/podman/app/bin
 ADD .env /home/podman/app/.env
 
-VOLUME /home/podman/app/logs
-VOLUME /home/podman/app/data
-
 RUN mkdir -p /home/podman/app/_configs /home/podman/app/logs /home/podman/app/data
 
-RUN source /home/podman/app/.env && bin/configure
 RUN chown podman:podman -R /home/podman/app
 
 RUN ln -s /run/user/1000/podman/podman.sock /var/run/docker.sock
@@ -174,21 +175,26 @@ RUN echo "podman ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 USER podman
 
-RUN mkdir -p /home/podman/app/data/postgres_data
-RUN mkdir -p /home/podman/app/data/registry_data
-RUN mkdir -p /home/podman/app/data/redis_data
-RUN mkdir -p /home/podman/app/data/minio_data
-RUN mkdir -p /home/podman/app/data/fusionauth_data
-RUN mkdir -p /home/podman/app/data/vault_data
-RUN mkdir -p /home/podman/app/data/traefik_data
-RUN mkdir -p /home/podman/app/data/postgrest_data
+RUN mkdir -p /home/podman/app/data/registry_data \
+    /home/podman/app/data/redis_data \
+    /home/podman/app/data/minio_data \
+    /home/podman/app/data/fusionauth_data \
+    /home/podman/app/data/vault_data \
+    /home/podman/app/data/traefik_data \
+    /home/podman/app/data/postgrest_data
 
 EXPOSE 80
 EXPOSE 443
 
-RUN systemctl --user enable podman.socket
-#RUN systemctl --user start podman.socket
-
 ENTRYPOINT ["/home/podman/app/bin/uberbase"]
-
 CMD ["start"]
+
+FROM uberbase AS uberbase-dev
+
+# dev tools and dependencies
+RUN sudo dnf install -y git postgresql-server postgresql-contrib
+
+# alias docker to podman
+RUN alias docker=podman
+
+CMD ["/bin/bash"]

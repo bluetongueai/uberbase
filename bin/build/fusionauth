@@ -1,7 +1,14 @@
 #! /bin/bash
 
+export UBERBASE_FUSIONAUTH_APPLICATION_ID=`cat /proc/sys/kernel/random/uuid`
+
+echo -n "Building FusionAuth..."
+
 podman build \
     --tls-verify=false \
     -f fusionauth/Dockerfile \
-    -t localhost:5000/uberbase-fusionauth:latest \
-    .
+    -t uberbase.local/uberbase-fusionauth:latest \
+    --build-arg UBERBASE_FUSIONAUTH_APPLICATION_ID=${UBERBASE_FUSIONAUTH_APPLICATION_ID} \
+    . > /dev/null 2>&1
+
+echo -e " \033[1;32mdone.\033[0m"

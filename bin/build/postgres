@@ -1,7 +1,9 @@
 #! /bin/bash
 
+echo -n "Building PostgreSQL..."
 podman build \
     --tls-verify=false \
-    -f postgres/image/Dockerfile \
-    -t localhost:5000/uberbase-postgres:latest \
-    .
+    -f postgres/Dockerfile \
+    -t uberbase.local/uberbase-postgres:latest \
+    . > /dev/null 2>&1
+echo -e " \033[1;32mdone.\033[0m"

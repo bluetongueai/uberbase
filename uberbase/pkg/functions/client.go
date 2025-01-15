@@ -3,10 +3,10 @@ package functions
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os/exec"
 	"time"
 
+	"github.com/bluetongueai/uberbase/uberbase/pkg/logging"
 	"github.com/goombaio/namegenerator"
 )
 
@@ -16,7 +16,7 @@ var nameCounts = make(map[string]int)
 var c client
 
 type client struct {
-	binPath        string
+	binPath string
 }
 
 func newClient() (client, error) {
@@ -26,7 +26,7 @@ func newClient() (client, error) {
 		return c, nil
 	}
 
-	log.Println("detecting container runtime")
+	logging.Logger.Info("Detecting container runtime")
 
 	// check for container manager runtime
 	path, err := exec.LookPath("podman")
@@ -35,7 +35,7 @@ func newClient() (client, error) {
 	}
 	client.binPath = path
 
-	log.Printf("using paths: container runtime=%s", client.binPath)
+	logging.Logger.Infof("Using paths: container runtime=%s", client.binPath)
 
 	c = client
 
@@ -44,7 +44,7 @@ func newClient() (client, error) {
 
 func (c client) command(bin string, args ...string) (string, string, error) {
 	var cmd *exec.Cmd
-	log.Printf("running command %s %v", bin, args)
+	logging.Logger.Infof("Running command %s %v", bin, args)
 	cmd = exec.Command(bin, args...)
 	stdoutBuffer := &bytes.Buffer{}
 	stderrBuffer := &bytes.Buffer{}
@@ -69,13 +69,13 @@ func (c client) containerCompose(args ...string) (string, string, error) {
 
 func (c client) Pull(imageName string, force bool) (string, string, error) {
 	if force || !c.imageExists(imageName) {
-		log.Printf("fetching container image %s", imageName)
+		logging.Logger.Infof("Fetching container image %s", imageName)
 		stdout, stderr, err := c.container("pull", imageName)
 		if err != nil {
-			log.Printf("failed to pull image %s: %v", imageName, err)
+			logging.Logger.Errorf("Failed to pull image %s: %v", imageName, err)
 			return stdout, stderr, err
 		}
-		log.Printf("successfully pulled image %s", imageName)
+		logging.Logger.Infof("Successfully pulled image %s", imageName)
 		return stdout, stderr, nil
 	}
 	return "image already exists, force not specified", "", nil
@@ -90,13 +90,13 @@ func (c client) imageExists(imageName string) bool {
 }
 
 func (c client) Build(imageName, containerfile string, context string) error {
-	log.Printf("building container image %s", imageName)
+	logging.Logger.Infof("Building container image %s", imageName)
 	_, _, err := c.container("build", "-t", imageName, "-f", containerfile, context)
 	if err != nil {
-		log.Printf("failed to build image %s: %v", imageName, err)
+		logging.Logger.Errorf("Failed to build image %s: %v", imageName, err)
 		return err
 	}
-	log.Printf("successfully built image %s", imageName)
+	logging.Logger.Infof("Successfully built image %s", imageName)
 	return nil
 }
 
@@ -112,7 +112,7 @@ func (c client) Run(imageName string, detatch bool, env map[string]string, param
 	imageParams = append(append(imageParams, imageName), params...)
 	stdout, stderr, err := c.container(imageParams...)
 	if err != nil {
-		log.Printf("failed to run image %s: %v", imageName, err)
+		logging.Logger.Errorf("Failed to run image %s: %v", imageName, err)
 		return stdout, stderr, err
 	}
 	return stdout, stderr, nil
@@ -122,7 +122,7 @@ func (c client) Stop(containerId string) (string, string, error) {
 	// imageParams := append([]string{"run", "--rm", "-i", imageName}, params...)
 	stdout, stderr, err := c.container("stop", containerId)
 	if err != nil {
-		log.Printf("failed to stop container %s: %v", containerId, err)
+		logging.Logger.Errorf("Failed to stop container %s: %v", containerId, err)
 		return stdout, stderr, err
 	}
 	return stdout, stderr, nil

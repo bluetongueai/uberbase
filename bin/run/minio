@@ -1,21 +1,20 @@
 #! /bin/bash
 
+echo -n "Starting MinIO..."
 podman run \
     -d \
-    --user 0 \
+    --replace \
     --restart unless-stopped \
     --name minio \
     --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
-    --env VAULT_ADDR=http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
-    --env MINIO_ROOT_USER=${UBERBASE_MINIO_ROOT_USER} \
-    --env MINIO_ROOT_PASSWORD=${UBERBASE_MINIO_ROOT_PASSWORD} \
+    --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
     -v ${UBERBASE_MINIO_STORAGE}:/data:Z \
     -v ${PWD}/logs:/var/log/minio:Z \
-    -p ${UBERBASE_MINIO_PORT}:9000 \
-    -p ${UBERBASE_MINIO_CONSOLE_PORT}:9001 \
-    localhost:5000/uberbase-minio:latest \
-    minio server /data --address "0.0.0.0:9000" --console-address "0.0.0.0:9001"
+    --network host \
+    --add-host uberbase:0.0.0.0 \
+    uberbase.local/uberbase-minio:latest \
+    minio server /data --address "0.0.0.0:9000" --console-address "0.0.0.0:9001" > /dev/null 2>&1
 
+#podman logs -f minio
 
-
-
+echo -e " \033[1;32mdone.\033[0m"
