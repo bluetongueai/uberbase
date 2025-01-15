@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 
 	"github.com/spf13/cobra"
 )
@@ -24,6 +25,11 @@ func getStartCmd() *cobra.Command {
 			startCmd.Stdout = os.Stdout
 			startCmd.Stderr = os.Stderr
 			startCmd.Stdin = os.Stdin
+
+			// Set process group to ensure signals are propagated
+			startCmd.SysProcAttr = &syscall.SysProcAttr{
+				Setpgid: false, // Allow signal propagation from parent
+			}
 
 			return startCmd.Run()
 		},

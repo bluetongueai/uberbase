@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#-v /proc:/proc:rw \
+
 docker run --rm -it \
   -v ${PWD}:/home/podman/app \
   -v uberbase_dev_data:/home/podman/app/data \

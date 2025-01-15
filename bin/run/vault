@@ -1,23 +1,36 @@
 #!/bin/bash
 
-#set -x
-
 # Configuration
 SECRET_PATH="secret/data/uberbase"
 VAULT_PREFIXES=("UBERBASE_" ${UBERBASE_VAULT_PREFIXES:-})
 
 VAULT_CACERT=/vault/ca/ca.pem
 
+echo -n "Starting Vault..."
+
+# Add this function near the top of the file, after the configuration variables
+wait_for_vault_unseal() {
+    while true; do
+        seal_status=$(podman exec \
+            --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
+            --env VAULT_CACERT=${VAULT_CACERT} \
+            vault \
+            vault status -format=json 2>/dev/null | jq -r '.sealed')
+        
+        if [ "$seal_status" = "false" ]; then
+            break
+        fi
+        sleep 1
+    done
+}
+
 # If vault isn't running, start it
 vault_status=$(podman exec --env VAULT_CACERT=${VAULT_CACERT} vault vault status 2>&1)
 if [ $? -ne 0 ]; then
     if ! podman volume inspect vault_data > /dev/null 2>&1; then
-        echo "Creating vault data volume..."
         podman volume create vault_data
-        echo "Creating vault raft directory..."
         podman run --rm --user vault -v vault_data:/opt/data/vault:Z --entrypoint="/bin/sh" docker.io/hashicorp/vault:latest -c "mkdir -p /opt/data/vault/raft"
     fi
-    echo "Starting Vault..."
     podman run \
         -d \
         --user vault \
@@ -31,19 +44,18 @@ if [ $? -ne 0 ]; then
         -v ${PWD}/_configs/vault:/vault/config:z \
         -v ${UBERBASE_VAULT_STORAGE}/certs:/vault/certs:z \
         -v ./data/certs:/vault/ca:z \
-        -p ${UBERBASE_VAULT_PORT}:8200 \
+        --network host \
+        --add-host uberbase:0.0.0.0 \
         docker.io/hashicorp/vault:latest \
-        vault server -config=/vault/config/vault-server.hcl
+        vault server -config=/vault/config/vault-server.hcl > /dev/null 2>&1
 fi
 
-# Wait for vault to start
 sleep 2
 
 # Initialize Vault if needed
 if [ ! -f ${UBERBASE_VAULT_STORAGE}/keys.json ]; then
-    echo "Initializing Vault..."
     podman exec \
-        --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
         vault operator init \
@@ -55,38 +67,29 @@ if [ ! -f ${UBERBASE_VAULT_STORAGE}/keys.json ]; then
     UNSEAL_KEY=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".unseal_keys_b64[0]")
     ROOT_TOKEN=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".root_token")
    
-
-    # Unseal and login
-    UNSEAL_KEY=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".unseal_keys_b64[0]")
-    ROOT_TOKEN=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".root_token")
-
-    echo "UNSEAL_KEY: $UNSEAL_KEY"
-    echo "ROOT_TOKEN: $ROOT_TOKEN"
-    
-    echo "Unsealing Vault..."
     podman exec \
-        --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault operator unseal $UNSEAL_KEY
+        vault operator unseal $UNSEAL_KEY > /dev/null 2>&1
 
-    echo "Logging in to Vault..."
+    # Add wait after initial unseal
+    wait_for_vault_unseal
+
     podman exec \
-        --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault login $ROOT_TOKEN
+        vault login $ROOT_TOKEN > /dev/null 2>&1
 
     # Enable secret engines
-    echo "Enabling secret engines..."
     podman exec \
-        --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault secrets enable -path=secret kv-v2
+        vault secrets enable -path=secret kv-v2 > /dev/null 2>&1
 
     # Create single policy for all services
-    echo "Creating service policy..."
     cat > "${PWD}/_configs/vault/service-policy.hcl" <<EOF
 path "${SECRET_PATH}/*" {
     capabilities = ["read"]
@@ -94,23 +97,21 @@ path "${SECRET_PATH}/*" {
 EOF
     
     podman exec \
-        --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault policy write service-policy /vault/config/service-policy.hcl
+        vault policy write service-policy /vault/config/service-policy.hcl > /dev/null 2>&1
 
     # Enable AppRole auth
-    echo "Enabling AppRole authentication..."
     podman exec \
-        --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault auth enable approle
+        vault auth enable approle > /dev/null 2>&1
 
     # Create single role for all services
-    echo "Creating service role..."
     podman exec \
-        --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
         vault write auth/approle/role/service \
@@ -118,10 +119,9 @@ EOF
         token_num_uses=0 \
         token_ttl=20m \
         token_max_ttl=30m \
-        policies="service-policy"
+        policies="service-policy" > /dev/null 2>&1
 
     # Store all matching environment variables
-    echo "Storing environment variables..."
     
     # Create a JSON object from environment variables
     json_data="{"
@@ -129,8 +129,8 @@ EOF
     
     for prefix in "${VAULT_PREFIXES[@]}"; do
         while IFS='=' read -r key value; do
-            # Skip empty lines
-            [ -z "$key" ] && continue
+            # Skip empty lines or empty values
+            [ -z "$key" ] || [ -z "$value" ] && continue
             
             # Add comma if not first entry
             if [ "$first" = true ]; then
@@ -139,6 +139,8 @@ EOF
                 json_data+=","
             fi
             
+            # remove leading 'export'
+            key=$(echo "$key" | sed 's/^export //')
             # Convert env var name to lowercase for secret path
             secret_key=$(echo "$key" | tr '[:upper:]' '[:lower:]')
             # Properly escape the value for JSON
@@ -152,39 +154,90 @@ EOF
     # Write JSON to config directory (which is mounted in the container)
     echo "$json_data" > "${PWD}/_configs/vault/secrets.json"
 
-    # Store secrets in Vault using the mounted file
     podman exec \
-        --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault kv put "$SECRET_PATH/config" "data=@/vault/config/secrets.json"
+        vault kv put "secret/uberbase/config" @/vault/config/secrets.json > /dev/null 2>&1
 
     # Clean up
     rm "${PWD}/_configs/vault/secrets.json"
 
     # Generate and store service credentials
-    echo "Generating service credentials..."
     ROLE_ID=$(podman exec \
-        --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
         vault read -field=role_id auth/approle/role/service/role-id)
     SECRET_ID=$(podman exec \
-        --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
         vault write -f -field=secret_id auth/approle/role/service/secret-id)
     
-    # Store credentials where services can find them
     echo "VAULT_ROLE_ID=$ROLE_ID" > ${UBERBASE_VAULT_STORAGE}/credentials
     echo "VAULT_SECRET_ID=$SECRET_ID" >> ${UBERBASE_VAULT_STORAGE}/credentials
 
 else
-    echo "Unsealing existing Vault..."
     UNSEAL_KEY=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".unseal_keys_b64[0]")
     podman exec \
-        --env VAULT_ADDR=https://127.0.0.1:${UBERBASE_VAULT_PORT} \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
         --env VAULT_CACERT=${VAULT_CACERT} \
         vault \
-        vault operator unseal $UNSEAL_KEY
+        vault operator unseal $UNSEAL_KEY > /dev/null 2>&1
+
+    # Wait for vault in steady state boot
+    wait_for_vault_unseal
+
+    # Login with root token for secret updates
+    ROOT_TOKEN=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".root_token")
+    podman exec \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
+        --env VAULT_CACERT=${VAULT_CACERT} \
+        vault \
+        vault login $ROOT_TOKEN > /dev/null 2>&1
+
+    # Update secrets from current environment variables
+    
+    # Create a JSON object from environment variables
+    json_data="{"
+    first=true
+    
+    for prefix in "${VAULT_PREFIXES[@]}"; do
+        while IFS='=' read -r key value; do
+            # Skip empty lines or empty values
+            [ -z "$key" ] || [ -z "$value" ] && continue
+            
+            # Add comma if not first entry
+            if [ "$first" = true ]; then
+                first=false
+            else
+                json_data+=","
+            fi
+            
+            # remove leading 'export'
+            key=$(echo "$key" | sed 's/^export //')
+            # Convert env var name to lowercase for secret path
+            secret_key=$(echo "$key" | tr '[:upper:]' '[:lower:]')
+            # Properly escape the value for JSON
+            escaped_value=$(printf '%s' "$value" | jq -R .)
+            json_data+="\"$secret_key\":$escaped_value"
+        done < <(env | grep "^${prefix}")
+    done
+    
+    json_data+="}"
+
+    # Write JSON to config directory
+    echo "$json_data" > "${PWD}/_configs/vault/secrets.json"
+
+    podman exec \
+        --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
+        --env VAULT_CACERT=${VAULT_CACERT} \
+        vault \
+        vault kv put "secret/uberbase/config" @/vault/config/secrets.json > /dev/null 2>&1
+
+    # Clean up
+    rm "${PWD}/_configs/vault/secrets.json"
 fi 
+
+echo -e " \033[1;32mdone.\033[0m"

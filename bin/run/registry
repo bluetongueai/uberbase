@@ -1,7 +1,9 @@
 #! /bin/bash
 
+echo -n "Starting Registry..."
 podman run \
     -d \
+    --replace \
     --name registry \
     --env REGISTRY_AUTH=htpasswd \
     --env REGISTRY_AUTH_HTPASSWD_REALM="uberbase-registry" \
@@ -14,5 +16,8 @@ podman run \
     -v ${UBERBASE_REGISTRY_STORAGE}:/data \
     -v ${UBERBASE_REGISTRY_STORAGE}/certs:/certs \
     -v ./data/certs:/ca:ro \
-    -p ${UBERBASE_REGISTRY_PORT}:5000 \
-    docker.io/registry:latest
+    --network host \
+    --add-host uberbase:0.0.0.0 \
+    docker.io/registry:latest > /dev/null 2>&1
+
+echo -e " \033[1;32mdone.\033[0m"
