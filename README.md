@@ -12,11 +12,6 @@
   - [x] **[Registry]()** - An OCI compatible registry for storing and distributing OCI images
   - [x] **[Traefik]()** - A modern reverse proxy and load balancer
 
-## Requirements
-
-- An OCI compatible runtime such as [Docker](https://docker.com) or [Podman](https://podman.io)
-- A Linux host running an SSH server and a set of SSH keys (for deployment)
-
 ## Demos
 
 ### Production ready Svelte marketing blog
@@ -26,6 +21,11 @@ Go from a concept to a fully deployed marketing blog in minutes.
 ### Production ready local AI assisted hosted code editor
 
 Go from a concept to a fully deployed AI assisted code editor in hours.
+
+## Requirements
+
+- An OCI compatible runtime such as [Docker](https://docker.com) or [Podman](https://podman.io)
+- A Linux host running an SSH server and a set of SSH keys (for deployment)
 
 ## Getting Started
 
@@ -141,12 +141,11 @@ By default, `uberbase` will configure itself using sane production ready default
 
 At a minimum, you should set the following secrets:
 
+- `UBERBASE_ADMIN_USERNAME`
 - `UBERBASE_ADMIN_PASSWORD`
 - `UBERBASE_REDIS_SECRET`
 - `UBERBASE_POSTGRES_PASSWORD`
-- `UBERBASE_POSTGREST_JWT_SECRET`
 - `UBERBASE_MINIO_ROOT_PASSWORD`
-- `UBERBASE_FUSIONAUTH_DATABASE_PASSWORD`
 - `UBERBASE_FUSIONAUTH_API_KEY`
 - `UBERBASE_REGISTRY_PASSWORD`
 
