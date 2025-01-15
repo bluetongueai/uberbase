@@ -55,6 +55,7 @@ if [ "$UBERBASE_ENABLE_MINIO" = true ]; then
 fi
 
 if [ "$UBERBASE_ENABLE_POSTGREST" = true ]; then
+    sleep 5
     ./bin/run/postgrest
 fi
 

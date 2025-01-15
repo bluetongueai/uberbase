@@ -1,5 +1,6 @@
 #! /bin/bash
 
+echo "Starting PostgreSQL..."
 podman run \
     -d \
     --user postgres \
@@ -10,11 +11,10 @@ podman run \
     --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
     -v ${PWD}/logs:/var/log/postgresql \
     -v ${PWD}/postgres/_init:/docker-entrypoint-initdb.d \
-    -v ${PWD}/postgres/conf/postgresql.conf:/etc/postgresql.conf \
-    -v ${PWD}/postgres/conf/pg_hba.conf:/etc/pg_hba.conf \
     -v postgres_data:/var/lib/postgresql/data \
     --network host \
     --add-host uberbase:0.0.0.0 \
     uberbase.local/uberbase-postgres:latest \
-    postgres -c config_file=/etc/postgresql.conf
+    docker-entrypoint.sh postgres > /dev/null 2>&1
 
+#podman logs -f postgres

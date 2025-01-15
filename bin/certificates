@@ -76,11 +76,9 @@ openssl x509 -req -sha256 \
                 echo "extendedKeyUsage=serverAuth")
 
 # Generate certs for FusionAuth
-openssl ecparam \
+openssl genrsa \
     -out ${UBERBASE_FUSIONAUTH_STORAGE}/certs/fusionauth-key.pem \
-    -name prime256v1 \
-    -genkey \
-    -noout
+    2048
 openssl req -new -sha256 \
     -subj "/CN=uberbase-fusionauth" \
     -key ${UBERBASE_FUSIONAUTH_STORAGE}/certs/fusionauth-key.pem \

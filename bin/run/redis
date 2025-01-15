@@ -1,5 +1,6 @@
 #! /bin/bash
 
+echo "Starting Redis..."
 podman run \
     -d \
     --replace \
@@ -13,7 +14,5 @@ podman run \
     -v ${PWD}/logs:/var/log/redis:Z \
     --network host \
     --add-host uberbase:0.0.0.0 \
-    uberbase.local/uberbase-redis-stack:latest
-
-
+    uberbase.local/uberbase-redis-stack:latest > /dev/null 2>&1
 

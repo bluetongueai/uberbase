@@ -74,7 +74,7 @@ echo "Setting up vault config..."
 interpolate_template "./vault/vault-server.template.hcl" "./_configs/vault/vault-server.hcl"
 echo "Setting up fusionauth config..."
 interpolate_template "./fusionauth/config/fusionauth.properties" "./_configs/fusionauth/config/fusionauth.properties"
-cp -r ./fusionauth/kickstart ./_configs/fusionauth/kickstart
+cp -r ./fusionauth/kickstart ./_configs/fusionauth
 
 chmod -R 777 ./_configs
 

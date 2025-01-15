@@ -1,6 +1,8 @@
 #! /bin/bash
 
-podman stop -a
-podman rm -a
+# fusionauth first, because if it goes down before postgres, it hangs
+podman stop fusionauth > /dev/null 2>&1
+podman stop -a > /dev/null 2>&1
+podman rm -a > /dev/null 2>&1
 
 echo -e "\033[32mAll Uberbase services stopped and removed.\033[0m"

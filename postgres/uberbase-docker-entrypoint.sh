@@ -21,16 +21,12 @@ eval "$EXPORTS"
 # construct environment variables
 export POSTGRES_USER=${UBERBASE_POSTGRES_USER}
 export POSTGRES_PASSWORD=${UBERBASE_POSTGRES_PASSWORD}
-export POSTGRES_DB=${UBERBASE_POSTGRES_DATABASE}
+export POSTGRES_DATABASE=${UBERBASE_POSTGRES_DATABASE}
+export PGDATA=/var/lib/postgresql/data/pgdata
 
 # Ensure postgres user has access to the log directory
 chown postgres:postgres /var/log/postgresql
 chmod -R 777 /var/log/postgresql
-
-export PGDATA=/var/lib/postgresql/data/pgdata
-if [ ! -d "$PGDATA" ]; then
-    initdb -D $PGDATA
-fi
 
 # Execute original entrypoint
 exec "$@"

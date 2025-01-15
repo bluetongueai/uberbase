@@ -1,5 +1,6 @@
 #! /bin/bash
 
+echo "Starting Registry..."
 podman run \
     -d \
     --replace \
@@ -17,4 +18,4 @@ podman run \
     -v ./data/certs:/ca:ro \
     --network host \
     --add-host uberbase:0.0.0.0 \
-    docker.io/registry:latest
+    docker.io/registry:latest > /dev/null 2>&1

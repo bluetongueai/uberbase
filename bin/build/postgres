@@ -2,6 +2,6 @@
 
 podman build \
     --tls-verify=false \
-    -f postgres/image/Dockerfile \
+    -f postgres/Dockerfile \
     -t uberbase.local/uberbase-postgres:latest \
     .

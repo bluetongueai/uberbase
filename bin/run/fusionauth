@@ -1,5 +1,6 @@
 #! /bin/bash
 
+echo "Starting FusionAuth..."
 podman run \
     -d \
     --restart unless-stopped \
@@ -8,12 +9,11 @@ podman run \
     --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
     --env VAULT_ADDR=https://uberbase:${UBERBASE_VAULT_PORT} \
     --env FUSIONAUTH_APP_URL=${UBERBASE_FUSIONAUTH_APP_URL} \
-    --env FUSIONAUTH_ENVIRONMENT=development \
-    --env FUSIONAUTH_APP_KICKSTART_FILE=/usr/local/fusionauth/kickstart/kickstart.json \
-    -v ${PWD}/_configs/fusionauth/kickstart:/usr/local/fusionauth/kickstart \
-    -v ${PWD}/_configs/fusionauth/config:/usr/local/fusionauth/config \
+    -v ${UBERBASE_FUSIONAUTH_STORAGE}/certs:/usr/local/fusionauth/kickstart/certs:z \
+    -v ${PWD}/_configs/fusionauth/kickstart:/usr/local/fusionauth/kickstart:z \
+    -v ${PWD}/_configs/fusionauth/config:/usr/local/fusionauth/config:Z \
     --network host \
     --add-host uberbase:0.0.0.0 \
-    uberbase.local/uberbase-fusionauth:latest
+    uberbase.local/uberbase-fusionauth:latest > /dev/null 2>&1
 
-podman logs -f fusionauth
+#podman logs -f fusionauth

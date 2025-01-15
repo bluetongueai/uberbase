@@ -1,13 +1,14 @@
-{}
-
 {
   "variables": {
     "domain": "#{ENV.UBERBASE_DOMAIN}",
     "adminEmail": "#{ENV.UBERBASE_ADMIN_EMAIL}",
     "adminPassword": "#{ENV.UBERBASE_ADMIN_PASSWORD}",
     "apiKey": "#{ENV.UBERBASE_FUSIONAUTH_API_KEY}",
+    "applicationId": "#{UUID()}",
+    "clientSecret": "#{UUID()}",
+    "tenantId": "#{UUID()}",
     "lambdaId": "#{UUID()}",
-    "keyId": "#{UUID()}",
+    "keyId": "#{UUID()}"
   },
   "apiKeys": [
     {
@@ -22,27 +23,9 @@
       "body": {
         "lambda": {
           "id": "#{lambdaId}",
-          "body": "@{./lambdas/enhanceClaims.js}",
+          "body": "@{lambdas/enhanceClaims.js}",
           "name": "[Uberbase] Enhance Claims",
           "type": "JWTPopulate"
-        }
-      }
-    },
-    {
-      "method": "POST",
-      "url": "/api/user/registration",
-      "body": {
-        "user": {
-          "email": "#{adminEmail}",
-          "firstName": "Uberbase",
-          "lastName": "Admin",
-          "password": "#{adminPassword}"
-        },
-        "registration": {
-          "applicationId": "#{FUSIONAUTH_APPLICATION_ID}",
-          "roles": [
-            "app_admin", "app_user"
-          ]
         }
       }
     },
@@ -54,9 +37,8 @@
           "algorithm": "RS256",
           "name": "Uberbase User Auth",
           "type": "RSA",
-          "kid": "zamAX0036820RULfdjUV6YkhYbY",
-          "privateKey": "@{keys/privatekey.pem}",
-          "publicKey": "@{keys/publickey.crt}"
+          "privateKey": "@{certs/fusionauth-key.pem}",
+          "publicKey": "@{certs/fusionauth-cert.pem}"
         }
       }
     },
@@ -67,26 +49,27 @@
         "tenant": {
           "id": "#{tenantId}",
           "name": "Uberbase",
-          "issuer": "#{ENV.K8_FUSIONAUTH_APP_URL}",
+          "issuer": "#{ENV.UBERBASE_FUSIONAUTH_APP_URL}",
           "jwtConfiguration": {
             "idTokenKeyId": "#{keyId}",
             "accessTokenKeyId": "#{keyId}"
-          },
+          }
         }
       }
     },
     {
       "method": "POST",
       "url": "/api/application/#{applicationId}",
+      "tenantId": "#{tenantId}",
       "body": {
         "application": {
           "name": "Uberbase",
           "roles": [
             {
-              "name": "app_admin"
+              "name": "admin"
             },
             {
-              "name": "app_user"
+              "name": "user"
             }
           ],
           "oauthConfiguration": {
@@ -114,6 +97,24 @@
             "accessTokenPopulateId": "#{lambdaId}",
             "idTokenPopulateId": "#{lambdaId}"
           }
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/user/registration",
+      "body": {
+        "user": {
+          "email": "#{ENV.UBERBASE_ADMIN_EMAIL}",
+          "firstName": "Uberbase",
+          "lastName": "Admin",
+          "password": "#{ENV.UBERBASE_ADMIN_PASSWORD}"
+        },
+        "registration": {
+          "applicationId": "#{applicationId}",
+          "roles": [
+            "admin"
+          ]
         }
       }
     }

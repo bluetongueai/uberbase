@@ -149,7 +149,8 @@ ADD traefik/dynamic /home/podman/app/traefik/dynamic
 ADD vault/vault-server.template.hcl /home/podman/app/vault/vault-server.template.hcl
 
 # fusionauth
-ADD fusionauth/kickstart.json /home/podman/app/fusionauth/kickstart/kickstart.json
+ADD fusionauth/kickstart /home/podman/app/fusionauth/kickstart
+ADD fusionauth/config /home/podman/app/fusionauth/config
 ADD fusionauth/uberbase-docker-entrypoint.sh /home/podman/app/fusionauth/uberbase-docker-entrypoint.sh
 
 # dockerfiles
@@ -158,7 +159,9 @@ ADD postgres/image/Dockerfile /home/podman/app/postgres/image/Dockerfile
 ADD postgres/image/uberbase-docker-entrypoint.sh /home/podman/app/postgres/image/uberbase-docker-entrypoint.sh
 ADD postgrest/Dockerfile /home/podman/app/postgrest/Dockerfile
 ADD minio/Dockerfile /home/podman/app/minio/Dockerfile
+ADD minio/uberbase-docker-entrypoint.sh /home/podman/app/minio/uberbase-docker-entrypoint.sh
 ADD fusionauth/Dockerfile /home/podman/app/fusionauth/Dockerfile
+ADD fusionauth/uberbase-docker-entrypoint.sh /home/podman/app/fusionauth/uberbase-docker-entrypoint.sh
 ADD redis/Dockerfile /home/podman/app/redis/Dockerfile
 ADD traefik/Dockerfile /home/podman/app/traefik/Dockerfile
 
