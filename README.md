@@ -30,7 +30,7 @@ Go from a concept to a fully deployed AI assisted code editor in hours.
 ## Getting Started
 
 You can start building on top of `uberbase` immediately by starting the `uberbase` container in a containerized environment.
-You'll instantly have access to a secure Postgres database, secured REST API, S3 compatible storage and an edge compute platform capable of running any OCI capable image (including `uberbase` itself with some modification if you want to get crazy).
+You'll instantly have access to a secure Postgres database, secured REST API, S3 compatible storage and an edge compute platform capable of running any OCI capable image.
 
 For integration into an existing project, or for a more customized setup, you can incorporate `uberbase` into an OCI compose project.
 
@@ -51,8 +51,7 @@ docker run --rm -it \
   --cap-add NET_ADMIN \
   --cap-add SETUID \
   --cap-add SETGID \
-  bluetongueai/uberbase:latest \
-  start
+  bluetongueai/uberbase:latest
 ```
 
 Services will be available on the following ports of the Uberbase container:
@@ -108,6 +107,7 @@ services:
       - 9000:9000 # minio
       - 6000:6000 # functions
       - 5000:5000 # registry
+      - 8200:8200 # vault
 
   # your-app:
   # ...
@@ -134,6 +134,75 @@ These capabilities, devices, and permissions are required by internal `uberbase`
 Vault and Minio both need to be able to mount FUSE filesystems to work correctly, Podman needs to be able to use TUN/TAP devices for VPNs, and so on.
 
 You're free to alter these requirements, however be aware that some components may not work correctly if you do. This may not be an issue if you're overriding certain components with your own services.
+
+### Configuration
+
+By default, `uberbase` will configure itself using sane production ready defaults. However, most `uberbase` services are configurable through a combination of environment variables and configuration files mounted into the container.
+
+At a minimum, you should set the following secrets:
+
+- `UBERBASE_ADMIN_PASSWORD`
+- `UBERBASE_REDIS_SECRET`
+- `UBERBASE_POSTGRES_PASSWORD`
+- `UBERBASE_POSTGREST_JWT_SECRET`
+- `UBERBASE_MINIO_ROOT_PASSWORD`
+- `UBERBASE_FUSIONAUTH_DATABASE_PASSWORD`
+- `UBERBASE_FUSIONAUTH_API_KEY`
+- `UBERBASE_REGISTRY_PASSWORD`
+
+Failure to set these secrets will result in an insecure `uberbase` installation, where it will be possible to access FusionAuth, Postgrest, and Minio using default credentials.
+
+#### Default Configuration
+
+The default configuration will give you:
+
+- A Postgres server with an `uberbase` database, and a `uberbase_fusionauth` database.
+- A FusionAuth server with a `uberbase` application and tenant. This server has been set up with generated certificates for JWT tokens, and a default user with the credentials defined in the `.env` file.
+- A Postgrest server configured to use the FusionAuth server for authentication.
+- An empty Minio server protected by the credentials defined in the `.env` file.
+- A Redis server with a secret defined in the `.env` file.
+- A Traefik load balancer, configured to route traffic to the FusionAuth, Postgrest, and Minio servers.
+- An internally managed Vault server
+- A private container registry, with credentials managed by automatically by Vault
+
+#### Custom Configuration
+
+There are two levels of configuration available to you, depending on how much control you need over the platform.
+
+1. **Environment Variables** - The `.env` file contains all the environment variables that can be set to configure the included services in the platform.
+
+Environment variables are primarily used to set commonly configured values, such as hosts, ports, secrets, etc. This is where the majority of your configuration will likely be set.
+
+If you wish to replace any of the included services with your own, you can do so by setting the relevant environment variables. `uberbase` will automatically configure the relevant services to use your custom services.
+
+Refer to the `.env` file for a list of all the environment variables that can be set.
+
+2. **Configuration Files** - The `config` directory contains all the configuration files for the included services in the platform. Mounting a configuration file into the correct path will override the default configuration for that service. A number of services are configured to combine the default configuration with the mounted configuration file.
+
+You can mount the following configuration files into the `config` directory:
+
+- `postgres/conf/postgresql.conf` - The Postgres configuration file.
+- `postgres/init/*` - The Postgres initialization scripts, in `.sql` or `.sh` format.
+- `fusionauth/config/fusionauth.properties` - The FusionAuth application configuration file.
+- `fusionauth/kickstart/kickstart.json` - The FusionAuth Kickstart file.
+- `postgrest/postgrest.conf` - The Postgrest configuration file.
+- `traefik/static/traefik.toml` - The Traefik static configuration file.
+- `traefik/dynamic/*` - The Traefik dynamic configuration files. 
+- `functions/config.json` - The Uberbase Functions configuration file.
+- `functions/images/**/*` - The Uberbase Functions images directory.
+
+#### Disabling Services
+
+It is possible to disable most of the included services. The following services can be disabled by setting the associated environment variable to `true`:
+
+- `UBERBASE_DISABLE_POSTGRES` - Disable the Postgres service. 
+- `UBERBASE_DISABLE_POSTGREST` - Disable the Postgrest service.
+- `UBERBASE_DISABLE_FUSIONAUTH` - Disable the FusionAuth service.
+- `UBERBASE_DISABLE_REDIS` - Disable the Redis service.
+- `UBERBASE_DISABLE_MINIO` - Disable the Minio service.
+- `UBERBASE_DISABLE_TRAFIK` - Disable the Traefik load balancer.
+
+Each service can be disabled individually. Be aware of service dependencies when disabling services, as it's possible to disable a service that is required by another service and cause the platform to fail.
 
 ### Accessing the Platform
 
@@ -166,8 +235,8 @@ To run a function, you can use the following command:
 ```bash
 curl -X POST \
   -H "Content-Type: application/json" \
-  -d '{"image": "cowsay:latest", "command": "cowsay 'Hello, World!'", "args": ["arg1", "arg2"]}' \
-  http://uberbase:6000/api/v1/functions/run
+  -d '{"command": "cowsay 'Hello, World!'", "args": ["arg1", "arg2"]}' \
+  http://uberbase:6000/api/v1/functions/run/cowsay:latest
 ```
 
 To stop a long running function, you can use the following command:
@@ -213,25 +282,6 @@ Any failure to deploy will be rolled back and the previous version of the applic
 
 Consult the help text for the `deploy` command for more information.
 
-## Overriding Defaults
-
-`uberbase` is configured entirely through environment variables. You can override the defaults by setting the relevant 
-environment variable either in the `docker run` command or in the `docker-compose.yml` file.
-
-At a minimum, you should set the following secrets:
-
-- `UBERBASE_ADMIN_PASSWORD`
-- `UBERBASE_REDIS_SECRET`
-- `UBERBASE_POSTGRES_PASSWORD`
-- `UBERBASE_POSTGREST_JWT_SECRET`
-- `UBERBASE_MINIO_ROOT_PASSWORD`
-- `UBERBASE_FUSIONAUTH_DATABASE_PASSWORD`
-- `UBERBASE_FUSIONAUTH_API_KEY`
-- `UBERBASE_REGISTRY_PASSWORD`
-
-Failure to set these secrets will result in an insecure `uberbase` installation, where it will be possible to access FusionAuth, Postgrest, and Minio using default credentials.
-
-Refer to the `.env` file for a list of all the environment variables that can be set.
 
 ## Integrating
 
@@ -317,6 +367,8 @@ This is all tied together and managed by [Podman](https://podman.io/) and a comb
 ### Vault
 
 `uberbase` uses `Vault` to manage secrets and encryption. The `Vault` installation is configured to use a self-generated CA and certificate. Upon first run, `Vault` will generate a root token and a set of keys for the root token. These credentials are cached and mounted into each service's container. It will also ingest all `UBERBASE_*` environment variables, and other environment variables prefixed with your configured `UBERBASE_VAULT_PREFIXES` availble in the `uberbase` container into the `Vault` server.
+
+Each service is configured to use the `Vault` server, and will automatically configure itself with the relevant credentials and URLs as defined in the `.env` file.
 
 ### Registry
 
