@@ -3,5 +3,5 @@
 podman build \
     --tls-verify=false \
     -f fusionauth/Dockerfile \
-    -t localhost:5000/uberbase-fusionauth:latest \
+    -t uberbase.local/uberbase-fusionauth:latest \
     .

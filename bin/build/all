@@ -1,0 +1,8 @@
+#! /bin/bash
+
+bin/build/fusionauth
+bin/build/minio
+bin/build/postgres
+bin/build/postgrest
+bin/build/redis
+bin/build/traefik

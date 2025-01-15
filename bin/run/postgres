@@ -2,22 +2,19 @@
 
 podman run \
     -d \
+    --user postgres \
     --replace \
-    --user 0 \
     --restart unless-stopped \
     --name postgres \
     --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
-    --env VAULT_ADDR=http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
-    --env POSTGRES_USER=${UBERBASE_POSTGRES_USER} \
-    --env POSTGRES_PASSWORD=${UBERBASE_POSTGRES_PASSWORD} \
-    --env POSTGRES_DB=${UBERBASE_POSTGRES_DATABASE} \
-    -v ${PWD}/logs:/var/log/postgresql:Z \
-    -v ${PWD}/postgres/_init:/docker-entrypoint-initdb.d:Z \
-    -v ${PWD}/postgres/conf:/etc/postgresql/ \
-    -v ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data:Z \
-    -p ${UBERBASE_POSTGRES_PORT}:5432 \
-    localhost:5000/uberbase-postgres:latest
-
-
-
+    --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
+    -v ${PWD}/logs:/var/log/postgresql \
+    -v ${PWD}/postgres/_init:/docker-entrypoint-initdb.d \
+    -v ${PWD}/postgres/conf/postgresql.conf:/etc/postgresql.conf \
+    -v ${PWD}/postgres/conf/pg_hba.conf:/etc/pg_hba.conf \
+    -v postgres_data:/var/lib/postgresql/data \
+    --network host \
+    --add-host uberbase:0.0.0.0 \
+    uberbase.local/uberbase-postgres:latest \
+    postgres -c config_file=/etc/postgresql.conf
 

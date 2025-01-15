@@ -3,5 +3,5 @@
 podman build \
     --tls-verify=false \
     -f traefik/Dockerfile \
-    -t localhost:5000/uberbase-traefik:latest \
+    -t uberbase.local/uberbase-traefik:latest \
     .

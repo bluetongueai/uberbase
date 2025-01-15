@@ -2,22 +2,18 @@
 
 podman run \
     -d \
-    --user root \
     --restart unless-stopped \
     --name fusionauth \
     --replace \
     --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
-    --env VAULT_ADDR=http://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
-    --env DATABASE_URL=jdbc:postgresql://${UBERBASE_POSTGRES_HOST}:${UBERBASE_POSTGRES_PORT}/${UBERBASE_FUSIONAUTH_DATABASE} \
-    --env DATABASE_ROOT_USERNAME=${UBERBASE_POSTGRES_USER} \
-    --env DATABASE_ROOT_PASSWORD=${UBERBASE_POSTGRES_PASSWORD} \
-    --env DATABASE_USERNAME=${UBERBASE_POSTGRES_USER} \
-    --env DATABASE_PASSWORD=${UBERBASE_POSTGRES_PASSWORD} \
-    --env FUSIONAUTH_APP_RUNTIME_MODE=production \
-    --env FUSIONAUTH_APP_URL=http://${UBERBASE_FUSIONAUTH_HOST}:${UBERBASE_FUSIONAUTH_PORT} \
+    --env VAULT_ADDR=https://uberbase:${UBERBASE_VAULT_PORT} \
+    --env FUSIONAUTH_APP_URL=${UBERBASE_FUSIONAUTH_APP_URL} \
+    --env FUSIONAUTH_ENVIRONMENT=development \
     --env FUSIONAUTH_APP_KICKSTART_FILE=/usr/local/fusionauth/kickstart/kickstart.json \
-    -v uberbase_fusionauth_data:/usr/local/fusionauth/config \
-    -v ${PWD}/_configs/fusionauth:/usr/local/fusionauth/kickstart \
-    -v ${PWD}/logs:/usr/local/fusionauth/logs:Z \
-    -p 9011:9011 \
-    localhost:5000/uberbase-fusionauth:latest
+    -v ${PWD}/_configs/fusionauth/kickstart:/usr/local/fusionauth/kickstart \
+    -v ${PWD}/_configs/fusionauth/config:/usr/local/fusionauth/config \
+    --network host \
+    --add-host uberbase:0.0.0.0 \
+    uberbase.local/uberbase-fusionauth:latest
+
+podman logs -f fusionauth

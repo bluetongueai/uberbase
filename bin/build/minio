@@ -3,5 +3,5 @@
 podman build \
     --tls-verify=false \
     -f minio/Dockerfile \
-    -t localhost:5000/uberbase-minio:latest \
+    -t uberbase.local/uberbase-minio:latest \
     .

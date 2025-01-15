@@ -1,9 +1,6 @@
 #! /bin/bash
 
-# stop all containers
 podman stop -a
+podman rm -a
 
-# prune all volumes
-podman system prune -f
-
-echo -e "\033[33mAll Uberbase services stopped and removed.\033[0m"
+echo -e "\033[32mAll Uberbase services stopped and removed.\033[0m"

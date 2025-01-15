@@ -93,12 +93,15 @@ ENV UBERBASE_REGISTRY_PASSWORD $UBERBASE_REGISTRY_PASSWORD
 
 # podman
 RUN dnf -y install \
-    podman fuse-overlayfs make gettext
+    podman fuse-overlayfs make gettext procps which
 
 # vault
 RUN dnf install -y dnf-plugins-core \
     && dnf config-manager addrepo --from-repofile=https://rpm.releases.hashicorp.com/fedora/hashicorp.repo \
     && dnf -y install vault jq
+
+# git
+RUN dnf install -y git
 
 # clean
 RUN dnf clean all
@@ -108,6 +111,7 @@ RUN useradd podman; \
     echo podman:1001:65534 > /etc/subgid;
 
 ADD etc/sysctl.conf /etc/sysctl.conf
+ADD etc/hosts /etc/hosts
 
 VOLUME /var/lib/containers
 VOLUME /home/podman/.local/share/containers
@@ -144,6 +148,10 @@ ADD traefik/dynamic /home/podman/app/traefik/dynamic
 # vault
 ADD vault/vault-server.template.hcl /home/podman/app/vault/vault-server.template.hcl
 
+# fusionauth
+ADD fusionauth/kickstart.json /home/podman/app/fusionauth/kickstart/kickstart.json
+ADD fusionauth/uberbase-docker-entrypoint.sh /home/podman/app/fusionauth/uberbase-docker-entrypoint.sh
+
 # dockerfiles
 ADD vault/uberbase-vault-wrapper.sh vault/uberbase-vault-wrapper.sh
 ADD postgres/image/Dockerfile /home/podman/app/postgres/image/Dockerfile
@@ -157,9 +165,6 @@ ADD traefik/Dockerfile /home/podman/app/traefik/Dockerfile
 ADD bin /home/podman/app/bin
 ADD .env /home/podman/app/.env
 
-VOLUME /home/podman/app/logs
-VOLUME /home/podman/app/data
-
 RUN mkdir -p /home/podman/app/_configs /home/podman/app/logs /home/podman/app/data
 
 RUN chown podman:podman -R /home/podman/app
@@ -171,7 +176,6 @@ RUN echo "podman ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 USER podman
 
-RUN mkdir -p /home/podman/app/data/postgres_data
 RUN mkdir -p /home/podman/app/data/registry_data
 RUN mkdir -p /home/podman/app/data/redis_data
 RUN mkdir -p /home/podman/app/data/minio_data
@@ -182,7 +186,5 @@ RUN mkdir -p /home/podman/app/data/postgrest_data
 
 EXPOSE 80
 EXPOSE 443
-
-RUN systemctl --user enable podman.socket
 
 CMD ["/home/podman/app/bin/uberbase", "start"]

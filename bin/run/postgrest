@@ -1,0 +1,34 @@
+#! /bin/bash
+
+echo "Configuring PostgREST..."
+curl "http://localhost:9011/.well-known/jwks.json" > /tmp/jwks.json
+cat /tmp/jwks.json
+export n=$(jq -r '.keys[0].n' /tmp/jwks.json)
+export kid=$(jq -r '.keys[0].kid' /tmp/jwks.json)
+export x5c=$(jq -r '.keys[0].x5c' /tmp/jwks.json)
+export x5t=$(jq -r '.keys[0].x5t' /tmp/jwks.json)
+export x5ts256=$(jq -r '.keys[0]."x5t#S256"' /tmp/jwks.json)
+echo "n: $n"
+echo "kid: $kid"
+echo "x5c: $x5c"
+echo "x5t: $x5t"
+echo "x5ts256: $x5ts256"
+envsubst < ${PWD}/postgrest/postgrest.template.conf > ${PWD}/_configs/postgrest/postgrest.conf
+rm /tmp/jwks.json
+
+exit 1
+
+echo "Starting PostgREST..."
+podman run \
+    -d \
+    --replace \
+    --restart unless-stopped \
+    --name postgrest \
+    --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
+    --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
+    -v ${UBERBASE_POSTGREST_STORAGE}:/data:Z \
+    -v ${PWD}/logs:/var/log/postgrest:Z \
+    -v ${PWD}/_configs/postgrest/postgrest.conf:/etc/postgrest.conf:Z \
+    --network host \
+    --add-host uberbase:0.0.0.0 \
+    uberbase.local/uberbase-postgrest:latest

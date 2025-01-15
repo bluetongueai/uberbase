@@ -1,0 +1,7 @@
+#! /bin/bash
+
+podman build \
+    --tls-verify=false \
+    -f postgrest/Dockerfile \
+    -t uberbase.local/uberbase-postgrest:latest \
+    .

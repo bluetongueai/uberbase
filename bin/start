@@ -15,19 +15,51 @@ echo -e "Starting on \033[33m$UBERBASE_PLATFORM\033[0m"
 
 ./bin/configure
 
-./bin/build/postgres
-./bin/build/redis
-./bin/build/minio
-./bin/build/fusionauth
-./bin/build/traefik
+if [ "$UBERBASE_ENABLE_POSTGRES" = true ] || [ "$UBERBASE_ENABLE_FUSIONAUTH" = true ] || [ "$UBERBASE_ENABLE_POSTGREST" = true ]; then
+    ./bin/build/postgres
+fi
+
+if [ "$UBERBASE_ENABLE_REDIS" = true ]; then
+    ./bin/build/redis
+fi
+
+if [ "$UBERBASE_ENABLE_MINIO" = true ]; then
+    ./bin/build/minio
+fi
+
+if [ "$UBERBASE_ENABLE_FUSIONAUTH" = true ]; then
+    ./bin/build/fusionauth
+fi
+
+if [ "$UBERBASE_ENABLE_POSTGREST" = true ]; then
+    ./bin/build/postgrest
+fi
 
 ./bin/run/vault
 ./bin/run/registry
-./bin/run/postgres
-./bin/run/redis
-./bin/run/minio
-./bin/run/fusionauth
+
+if [ "$UBERBASE_ENABLE_POSTGRES" = true ] || [ "$UBERBASE_ENABLE_FUSIONAUTH" = true ] || [ "$UBERBASE_ENABLE_POSTGREST" = true ]; then
+    ./bin/run/postgres
+fi
+
+if [ "$UBERBASE_ENABLE_FUSIONAUTH" = true ]; then
+    ./bin/run/fusionauth
+fi
+
+if [ "$UBERBASE_ENABLE_REDIS" = true ]; then
+    ./bin/run/redis
+fi
+
+if [ "$UBERBASE_ENABLE_MINIO" = true ]; then
+    ./bin/run/minio
+fi
+
+if [ "$UBERBASE_ENABLE_POSTGREST" = true ]; then
+    ./bin/run/postgrest
+fi
+
 ./bin/run/traefik
 
-# Start the uberbase api
-./bin/uberbase serve ./_configs/functions/config.json
+if [ "$UBERBASE_ENABLE_FUNCTIONS" = true ]; then
+    ./bin/uberbase serve ./_configs/functions/config.json
+fi

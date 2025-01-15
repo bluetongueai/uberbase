@@ -3,10 +3,12 @@
 rm -rf ./data/certs
 rm -rf ${UBERBASE_VAULT_STORAGE}/certs
 rm -rf ${UBERBASE_REGISTRY_STORAGE}/certs
+rm -rf ${UBERBASE_FUSIONAUTH_STORAGE}/certs
 
 mkdir -p ./data/certs
 mkdir -p ${UBERBASE_VAULT_STORAGE}/certs
 mkdir -p ${UBERBASE_REGISTRY_STORAGE}/certs
+mkdir -p ${UBERBASE_FUSIONAUTH_STORAGE}/certs
 
 # Create CA certificate with proper extensions
 openssl ecparam \
@@ -28,6 +30,9 @@ openssl req -x509 -new -sha256 \
               echo "subjectKeyIdentifier=hash"; \
               echo "subjectAltName=DNS:uberbase-ca,IP:127.0.0.1")
 
+# generate CA certificate bundle for curl
+cat ./data/certs/ca.pem > ./data/certs/ca.crt
+
 # Generate certs for Vault
 openssl ecparam \
     -out ${UBERBASE_VAULT_STORAGE}/certs/vault-key.pem \
@@ -45,7 +50,7 @@ openssl x509 -req -sha256 \
     -out ${UBERBASE_VAULT_STORAGE}/certs/vault-cert.pem \
     -CAcreateserial \
     -days 365 \
-    -extfile <(echo "subjectAltName=DNS:localhost,IP:127.0.0.1"; \
+    -extfile <(echo "subjectAltName=DNS:uberbase,IP:127.0.0.1"; \
                 echo "keyUsage=critical,digitalSignature,keyEncipherment"; \
                 echo "extendedKeyUsage=serverAuth")
 
@@ -66,7 +71,28 @@ openssl x509 -req -sha256 \
     -out ${UBERBASE_REGISTRY_STORAGE}/certs/registry-cert.pem \
     -CAcreateserial \
     -days 365 \
-    -extfile <(echo "subjectAltName=DNS:localhost,IP:127.0.0.1"; \
+    -extfile <(echo "subjectAltName=DNS:uberbase,IP:127.0.0.1"; \
+                echo "keyUsage=critical,digitalSignature,keyEncipherment"; \
+                echo "extendedKeyUsage=serverAuth")
+
+# Generate certs for FusionAuth
+openssl ecparam \
+    -out ${UBERBASE_FUSIONAUTH_STORAGE}/certs/fusionauth-key.pem \
+    -name prime256v1 \
+    -genkey \
+    -noout
+openssl req -new -sha256 \
+    -subj "/CN=uberbase-fusionauth" \
+    -key ${UBERBASE_FUSIONAUTH_STORAGE}/certs/fusionauth-key.pem \
+    -out ${UBERBASE_FUSIONAUTH_STORAGE}/certs/fusionauth.csr
+openssl x509 -req -sha256 \
+    -CA ./data/certs/ca.pem \
+    -CAkey ./data/certs/ca-key.pem \
+    -in ${UBERBASE_FUSIONAUTH_STORAGE}/certs/fusionauth.csr \
+    -out ${UBERBASE_FUSIONAUTH_STORAGE}/certs/fusionauth-cert.pem \
+    -CAcreateserial \
+    -days 365 \
+    -extfile <(echo "subjectAltName=DNS:uberbase,IP:127.0.0.1"; \
                 echo "keyUsage=critical,digitalSignature,keyEncipherment"; \
                 echo "extendedKeyUsage=serverAuth")
 
@@ -77,13 +103,20 @@ sudo chown root:vault ${UBERBASE_VAULT_STORAGE}/certs/vault-key.pem
 sudo chmod 0644 ${UBERBASE_VAULT_STORAGE}/certs/vault-key.pem ${UBERBASE_VAULT_STORAGE}/certs/vault-cert.pem
 sudo chown root:root ${UBERBASE_REGISTRY_STORAGE}/certs/registry-key.pem
 sudo chmod 0644 ${UBERBASE_REGISTRY_STORAGE}/certs/registry-key.pem ${UBERBASE_REGISTRY_STORAGE}/certs/registry-cert.pem
+sudo chown root:root ${UBERBASE_FUSIONAUTH_STORAGE}/certs/fusionauth-key.pem
+sudo chmod 0644 ${UBERBASE_FUSIONAUTH_STORAGE}/certs/fusionauth-key.pem ${UBERBASE_FUSIONAUTH_STORAGE}/certs/fusionauth-cert.pem
 
 # Make podman trust the registry CA
-sudo mkdir -p /etc/containers/certs.d/localhost:${UBERBASE_REGISTRY_PORT}
-sudo cp ./data/certs/ca.pem /etc/containers/certs.d/localhost:${UBERBASE_REGISTRY_PORT}/ca.crt
-sudo chmod 0644 /etc/containers/certs.d/localhost:${UBERBASE_REGISTRY_PORT}/ca.crt
+sudo mkdir -p /etc/containers/certs.d/uberbase:${UBERBASE_REGISTRY_PORT}
+sudo cp ./data/certs/ca.pem /etc/containers/certs.d/uberbase:${UBERBASE_REGISTRY_PORT}/ca.crt
+sudo chmod 0644 /etc/containers/certs.d/uberbase:${UBERBASE_REGISTRY_PORT}/ca.crt
 
 # Make podman trust the vault CA
-sudo mkdir -p /etc/containers/certs.d/localhost:${UBERBASE_VAULT_PORT}
-sudo cp ./data/certs/ca.pem /etc/containers/certs.d/localhost:${UBERBASE_VAULT_PORT}/ca.crt
-sudo chmod 0644 /etc/containers/certs.d/localhost:${UBERBASE_VAULT_PORT}/ca.crt
+sudo mkdir -p /etc/containers/certs.d/uberbase:${UBERBASE_VAULT_PORT}
+sudo cp ./data/certs/ca.pem /etc/containers/certs.d/uberbase:${UBERBASE_VAULT_PORT}/ca.crt
+sudo chmod 0644 /etc/containers/certs.d/uberbase:${UBERBASE_VAULT_PORT}/ca.crt
+
+# Make podman trust the fusionauth CA
+sudo mkdir -p /etc/containers/certs.d/uberbase:${UBERBASE_FUSIONAUTH_PORT}
+sudo cp ./data/certs/ca.pem /etc/containers/certs.d/uberbase:${UBERBASE_FUSIONAUTH_PORT}/ca.crt
+sudo chmod 0644 /etc/containers/certs.d/uberbase:${UBERBASE_FUSIONAUTH_PORT}/ca.crt

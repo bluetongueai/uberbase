@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 
 # Authenticate with Vault using AppRole
 VAULT_TOKEN=$(curl -s -k \
@@ -19,19 +19,8 @@ EXPORTS=$(echo "$SECRETS" | jq -r 'to_entries | .[] | "export \(.key|ascii_upcas
 eval "$EXPORTS"
 
 # construct environment variables
-export POSTGRES_USER=${UBERBASE_POSTGRES_USER}
-export POSTGRES_PASSWORD=${UBERBASE_POSTGRES_PASSWORD}
-export POSTGRES_DB=${UBERBASE_POSTGRES_DATABASE}
-
-# Ensure postgres user has access to the log directory
-chown postgres:postgres /var/log/postgresql
-chmod -R 777 /var/log/postgresql
-
-export PGDATA=/var/lib/postgresql/data/pgdata
-if [ ! -d "$PGDATA" ]; then
-    initdb -D $PGDATA
-fi
+export MINIO_ROOT_USER=${UBERBASE_MINIO_ROOT_USER}
+export MINIO_ROOT_PASSWORD=${UBERBASE_MINIO_ROOT_PASSWORD}
 
 # Execute original entrypoint
 exec "$@"
-

@@ -1,0 +1,121 @@
+{}
+
+{
+  "variables": {
+    "domain": "#{ENV.UBERBASE_DOMAIN}",
+    "adminEmail": "#{ENV.UBERBASE_ADMIN_EMAIL}",
+    "adminPassword": "#{ENV.UBERBASE_ADMIN_PASSWORD}",
+    "apiKey": "#{ENV.UBERBASE_FUSIONAUTH_API_KEY}",
+    "lambdaId": "#{UUID()}",
+    "keyId": "#{UUID()}",
+  },
+  "apiKeys": [
+    {
+      "key": "#{apiKey}",
+      "description": "Uberbase API key"
+    }
+  ],
+  "requests": [
+    {
+      "method": "POST",
+      "url": "/api/lambda/#{lambdaId}",
+      "body": {
+        "lambda": {
+          "id": "#{lambdaId}",
+          "body": "@{./lambdas/enhanceClaims.js}",
+          "name": "[Uberbase] Enhance Claims",
+          "type": "JWTPopulate"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/user/registration",
+      "body": {
+        "user": {
+          "email": "#{adminEmail}",
+          "firstName": "Uberbase",
+          "lastName": "Admin",
+          "password": "#{adminPassword}"
+        },
+        "registration": {
+          "applicationId": "#{FUSIONAUTH_APPLICATION_ID}",
+          "roles": [
+            "app_admin", "app_user"
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/key/import/#{keyId}",
+      "body": {
+        "key": {
+          "algorithm": "RS256",
+          "name": "Uberbase User Auth",
+          "type": "RSA",
+          "kid": "zamAX0036820RULfdjUV6YkhYbY",
+          "privateKey": "@{keys/privatekey.pem}",
+          "publicKey": "@{keys/publickey.crt}"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/tenant/#{tenantId}",
+      "body": {
+        "tenant": {
+          "id": "#{tenantId}",
+          "name": "Uberbase",
+          "issuer": "#{ENV.K8_FUSIONAUTH_APP_URL}",
+          "jwtConfiguration": {
+            "idTokenKeyId": "#{keyId}",
+            "accessTokenKeyId": "#{keyId}"
+          },
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/api/application/#{applicationId}",
+      "body": {
+        "application": {
+          "name": "Uberbase",
+          "roles": [
+            {
+              "name": "app_admin"
+            },
+            {
+              "name": "app_user"
+            }
+          ],
+          "oauthConfiguration": {
+            "clientSecret": "#{clientSecret}",
+            "enabledGrants": [
+              "authorization_code",
+              "refresh_token",
+              "password"
+            ],
+            "requireClientAuthentication": true,
+            "generateRefreshTokens": true,
+            "tokenExpirationMinutes": 30,
+            "logoutURL": "https://#{domain}/auth/logout",
+            "logoutURLMethod": "GET",
+            "clientAuthenticationPolicy": "Required",
+            "urlValidation": "Allow wildcards",
+            "authorizedOriginURLs": [
+              "https://#{domain}"
+            ],
+            "authorizedRedirectURLs": [
+              "https://#{domain}/auth/callback"
+            ]
+          },
+          "lambdaConfiguration": {
+            "accessTokenPopulateId": "#{lambdaId}",
+            "idTokenPopulateId": "#{lambdaId}"
+          }
+        }
+      }
+    }
+  ]
+}

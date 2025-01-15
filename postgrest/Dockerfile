@@ -26,5 +26,5 @@ RUN chmod +x /usr/local/bin/uberbase-vault-wrapper.sh
 EXPOSE 3000
 EXPOSE 3001
 
-# ENTRYPOINT ["/app/postgrest", "/etc/postgrest.conf"]
-ENTRYPOINT ["/usr/local/bin/uberbase-vault-wrapper.sh", "/app/postgrest", "/etc/postgrest.conf"]
+ENTRYPOINT ["/usr/local/bin/uberbase-docker-entrypoint.sh"]
+CMD ["/usr/local/bin/uberbase-vault-wrapper.sh", "/app/postgrest", "/etc/postgrest.conf"]
