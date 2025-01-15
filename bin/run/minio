@@ -1,6 +1,6 @@
 #! /bin/bash
 
-echo "Starting MinIO..."
+echo -n "Starting MinIO..."
 podman run \
     -d \
     --replace \
@@ -17,3 +17,4 @@ podman run \
 
 #podman logs -f minio
 
+echo -e " \033[1;32mdone.\033[0m"

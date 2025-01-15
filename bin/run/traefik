@@ -1,6 +1,6 @@
 #! /bin/bash
 
-echo "Starting Traefik..."
+echo -n "Starting Traefik..."
 podman run \
     -d \
     --replace \
@@ -15,3 +15,5 @@ podman run \
     --add-host uberbase:0.0.0.0 \
     uberbase.local/uberbase-traefik:latest \
     traefik --configFile=/etc/traefik/config/static/traefik.yml > /dev/null 2>&1 
+
+echo -e " \033[1;32mdone.\033[0m"

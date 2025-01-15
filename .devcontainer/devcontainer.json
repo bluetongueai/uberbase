@@ -1,7 +1,8 @@
 {
 	"name": "Uberbase Dev",
 	"build": {
-		"dockerfile": "../Dockerfile"
+		"dockerfile": "../Dockerfile",
+		"target": "uberbase-dev"
 	},
 	"runArgs": [
 		"--security-opt",

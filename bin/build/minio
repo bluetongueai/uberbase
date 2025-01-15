@@ -1,7 +1,9 @@
 #! /bin/bash
 
+echo -n "Building MinIO..."
 podman build \
     --tls-verify=false \
     -f minio/Dockerfile \
     -t uberbase.local/uberbase-minio:latest \
-    .
+    . > /dev/null 2>&1
+echo -e " \033[1;32mdone.\033[0m"

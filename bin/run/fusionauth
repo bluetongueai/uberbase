@@ -1,6 +1,6 @@
 #! /bin/bash
 
-echo "Starting FusionAuth..."
+echo -n "Starting FusionAuth..."
 podman run \
     -d \
     --restart unless-stopped \
@@ -17,3 +17,5 @@ podman run \
     uberbase.local/uberbase-fusionauth:latest > /dev/null 2>&1
 
 #podman logs -f fusionauth
+
+echo -e " \033[1;32mdone.\033[0m"

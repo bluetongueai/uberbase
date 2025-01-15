@@ -1,6 +1,6 @@
 #! /bin/bash
 
-echo "Starting Registry..."
+echo -n "Starting Registry..."
 podman run \
     -d \
     --replace \
@@ -19,3 +19,5 @@ podman run \
     --network host \
     --add-host uberbase:0.0.0.0 \
     docker.io/registry:latest > /dev/null 2>&1
+
+echo -e " \033[1;32mdone.\033[0m"

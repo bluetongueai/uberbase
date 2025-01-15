@@ -5,7 +5,7 @@ ADD uberbase/ /app/uberbase
 WORKDIR /app/uberbase
 RUN go build -o bin/uberbase ./cmd/uberbase/*
 
-FROM quay.io/podman/stable:latest
+FROM quay.io/podman/stable:latest AS uberbase
 
 ARG UBERBASE_DOMAIN
 ARG UBERBASE_ADMIN_USERNAME
@@ -100,9 +100,6 @@ RUN dnf install -y dnf-plugins-core \
     && dnf config-manager addrepo --from-repofile=https://rpm.releases.hashicorp.com/fedora/hashicorp.repo \
     && dnf -y install vault jq
 
-# git
-RUN dnf install -y git
-
 # clean
 RUN dnf clean all
 
@@ -136,7 +133,6 @@ ADD functions /home/podman/app/functions
 # postgres
 ADD postgres/_init /home/podman/app/postgres/_init
 ADD postgres/conf /home/podman/app/postgres/conf
-ADD postgres/image /home/podman/app/postgres/image
 
 # postgrest
 ADD postgrest/postgrest.template.conf /home/podman/app/postgrest/postgrest.template.conf
@@ -155,8 +151,8 @@ ADD fusionauth/uberbase-docker-entrypoint.sh /home/podman/app/fusionauth/uberbas
 
 # dockerfiles
 ADD vault/uberbase-vault-wrapper.sh vault/uberbase-vault-wrapper.sh
-ADD postgres/image/Dockerfile /home/podman/app/postgres/image/Dockerfile
-ADD postgres/image/uberbase-docker-entrypoint.sh /home/podman/app/postgres/image/uberbase-docker-entrypoint.sh
+ADD postgres/Dockerfile /home/podman/app/postgres/Dockerfile
+ADD postgres/uberbase-docker-entrypoint.sh /home/podman/app/postgres//uberbase-docker-entrypoint.sh
 ADD postgrest/Dockerfile /home/podman/app/postgrest/Dockerfile
 ADD minio/Dockerfile /home/podman/app/minio/Dockerfile
 ADD minio/uberbase-docker-entrypoint.sh /home/podman/app/minio/uberbase-docker-entrypoint.sh
@@ -179,15 +175,26 @@ RUN echo "podman ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 USER podman
 
-RUN mkdir -p /home/podman/app/data/registry_data
-RUN mkdir -p /home/podman/app/data/redis_data
-RUN mkdir -p /home/podman/app/data/minio_data
-RUN mkdir -p /home/podman/app/data/fusionauth_data
-RUN mkdir -p /home/podman/app/data/vault_data
-RUN mkdir -p /home/podman/app/data/traefik_data
-RUN mkdir -p /home/podman/app/data/postgrest_data
+RUN mkdir -p /home/podman/app/data/registry_data \
+    /home/podman/app/data/redis_data \
+    /home/podman/app/data/minio_data \
+    /home/podman/app/data/fusionauth_data \
+    /home/podman/app/data/vault_data \
+    /home/podman/app/data/traefik_data \
+    /home/podman/app/data/postgrest_data
 
 EXPOSE 80
 EXPOSE 443
 
-CMD ["/home/podman/app/bin/uberbase", "start"]
+ENTRYPOINT ["/home/podman/app/bin/uberbase"]
+CMD ["start"]
+
+FROM uberbase AS uberbase-dev
+
+# dev tools and dependencies
+RUN sudo dnf install -y git postgresql-server postgresql-contrib
+
+# alias docker to podman
+RUN alias docker=podman
+
+CMD ["/bin/bash"]

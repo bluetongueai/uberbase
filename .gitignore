@@ -8,4 +8,3 @@ vmlinux.bin
 data
 .DS_Store
 uberbase/bin
-postgres/_init

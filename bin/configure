@@ -2,7 +2,7 @@
 
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 
-echo "Configuring Uberbase for ${UBERBASE_PLATFORM}..."
+echo -n "Configuring Uberbase for ${UBERBASE_PLATFORM}..."
 
 # Function to interpolate template files
 interpolate_template() {
@@ -37,20 +37,20 @@ interpolate_template() {
 
 # Create certificates
 if [ ! -f "./data/certs/ca.pem" ]; then
-    echo "Creating certificates..."
     ./bin/certificates
 fi
 
 # Smoosh our base postgres init data script
 # in with the user's provided init data
 # pray for no conflicts
-echo "Setting up postgres init.d scripts..."
+rm -Rf $UBERBASE_POSTGRES_STORAGE/init.d
+mkdir -p $UBERBASE_POSTGRES_STORAGE/init.d
+cp postgres/_init/* $UBERBASE_POSTGRES_STORAGE/init.d/.
 if [ -d "postgres/init" ]; then
-    cp postgres/init/* postgres/_init/.
+    cp postgres/init/* $UBERBASE_POSTGRES_STORAGE/init.d/.
 fi
 
 # Delete the previously configured configs and start fresh
-echo "Cleaning up previously configured configs..."
 rm -Rf ./_configs/*
 mkdir -p ./_configs/traefik/static
 mkdir -p ./_configs/traefik/dynamic
@@ -63,22 +63,17 @@ mkdir -p ./_configs/fusionauth/kickstart
 
 # Place templates interpolated with env vars into the _configs directory, or
 # use the user's provided configs if they exist
-echo "Setting up traefik config..."
 interpolate_template "./traefik/static/traefik.template.yml" "./_configs/traefik/static/traefik.yml"
 interpolate_template "./traefik/dynamic/uberbase.template.yml" "./_configs/traefik/dynamic/uberbase.yml"
-echo "Setting up functions config..."
 interpolate_template "./functions/config.template.json" "./_configs/functions/config.json"
-echo "Setting up postgrest config..."
 interpolate_template "./postgrest/postgrest.template.conf" "./_configs/postgrest/postgrest.conf"
-echo "Setting up vault config..."
 interpolate_template "./vault/vault-server.template.hcl" "./_configs/vault/vault-server.hcl"
-echo "Setting up fusionauth config..."
 interpolate_template "./fusionauth/config/fusionauth.properties" "./_configs/fusionauth/config/fusionauth.properties"
 cp -r ./fusionauth/kickstart ./_configs/fusionauth
 
 chmod -R 777 ./_configs
 
 # Create the registry password file
-echo "Creating registry password file..."
 echo "${UBERBASE_REGISTRY_USERNAME}:${UBERBASE_REGISTRY_PASSWORD}" > ./_configs/registry/registry.password
 
+echo -e " \033[1;32mdone.\033[0m"

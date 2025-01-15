@@ -1,5 +1,6 @@
 #! /bin/bash
 
+echo "Building all services..."
 bin/build/fusionauth
 bin/build/minio
 bin/build/postgres

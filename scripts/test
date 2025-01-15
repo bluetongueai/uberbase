@@ -14,5 +14,4 @@ docker run --rm -it \
   --cap-add NET_ADMIN \
   --cap-add SETUID \
   --cap-add SETGID \
-  bluetongueai/uberbase:latest \
-  start
+  bluetongueai/uberbase:latest
