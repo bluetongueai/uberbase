@@ -35,6 +35,9 @@ interpolate_template() {
     fi
 }
 
+# Ensure the data directory exists
+mkdir -p ./data/certs ./data/registry_data ./data/redis_data ./data/minio_data ./data/fusionauth_data ./data/vault_data ./data/traefik_data ./data/postgrest_data ./data/postgres_data
+
 # Create certificates
 if [ ! -f "./data/certs/ca.pem" ]; then
     ./bin/certificates
@@ -52,14 +55,7 @@ fi
 
 # Delete the previously configured configs and start fresh
 rm -Rf ./_configs/*
-mkdir -p ./_configs/traefik/static
-mkdir -p ./_configs/traefik/dynamic
-mkdir -p ./_configs/functions
-mkdir -p ./_configs/postgrest
-mkdir -p ./_configs/vault
-mkdir -p ./_configs/registry
-mkdir -p ./_configs/fusionauth/config
-mkdir -p ./_configs/fusionauth/kickstart
+mkdir -p ./_configs/traefik/static ./_configs/traefik/dynamic ./_configs/functions ./_configs/postgrest ./_configs/vault ./_configs/registry ./_configs/fusionauth/config ./_configs/fusionauth/kickstart
 
 # Place templates interpolated with env vars into the _configs directory, or
 # use the user's provided configs if they exist

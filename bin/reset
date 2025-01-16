@@ -8,9 +8,8 @@ if [ "$confirm" != "y" ]; then
 fi
 
 bin/stop
-podman volume prune -f
-rm -Rf ./data/certs
-rm -rf ./data/vault_data/*
+podman volume prune -f > /dev/null 2>&1
+rm -Rf ./data
 
 source .env
 bin/configure

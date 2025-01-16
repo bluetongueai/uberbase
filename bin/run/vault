@@ -24,11 +24,14 @@ wait_for_vault_unseal() {
     done
 }
 
+# Pull vault image
+podman pull docker.io/hashicorp/vault:latest > /dev/null 2>&1
+
 # If vault isn't running, start it
 vault_status=$(podman exec --env VAULT_CACERT=${VAULT_CACERT} vault vault status 2>&1)
 if [ $? -ne 0 ]; then
     if ! podman volume inspect vault_data > /dev/null 2>&1; then
-        podman volume create vault_data
+        podman volume create vault_data > /dev/null 2>&1
         podman run --rm --user vault -v vault_data:/opt/data/vault:Z --entrypoint="/bin/sh" docker.io/hashicorp/vault:latest -c "mkdir -p /opt/data/vault/raft"
     fi
     podman run \

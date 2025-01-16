@@ -1,7 +1,19 @@
 #! /bin/bash
 
+# Function to wait for JWKS endpoint
+wait_for_jwks() {
+    echo -n "Waiting for JWKS endpoint..."
+    while ! curl -s "http://localhost:9011/.well-known/jwks.json" -o jwks.json > /dev/null 2>&1; do
+        sleep 1
+    done
+    echo -e " \033[1;32mdone\033[0m"
+}
+
+# Wait for jwks.json to be available
+wait_for_jwks
+
 echo -n "Starting PostgREST..."
-curl -s "http://localhost:9011/.well-known/jwks.json" > jwks.json
+
 podman run \
     -d \
     --replace \
@@ -14,7 +26,7 @@ podman run \
     -v ${PWD}/jwks.json:/jwks.json:Z \
     --network host \
     --add-host uberbase:0.0.0.0 \
-    uberbase.local/uberbase-postgrest:latest > /dev/null 2>&1
+    localhost/uberbase-postgrest:latest > /dev/null 2>&1
 
 #podman logs -f postgrest
 

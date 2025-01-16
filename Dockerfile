@@ -93,7 +93,7 @@ ENV UBERBASE_REGISTRY_PASSWORD $UBERBASE_REGISTRY_PASSWORD
 
 # podman
 RUN dnf -y install \
-    podman fuse-overlayfs make gettext procps which
+    podman fuse-overlayfs make gettext procps netcat
 
 # vault
 RUN dnf install -y dnf-plugins-core \
@@ -175,13 +175,7 @@ RUN echo "podman ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 USER podman
 
-RUN mkdir -p /home/podman/app/data/registry_data \
-    /home/podman/app/data/redis_data \
-    /home/podman/app/data/minio_data \
-    /home/podman/app/data/fusionauth_data \
-    /home/podman/app/data/vault_data \
-    /home/podman/app/data/traefik_data \
-    /home/podman/app/data/postgrest_data
+VOLUME /home/podman/.podman
 
 EXPOSE 80
 EXPOSE 443
@@ -192,7 +186,7 @@ CMD ["start"]
 FROM uberbase AS uberbase-dev
 
 # dev tools and dependencies
-RUN sudo dnf install -y git postgresql-server postgresql-contrib
+RUN sudo dnf install -y git postgresql-server postgresql-contrib which
 
 # alias docker to podman
 RUN alias docker=podman

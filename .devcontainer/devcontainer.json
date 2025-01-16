@@ -25,13 +25,8 @@
 	"mounts": [
 		{
 			"type": "volume",
-			"source": "uberbase_dev_data",
-			"target": "/home/podman/app/data"
-		},
-		{
-			"type": "volume",
 			"source": "podman_data",
-			"target": "/var/lib/podman"
+			"target": "/home/podman/.podman"
 		}
 	],
 	"workspaceFolder": "/home/podman/app",

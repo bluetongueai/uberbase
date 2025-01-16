@@ -11,15 +11,16 @@ http:
     storage:
       loadBalancer:
         servers:
-        - url: "http://${UBERBASE_MINIO_HOST}:${UBERBASE_MINIO_PORT}/"
-
+        - url: "http://${UBERBASE_MINIO_HOST}:${UBERBASE_MINIO_CONSOLE_PORT}/"
+  
   routers:
     auth:
-      rule: "PathPrefix(`/auth`)"
+      rule: "Host(`auth.${UBERBASE_DOMAIN}`)"
       service: auth
     api:
-      rule: "PathPrefix(`/api`)"
+      rule: "Host(`api.${UBERBASE_DOMAIN}`)"
       service: api
     storage:
-      rule: "PathPrefix(`/storage`)"
+      rule: "Host(`storage.${UBERBASE_DOMAIN}`)"
       service: storage
+

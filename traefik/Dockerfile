@@ -1,11 +1,16 @@
-FROM docker.io/traefik:v3.3
+FROM alpine:3.21
 
-# Install dependencies using the correct package manager for the base image
 RUN apk add --no-cache curl jq bash
+
+# Add Traefik
+COPY --from=docker.io/traefik:v3.3 /usr/local/bin/traefik /usr/local/bin/traefik
+COPY --from=docker.io/traefik:v3.3 /entrypoint.sh /entrypoint.sh
 
 # Copy and set up entrypoint script
 ADD vault/uberbase-vault-wrapper.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/uberbase-vault-wrapper.sh
 
-ENTRYPOINT ["/usr/local/bin/uberbase-vault-wrapper.sh"]
-CMD ["/usr/local/bin/uberbase-vault-wrapper.sh", "/traefik"]
+EXPOSE 80 443
+
+ENTRYPOINT ["/usr/local/bin/uberbase-vault-wrapper.sh", "/entrypoint.sh"]
+CMD ["/usr/local/bin/uberbase-vault-wrapper.sh", "/entrypoint.sh", "/usr/local/bin/traefik"]

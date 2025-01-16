@@ -14,7 +14,7 @@ podman run \
     -v postgres_data:/var/lib/postgresql/data \
     --network host \
     --add-host uberbase:0.0.0.0 \
-    uberbase.local/uberbase-postgres:latest \
+    localhost/uberbase-postgres:latest \
     docker-entrypoint.sh postgres > /dev/null 2>&1
 
 #podman logs -f postgres
