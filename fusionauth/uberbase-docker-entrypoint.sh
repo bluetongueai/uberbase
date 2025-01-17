@@ -26,10 +26,5 @@ export FUSIONAUTH_ENVIRONMENT=production
 export FUSIONAUTH_APP_URL="http://${UBERBASE_FUSIONAUTH_HOST}:${UBERBASE_FUSIONAUTH_PORT}"
 export FUSIONAUTH_APP_KICKSTART_FILE=/usr/local/fusionauth/kickstart/kickstart.json
 
-if [ -f /usr/local/fusionauth/kickstart/kickstart.json ]; then
-    echo "Kickstarting with the following configuration:"
-    cat /usr/local/fusionauth/kickstart/kickstart.json
-fi
-
 # Execute original entrypoint
 exec "$@"

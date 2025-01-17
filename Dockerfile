@@ -7,6 +7,7 @@ RUN go build -o bin/uberbase ./cmd/uberbase/*
 
 FROM quay.io/podman/stable:latest AS uberbase
 
+ARG UBERBASE_VERSION
 ARG UBERBASE_DOMAIN
 ARG UBERBASE_ADMIN_USERNAME
 ARG UBERBASE_ADMIN_EMAIL
@@ -50,6 +51,7 @@ ARG UBERBASE_REGISTRY_STORAGE
 ARG UBERBASE_REGISTRY_USERNAME
 ARG UBERBASE_REGISTRY_PASSWORD
 
+ENV UBERBASE_VERSION $UBERBASE_VERSION
 ENV UBERBASE_DOMAIN $UBERBASE_DOMAIN
 ENV UBERBASE_ADMIN_USERNAME $UBERBASE_ADMIN_USERNAME
 ENV UBERBASE_ADMIN_EMAIL $UBERBASE_ADMIN_EMAIL
@@ -145,7 +147,6 @@ ADD vault/vault-server.template.hcl /home/podman/app/vault/vault-server.template
 
 # fusionauth
 ADD fusionauth/kickstart /home/podman/app/fusionauth/kickstart
-ADD fusionauth/config /home/podman/app/fusionauth/config
 ADD fusionauth/uberbase-docker-entrypoint.sh /home/podman/app/fusionauth/uberbase-docker-entrypoint.sh
 
 # dockerfiles

@@ -1,5 +1,7 @@
 #! /bin/bash
 
+source .env
+
 echo -n "Starting Traefik..."
 
 podman run \
@@ -8,6 +10,7 @@ podman run \
     --restart unless-stopped \
     --name traefik \
     --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
+    --env-file .env \
     --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
     -v ${UBERBASE_TRAEFIK_STORAGE}:/data:Z \
     -v ${PWD}/_configs/traefik/static:/etc/traefik/config/static:z \

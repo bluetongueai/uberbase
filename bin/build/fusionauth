@@ -1,6 +1,9 @@
 #! /bin/bash
 
-export UBERBASE_FUSIONAUTH_APPLICATION_ID=`cat /proc/sys/kernel/random/uuid`
+source .env
+if [ -z "${UBERBASE_FUSIONAUTH_APPLICATION_ID}" ]; then
+    export UBERBASE_FUSIONAUTH_APPLICATION_ID=`cat /proc/sys/kernel/random/uuid`
+fi
 
 echo -n "Building FusionAuth..."
 

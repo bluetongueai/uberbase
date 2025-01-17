@@ -1,10 +1,13 @@
 #! /bin/bash
 
+source .env
+
 echo -n "Starting Registry..."
 podman run \
     -d \
     --replace \
     --name registry \
+    --env-file .env \
     --env REGISTRY_AUTH=htpasswd \
     --env REGISTRY_AUTH_HTPASSWD_REALM="uberbase-registry" \
     --env REGISTRY_AUTH_HTPASSWD_PATH=/auth/registry.password \

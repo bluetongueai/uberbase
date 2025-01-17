@@ -9,6 +9,7 @@ fi
 docker pull quay.io/podman/stable:latest
 
 docker buildx build \
+  --build-arg="UBERBASE_VERSION=$UBERBASE_VERSION" \
   --build-arg="UBERBASE_DOMAIN=$UBERBASE_DOMAIN" \
   --build-arg="UBERBASE_ADMIN_USERNAME=$UBERBASE_ADMIN_USERNAME" \
   --build-arg="UBERBASE_ADMIN_EMAIL=$UBERBASE_ADMIN_EMAIL" \

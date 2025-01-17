@@ -1,5 +1,7 @@
 #! /bin/bash
 
+source .env
+
 echo "Building all services..."
 bin/build/fusionauth
 bin/build/minio

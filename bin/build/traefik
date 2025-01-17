@@ -1,5 +1,7 @@
 #! /bin/bash
 
+source .env
+
 echo -n "Building Traefik..."
 
 podman build \

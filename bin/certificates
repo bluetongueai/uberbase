@@ -1,5 +1,7 @@
 #! /bin/bash
 
+source .env
+
 mkdir -p ./data/certs
 mkdir -p ${UBERBASE_VAULT_STORAGE}/certs
 mkdir -p ${UBERBASE_REGISTRY_STORAGE}/certs

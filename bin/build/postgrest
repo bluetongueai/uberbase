@@ -1,5 +1,7 @@
 #! /bin/bash
 
+source .env
+
 echo -n "Building PostgREST..."
 podman build \
     --tls-verify=false \
