@@ -11,7 +11,7 @@ podman run \
     --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
     --env REDIS_ARGS="--logfile /var/log/redis/redis.log --loglevel verbose" \
     -v ${UBERBASE_REDIS_STORAGE}:/data:Z \
-    -v ${PWD}/logs:/var/log/redis:Z \
+    -v ${PWD}/logs/redis:/var/log/redis:Z \
     --network host \
     --add-host uberbase:0.0.0.0 \
     localhost/uberbase-redis-stack:latest > /dev/null 2>&1

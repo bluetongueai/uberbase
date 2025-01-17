@@ -1,2 +1,0 @@
-- [] Make Dockerfile multi-stage, trim down production build 
-- [] Add healthchecks to docker-compose.yml

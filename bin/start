@@ -46,7 +46,7 @@ if [ ! "$UBERBASE_DISABLE_POSTGRES" = true ]; then
     ./bin/run/postgres
 fi
 
-if [ ! "$UBERBASE_DISABLE_FUSIONAUTH" = true ] && [ ! "$UBERBASE_DISABLE_POSTGRES" = true ]; then
+if [ ! "$UBERBASE_DISABLE_FUSIONAUTH" = true ]; then
     ./bin/run/fusionauth
 fi
 
