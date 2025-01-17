@@ -13,6 +13,10 @@ wait_for_postgres
 
 echo -n "Starting FusionAuth..."
 
+# Get the API key
+api_key=$(cat ${UBERBASE_FUSIONAUTH_STORAGE}/key)
+export UBERBASE_FUSIONAUTH_API_KEY=$api_key
+
 podman run \
     -d \
     --restart unless-stopped \
