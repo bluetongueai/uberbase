@@ -1,6 +1,16 @@
 #! /bin/bash
 
 echo -n "Starting PostgreSQL..."
+
+# Ensure postgres data directory is writable
+podman run \
+  --rm \
+  --user root \
+  -v ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data:rw \
+  --entrypoint="/bin/sh" \
+  localhost/uberbase-postgres:latest \
+  -c "mkdir -p /var/lib/postgresql/data/pgdata; chown -R postgres:postgres /var/lib/postgresql/data/pgdata; chown -R postgres:postgres /var/log/postgresql" > /dev/null 2>&1
+
 podman run \
     -d \
     --user postgres \
@@ -9,12 +19,12 @@ podman run \
     --name postgres \
     --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
     --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
-    -v ${PWD}/logs:/var/log/postgresql \
     -v ${UBERBASE_POSTGRES_STORAGE}/init.d:/docker-entrypoint-initdb.d \
-    -v postgres_data:/var/lib/postgresql/data \
+    -v ${PWD}/logs/postgres:/var/log/postgresql \
+    -v ${UBERBASE_POSTGRES_STORAGE}:/var/lib/postgresql/data \
     --network host \
     --add-host uberbase:0.0.0.0 \
-    uberbase.local/uberbase-postgres:latest \
+    localhost/uberbase-postgres:latest \
     docker-entrypoint.sh postgres > /dev/null 2>&1
 
 #podman logs -f postgres

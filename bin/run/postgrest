@@ -1,7 +1,27 @@
 #! /bin/bash
 
+# Function to wait for JWKS endpoint
+wait_for_jwks() {
+    echo -n "Waiting for JWKS endpoint..."
+    while true; do
+        curl -s "http://localhost:9011/.well-known/jwks.json" -o ${UBERBASE_POSTGREST_STORAGE}/jwks.json > /dev/null 2>&1
+        if [ -f ${UBERBASE_POSTGREST_STORAGE}/jwks.json ]; then
+            # wait for the keys array to be non-empty
+            content=$(jq -r '.keys[0].kid' ${UBERBASE_POSTGREST_STORAGE}/jwks.json 2>/dev/null)
+            if [ "$content" != "null" ]; then
+                break
+            fi
+        fi
+        sleep 1
+    done
+    echo -e " \033[1;32mdone\033[0m"
+}
+
+# Wait for jwks.json to be available
+wait_for_jwks
+
 echo -n "Starting PostgREST..."
-curl -s "http://localhost:9011/.well-known/jwks.json" > jwks.json
+
 podman run \
     -d \
     --replace \
@@ -10,11 +30,11 @@ podman run \
     --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
     --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
     -v ${PWD}/logs:/var/log/postgrest:Z \
-    -v ${PWD}/_configs/postgrest/postgrest.conf:/etc/postgrest.conf:Z \
-    -v ${PWD}/jwks.json:/jwks.json:Z \
+    -v ${PWD}/_configs/postgrest/postgrest.conf:/etc/postgrest.conf:z \
+    -v ${UBERBASE_POSTGREST_STORAGE}/jwks.json:/jwks.json:z \
     --network host \
     --add-host uberbase:0.0.0.0 \
-    uberbase.local/uberbase-postgrest:latest > /dev/null 2>&1
+    localhost/uberbase-postgrest:latest > /dev/null 2>&1
 
 #podman logs -f postgrest
 

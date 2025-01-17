@@ -24,26 +24,33 @@ wait_for_vault_unseal() {
     done
 }
 
+# Pull vault image
+podman pull docker.io/hashicorp/vault:latest > /dev/null 2>&1
+
+# Ensure vault data directory is writable
+podman run \
+  --user root \
+  --rm \
+  -v ${UBERBASE_VAULT_STORAGE}:/vault/data:rw \
+  --entrypoint="/bin/sh" \
+  docker.io/hashicorp/vault:latest \
+  -c "chown -R vault:vault /vault/data/vault" > /dev/null 2>&1
+
 # If vault isn't running, start it
 vault_status=$(podman exec --env VAULT_CACERT=${VAULT_CACERT} vault vault status 2>&1)
 if [ $? -ne 0 ]; then
-    if ! podman volume inspect vault_data > /dev/null 2>&1; then
-        podman volume create vault_data
-        podman run --rm --user vault -v vault_data:/opt/data/vault:Z --entrypoint="/bin/sh" docker.io/hashicorp/vault:latest -c "mkdir -p /opt/data/vault/raft"
-    fi
     podman run \
         -d \
-        --user vault \
-        --replace \
         --name vault \
+        --replace \
         --env-file .env \
         --env VAULT_CACERT=${VAULT_CACERT} \
         --cap-add IPC_LOCK \
         --cap-add CAP_SETFCAP \
-        -v vault_data:/opt/data/vault:Z \
-        -v ${PWD}/_configs/vault:/vault/config:z \
-        -v ${UBERBASE_VAULT_STORAGE}/certs:/vault/certs:z \
-        -v ./data/certs:/vault/ca:z \
+        -v ${UBERBASE_VAULT_STORAGE}/certs:/vault/certs \
+        -v ${UBERBASE_VAULT_STORAGE}:/vault/data \
+        -v ${PWD}/_configs/vault:/vault/config \
+        -v ./data/certs:/vault/ca \
         --network host \
         --add-host uberbase:0.0.0.0 \
         docker.io/hashicorp/vault:latest \
@@ -63,7 +70,6 @@ if [ ! -f ${UBERBASE_VAULT_STORAGE}/keys.json ]; then
         -key-threshold=1 \
         -format=json > ${UBERBASE_VAULT_STORAGE}/keys.json
 
-    # Unseal and login
     UNSEAL_KEY=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".unseal_keys_b64[0]")
     ROOT_TOKEN=$(cat ${UBERBASE_VAULT_STORAGE}/keys.json | jq -r ".root_token")
    
@@ -73,7 +79,6 @@ if [ ! -f ${UBERBASE_VAULT_STORAGE}/keys.json ]; then
         vault \
         vault operator unseal $UNSEAL_KEY > /dev/null 2>&1
 
-    # Add wait after initial unseal
     wait_for_vault_unseal
 
     podman exec \
@@ -122,7 +127,6 @@ EOF
         policies="service-policy" > /dev/null 2>&1
 
     # Store all matching environment variables
-    
     # Create a JSON object from environment variables
     json_data="{"
     first=true
@@ -198,7 +202,6 @@ else
         vault login $ROOT_TOKEN > /dev/null 2>&1
 
     # Update secrets from current environment variables
-    
     # Create a JSON object from environment variables
     json_data="{"
     first=true

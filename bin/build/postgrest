@@ -4,6 +4,6 @@ echo -n "Building PostgREST..."
 podman build \
     --tls-verify=false \
     -f postgrest/Dockerfile \
-    -t uberbase.local/uberbase-postgrest:latest \
+    -t localhost/uberbase-postgrest:latest \
     . > /dev/null 2>&1
 echo -e " \033[1;32mdone.\033[0m"

@@ -22,10 +22,14 @@ eval "$EXPORTS"
 export DATABASE_URL="jdbc:postgresql://${UBERBASE_POSTGRES_HOST}:${UBERBASE_POSTGRES_PORT}/${UBERBASE_FUSIONAUTH_DATABASE}"
 export DATABASE_ROOT_USERNAME=${UBERBASE_POSTGRES_USER}
 export DATABASE_ROOT_PASSWORD=${UBERBASE_POSTGRES_PASSWORD}
-export FUSIONAUTH_ENVIRONMENT=development
+export FUSIONAUTH_ENVIRONMENT=production
 export FUSIONAUTH_APP_URL="http://${UBERBASE_FUSIONAUTH_HOST}:${UBERBASE_FUSIONAUTH_PORT}"
 export FUSIONAUTH_APP_KICKSTART_FILE=/usr/local/fusionauth/kickstart/kickstart.json
-export FUSIONAUTH_APPLICATION_ID=${UBERBASE_FUSIONAUTH_APPLICATION_ID}
+
+if [ -f /usr/local/fusionauth/kickstart/kickstart.json ]; then
+    echo "Kickstarting with the following configuration:"
+    cat /usr/local/fusionauth/kickstart/kickstart.json
+fi
 
 # Execute original entrypoint
 exec "$@"

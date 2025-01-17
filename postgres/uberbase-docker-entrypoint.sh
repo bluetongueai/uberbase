@@ -24,10 +24,6 @@ export POSTGRES_PASSWORD=${UBERBASE_POSTGRES_PASSWORD}
 export POSTGRES_DATABASE=${UBERBASE_POSTGRES_DATABASE}
 export PGDATA=/var/lib/postgresql/data/pgdata
 
-# Ensure postgres user has access to the log directory
-chown postgres:postgres /var/log/postgresql
-chmod -R 777 /var/log/postgresql
-
 # Execute original entrypoint
 exec "$@"
 

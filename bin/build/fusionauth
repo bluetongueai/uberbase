@@ -7,7 +7,7 @@ echo -n "Building FusionAuth..."
 podman build \
     --tls-verify=false \
     -f fusionauth/Dockerfile \
-    -t uberbase.local/uberbase-fusionauth:latest \
+    -t localhost/uberbase-fusionauth:latest \
     --build-arg UBERBASE_FUSIONAUTH_APPLICATION_ID=${UBERBASE_FUSIONAUTH_APPLICATION_ID} \
     . > /dev/null 2>&1
 
