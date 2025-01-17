@@ -2,11 +2,11 @@
 
 source .env
 
-docker compose push
-
 if ! docker buildx ls | grep -q uberbase-local-docker-container; then
   docker buildx create --name uberbase-local-docker-container --use
 fi
+
+docker pull quay.io/podman/stable:latest
 
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
@@ -56,6 +56,7 @@ docker buildx build \
   --target uberbase \
   --no-cache \
   --push \
+  -t bluetongueai/uberbase:${UBERBASE_VERSION} \
   -t bluetongueai/uberbase:latest \
   --provenance=true --sbom=true \
   .

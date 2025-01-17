@@ -6,6 +6,8 @@ if ! docker buildx ls | grep -q uberbase-local-docker-container; then
   docker buildx create --name uberbase-local-docker-container --use
 fi
 
+docker pull quay.io/podman/stable:latest
+
 docker buildx build \
   --build-arg="UBERBASE_DOMAIN=$UBERBASE_DOMAIN" \
   --build-arg="UBERBASE_ADMIN_USERNAME=$UBERBASE_ADMIN_USERNAME" \
@@ -53,5 +55,5 @@ docker buildx build \
   --target uberbase \
   --no-cache \
   --load \
-  -t bluetongueai/uberbase:latest \
+  -t bluetongueai/uberbase:dev \
   .

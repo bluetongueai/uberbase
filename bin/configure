@@ -78,16 +78,28 @@ mkdir -p ./_configs/traefik/static \
 # Place templates interpolated with env vars into the _configs directory, or
 # use the user's provided configs if they exist
 interpolate_template "./traefik/static/traefik.template.yml" "./_configs/traefik/static/traefik.yml"
-interpolate_template "./traefik/dynamic/uberbase.template.yml" "./_configs/traefik/dynamic/uberbase.yml"
 interpolate_template "./functions/config.template.json" "./_configs/functions/config.json"
 interpolate_template "./postgrest/postgrest.template.conf" "./_configs/postgrest/postgrest.conf"
 interpolate_template "./vault/vault-server.template.hcl" "./_configs/vault/vault-server.hcl"
 interpolate_template "./fusionauth/config/fusionauth.properties" "./_configs/fusionauth/config/fusionauth.properties"
 cp -r ./fusionauth/kickstart ./_configs/fusionauth
 
+# Interpolate the all configs in the traefik dynamic directory
+for file in ./traefik/dynamic/*; do
+    interpolate_template "$file" "./_configs/traefik/dynamic/$(basename "$file")"
+done
+
+# The configs world readable
 chmod -R 777 ./_configs
 
 # Create the registry password file
 echo "${UBERBASE_REGISTRY_USERNAME}:${UBERBASE_REGISTRY_PASSWORD}" > ./_configs/registry/registry.password
+
+# Generate a FusionAuth API key
+key=$(cat /proc/sys/kernel/random/uuid)
+export UBERBASE_FUSIONAUTH_API_KEY=$key
+cat <<EOF > ${UBERBASE_FUSIONAUTH_STORAGE}/key
+${key}
+EOF
 
 echo -e " \033[1;32mdone.\033[0m"
