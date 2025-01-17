@@ -60,8 +60,8 @@ fi
 rm -Rf $UBERBASE_POSTGRES_STORAGE/init.d
 mkdir -p $UBERBASE_POSTGRES_STORAGE/init.d
 cp postgres/_init/* $UBERBASE_POSTGRES_STORAGE/init.d/.
-if [ -d "postgres/init" ]; then
-    cp postgres/init/* $UBERBASE_POSTGRES_STORAGE/init.d/.
+if [ -d "configs/postgres/init" ]; then
+    cp configs/postgres/init/* $UBERBASE_POSTGRES_STORAGE/init.d/.
 fi
 
 # Delete the previously configured configs and start fresh
@@ -82,7 +82,12 @@ interpolate_template "./functions/config.template.json" "./_configs/functions/co
 interpolate_template "./postgrest/postgrest.template.conf" "./_configs/postgrest/postgrest.conf"
 interpolate_template "./vault/vault-server.template.hcl" "./_configs/vault/vault-server.hcl"
 interpolate_template "./fusionauth/config/fusionauth.properties" "./_configs/fusionauth/config/fusionauth.properties"
-cp -r ./fusionauth/kickstart ./_configs/fusionauth
+
+# Ensure we have the generated certs available, but use the user's kickstart
+cp -r ./fusionauth/kickstart ./_configs/fusionauth/.
+if [ -d "configs/fusionauth" ]; then
+    cp -r ./configs/fusionauth/* ./_configs/fusionauth/.
+fi
 
 # Interpolate the all configs in the traefik dynamic directory
 for file in ./traefik/dynamic/*; do
@@ -96,10 +101,12 @@ chmod -R 777 ./_configs
 echo "${UBERBASE_REGISTRY_USERNAME}:${UBERBASE_REGISTRY_PASSWORD}" > ./_configs/registry/registry.password
 
 # Generate a FusionAuth API key
-key=$(cat /proc/sys/kernel/random/uuid)
-export UBERBASE_FUSIONAUTH_API_KEY=$key
+if [ -z "${UBERBASE_FUSIONAUTH_API_KEY}" ]; then
+    key=$(cat /proc/sys/kernel/random/uuid)
+    export UBERBASE_FUSIONAUTH_API_KEY=$key
+fi
 cat <<EOF > ${UBERBASE_FUSIONAUTH_STORAGE}/key
-${key}
+${UBERBASE_FUSIONAUTH_API_KEY}
 EOF
 
 echo -e " \033[1;32mdone.\033[0m"

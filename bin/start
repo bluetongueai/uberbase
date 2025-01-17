@@ -16,6 +16,9 @@ echo -e "Starting \033[33muberbase\033[0m..."
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 echo -e "Starting on \033[33m$UBERBASE_PLATFORM\033[0m"
 
+podman stop -a 2>&1 > /dev/null
+podman rm -a 2>&1 > /dev/null
+
 ./bin/configure
 
 if [ ! "$UBERBASE_DISABLE_POSTGRES" = true ]; then

@@ -110,3 +110,7 @@ sudo chmod 0644 /etc/containers/certs.d/uberbase:${UBERBASE_VAULT_PORT}/ca.crt
 sudo mkdir -p /etc/containers/certs.d/uberbase:${UBERBASE_FUSIONAUTH_PORT}
 sudo cp ./data/certs/ca.pem /etc/containers/certs.d/uberbase:${UBERBASE_FUSIONAUTH_PORT}/ca.crt
 sudo chmod 0644 /etc/containers/certs.d/uberbase:${UBERBASE_FUSIONAUTH_PORT}/ca.crt
+
+# Copy FusionAuth certs to the kickstart directory
+mkdir -p ./_configs/fusionauth/kickstart/certs
+cp -r ${UBERBASE_FUSIONAUTH_STORAGE}/certs ./_configs/fusionauth/kickstart/certs
