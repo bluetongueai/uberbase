@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Configuration
+source .env
+
 SECRET_PATH="secret/data/uberbase"
 VAULT_PREFIXES=("UBERBASE_" ${UBERBASE_VAULT_PREFIXES:-})
 

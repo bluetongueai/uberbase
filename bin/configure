@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source .env
+
 export UBERBASE_PLATFORM="`arch | sed s/arm64/aarch64/ | sed s/amd64/x86_64/`"
 
 echo -n "Configuring Uberbase for ${UBERBASE_PLATFORM}..."
@@ -81,7 +83,6 @@ interpolate_template "./traefik/static/traefik.template.yml" "./_configs/traefik
 interpolate_template "./functions/config.template.json" "./_configs/functions/config.json"
 interpolate_template "./postgrest/postgrest.template.conf" "./_configs/postgrest/postgrest.conf"
 interpolate_template "./vault/vault-server.template.hcl" "./_configs/vault/vault-server.hcl"
-interpolate_template "./fusionauth/config/fusionauth.properties" "./_configs/fusionauth/config/fusionauth.properties"
 
 # Ensure we have the generated certs available, but use the user's kickstart
 cp -r ./fusionauth/kickstart ./_configs/fusionauth/.

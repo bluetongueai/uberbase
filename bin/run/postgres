@@ -2,6 +2,8 @@
 
 echo -n "Starting PostgreSQL..."
 
+source .env
+
 # Ensure postgres data directory is writable
 podman run \
   --rm \
@@ -18,6 +20,7 @@ podman run \
     --restart unless-stopped \
     --name postgres \
     --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
+    --env-file .env \
     --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
     -v ${UBERBASE_POSTGRES_STORAGE}/init.d:/docker-entrypoint-initdb.d \
     -v ${PWD}/logs/postgres:/var/log/postgresql \

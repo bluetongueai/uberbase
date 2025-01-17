@@ -1,5 +1,7 @@
 #! /bin/bash
 
+source .env
+
 # Function to check if postgres is ready
 wait_for_postgres() {
     echo -n "Waiting for PostgreSQL to be ready..."
@@ -13,21 +15,17 @@ wait_for_postgres
 
 echo -n "Starting FusionAuth..."
 
-# Get the API key
-api_key=$(cat ${UBERBASE_FUSIONAUTH_STORAGE}/key)
-export UBERBASE_FUSIONAUTH_API_KEY=$api_key
-
 podman run \
     -d \
     --restart unless-stopped \
     --name fusionauth \
     --replace \
     --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
+    --env-file .env \
     --env VAULT_ADDR=https://uberbase:${UBERBASE_VAULT_PORT} \
     --env FUSIONAUTH_APP_URL=${UBERBASE_FUSIONAUTH_APP_URL} \
     -v ${UBERBASE_FUSIONAUTH_STORAGE}/certs:/usr/local/fusionauth/kickstart/certs:z \
     -v ${PWD}/_configs/fusionauth/kickstart:/usr/local/fusionauth/kickstart:z \
-    -v ${PWD}/_configs/fusionauth/config:/usr/local/fusionauth/config:Z \
     --network host \
     --add-host uberbase:0.0.0.0 \
     localhost/uberbase-fusionauth:latest > /dev/null 2>&1
