@@ -91,9 +91,13 @@ if [ -d "configs/fusionauth" ]; then
 fi
 
 # Interpolate the all configs in the traefik dynamic directory
-for file in ./traefik/dynamic/*; do
-    interpolate_template "$file" "./_configs/traefik/dynamic/$(basename "$file")"
-done
+if [ -d "configs/traefik/dynamic" ]; then
+    for file in ./configs/traefik/dynamic/*; do
+        interpolate_template "$file" "./_configs/traefik/dynamic/$(basename "$file")"
+    done
+else
+    interpolate_template "./traefik/dynamic/uberbase.template.yml" "./_configs/traefik/dynamic/uberbase.yml"
+fi
 
 # The configs world readable
 chmod -R 777 ./_configs
