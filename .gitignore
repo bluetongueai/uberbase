@@ -2,9 +2,10 @@ configs/*
 _configs/*
 */**/node_modules
 keys/*
-logs/**/*.log
+logs
 linux.git
 vmlinux.bin
 data
 .DS_Store
 uberbase/bin
+jwks.json

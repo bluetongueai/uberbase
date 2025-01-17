@@ -35,6 +35,10 @@ if [ ! "$UBERBASE_DISABLE_POSTGREST" = true ] && [ ! "$UBERBASE_DISABLE_POSTGRES
     ./bin/build/postgrest
 fi
 
+if [ ! "$UBERBASE_DISABLE_TRAEFIK" = true ]; then
+    ./bin/build/traefik
+fi
+
 ./bin/run/vault
 ./bin/run/registry
 
@@ -46,6 +50,7 @@ if [ ! "$UBERBASE_DISABLE_FUSIONAUTH" = true ] && [ ! "$UBERBASE_DISABLE_POSTGRE
     ./bin/run/fusionauth
 fi
 
+
 if [ ! "$UBERBASE_DISABLE_REDIS" = true ]; then
     ./bin/run/redis
 fi
@@ -55,7 +60,6 @@ if [ ! "$UBERBASE_DISABLE_MINIO" = true ]; then
 fi
 
 if [ ! "$UBERBASE_DISABLE_POSTGREST" = true ] && [ ! "$UBERBASE_DISABLE_POSTGRES" = true ]; then
-    sleep 5
     ./bin/run/postgrest
 fi
 

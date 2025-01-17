@@ -14,6 +14,6 @@ podman run \
     -v ${PWD}/logs:/var/log/redis:Z \
     --network host \
     --add-host uberbase:0.0.0.0 \
-    uberbase.local/uberbase-redis-stack:latest > /dev/null 2>&1
+    localhost/uberbase-redis-stack:latest > /dev/null 2>&1
 
 echo -e " \033[1;32mdone.\033[0m"

@@ -1,9 +1,11 @@
 #! /bin/bash
 
 echo -n "Building Traefik..."
+
 podman build \
     --tls-verify=false \
     -f traefik/Dockerfile \
-    -t uberbase.local/uberbase-traefik:latest \
+    -t localhost/uberbase-traefik:latest \
     . > /dev/null 2>&1
+
 echo -e " \033[1;32mdone.\033[0m"

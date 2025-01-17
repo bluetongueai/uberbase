@@ -12,7 +12,7 @@ podman run \
     -v ${PWD}/logs:/var/log/minio:Z \
     --network host \
     --add-host uberbase:0.0.0.0 \
-    uberbase.local/uberbase-minio:latest \
+    localhost/uberbase-minio:latest \
     minio server /data --address "0.0.0.0:9000" --console-address "0.0.0.0:9001" > /dev/null 2>&1
 
 #podman logs -f minio

@@ -1,13 +1,26 @@
+log:
+  level: INFO
+
+accessLog: {}
+
 providers:
   file:
-    directory: /etc/traefik/config/dynamic
+    directory: /etc/traefik/config/dynamic/
     watch: true
 
 entryPoints:
   web:
-    address: ":80"
+    address: ":${UBERBASE_TRAEFIK_HTTP_PORT}"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
   websecure:
-    address: ":443"
+    address: ":${UBERBASE_TRAEFIK_HTTPS_PORT}"
+    http:
+      tls:
+        certResolver: letsencryptresolver
 
 certificatesResolvers:
   letsencryptresolver:
@@ -16,3 +29,6 @@ certificatesResolvers:
       storage: /data/acme.json
       tlsChallenge: true
 
+serversTransport:
+  rootCAs:
+    - /uberbase/certs/ca.crt

@@ -111,7 +111,7 @@
           "password": "#{ENV.UBERBASE_ADMIN_PASSWORD}"
         },
         "registration": {
-          "applicationId": "#{applicationId}",
+          "applicationId": "#{FUSIONAUTH_APPLICATION_ID}",
           "roles": [
             "admin"
           ]

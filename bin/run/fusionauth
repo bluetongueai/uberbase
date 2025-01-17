@@ -1,6 +1,18 @@
 #! /bin/bash
 
+# Function to check if postgres is ready
+wait_for_postgres() {
+    echo -n "Waiting for PostgreSQL to be ready..."
+    while ! podman exec postgres pg_isready -h localhost -p 5432 > /dev/null 2>&1; do
+        sleep 1
+    done
+    echo -e " \033[1;32mdone\033[0m"
+}
+
+wait_for_postgres
+
 echo -n "Starting FusionAuth..."
+
 podman run \
     -d \
     --restart unless-stopped \
@@ -14,8 +26,8 @@ podman run \
     -v ${PWD}/_configs/fusionauth/config:/usr/local/fusionauth/config:Z \
     --network host \
     --add-host uberbase:0.0.0.0 \
-    uberbase.local/uberbase-fusionauth:latest > /dev/null 2>&1
+    localhost/uberbase-fusionauth:latest > /dev/null 2>&1
 
-#podman logs -f fusionauth
+# podman logs -f fusionauth
 
 echo -e " \033[1;32mdone.\033[0m"

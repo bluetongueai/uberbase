@@ -11,7 +11,6 @@ listener "tcp" {
   tls_client_ca_file    = "/vault/ca/ca.pem"
 }
 
-backend "raft" {
-  path                  = "/opt/data/vault/raft"
-  node_id               = "uberbase-vault-server"
+storage "file" {
+  path                  = "/vault/data/vault/file"
 }
