@@ -2,7 +2,7 @@ configs/*
 _configs/*
 */**/node_modules
 keys/*
-logs/**/*.log
+logs
 linux.git
 vmlinux.bin
 data

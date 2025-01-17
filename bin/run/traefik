@@ -9,10 +9,10 @@ podman run \
     --name traefik \
     --env-file ${UBERBASE_VAULT_STORAGE}/credentials \
     --env VAULT_ADDR=https://${UBERBASE_VAULT_HOST}:${UBERBASE_VAULT_PORT} \
-    -v ${PWD}/_configs/traefik/static:/etc/traefik/config/static \
-    -v ${PWD}/_configs/traefik/dynamic:/etc/traefik/config/dynamic \
     -v ${UBERBASE_TRAEFIK_STORAGE}:/data:Z \
-    -v ${PWD}/data/certs:/uberbase/certs:Z \
+    -v ${PWD}/_configs/traefik/static:/etc/traefik/config/static:z \
+    -v ${PWD}/_configs/traefik/dynamic:/etc/traefik/config/dynamic:z \
+    -v ${PWD}/data/certs:/uberbase/certs:z \
     --network host \
     --add-host uberbase:0.0.0.0 \
     -p ${UBERBASE_TRAEFIK_HTTP_PORT}:80 \

@@ -12,9 +12,9 @@ podman run \
     --env REGISTRY_HTTP_TLS_CERTIFICATE=/certs/registry-cert.pem \
     --env REGISTRY_HTTP_TLS_KEY=/certs/registry-key.pem \
     --env REGISTRY_HTTP_TLS_CLIENTCAS='["/ca/ca.pem"]' \
-    -v ${PWD}/_configs/registry/registry.password:/auth/registry.password \
-    -v ${UBERBASE_REGISTRY_STORAGE}:/data \
-    -v ${UBERBASE_REGISTRY_STORAGE}/certs:/certs \
+    -v ${UBERBASE_REGISTRY_STORAGE}:/data:Z \
+    -v ${UBERBASE_REGISTRY_STORAGE}/certs:/certs:z \
+    -v ${PWD}/_configs/registry/registry.password:/auth/registry.password:Z \
     -v ./data/certs:/ca:ro \
     --network host \
     --add-host uberbase:0.0.0.0 \

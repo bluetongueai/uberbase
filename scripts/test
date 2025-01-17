@@ -1,7 +1,7 @@
 #!/bin/bash
 
 docker run --rm \
-  -d \
+  -it \
   --name uberbase \
   --security-opt seccomp=unconfined \
   --device /dev/fuse \
@@ -11,9 +11,11 @@ docker run --rm \
   --cap-add NET_ADMIN \
   --cap-add SETUID \
   --cap-add SETGID \
-  -v podman_data:/home/podman/.podman \
+  -v uberbase_test_podman_data:/home/podman/podman \
+  -v uberbase_test_uberbase_data:/home/podman/app/data \
   -p 8080:80 \
   -p 8443:443 \
+  --entrypoint=/bin/bash \
   bluetongueai/uberbase:latest
 
 docker logs -f uberbase

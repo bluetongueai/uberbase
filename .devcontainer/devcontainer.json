@@ -25,7 +25,7 @@
 	"mounts": [
 		{
 			"type": "volume",
-			"source": "podman_data",
+			"source": "devpod_podman_data",
 			"target": "/home/podman/.podman"
 		}
 	],
