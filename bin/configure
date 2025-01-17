@@ -46,6 +46,9 @@ mkdir -p ./data/certs \
     ./data/postgrest_data \
     ./data/postgres_data
 
+# Ensure the logs directory exists
+mkdir -p ./logs/postgres
+
 # Create certificates
 if [ ! -f "./data/certs/ca.pem" ]; then
     ./bin/certificates
