@@ -8,7 +8,7 @@ echo " / / / / _ )/ __/ _ \/ _ )/ _ | / __/ __/"
 echo "/ /_/ / _  / _// , _/ _  / __ |_\ \/ _/"  
 echo "\____/____/___/_/|_/____/_/ |_/___/___/"  
 echo ""
-echo -e "Version \033[33m$$UBERBASE_VERSION\033[0m"
+echo -e "Version \033[33m$UBERBASE_VERSION\033[0m"
 echo ""
 
 platform=$(uname -m)
