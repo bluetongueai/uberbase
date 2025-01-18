@@ -6,6 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/bluetongueai/uberbase/uberbase/pkg/logging"
+	"github.com/bluetongueai/uberbase/uberbase/pkg/utils"
 )
 
 type LocalExecutor struct {
@@ -27,7 +28,7 @@ func (e *LocalExecutor) SendFile(localPath, remotePath string) error {
 }
 
 func (e *LocalExecutor) Exec(command string) (string, error) {
-	logging.Logger.Infof("local: \033[33m%s\033[0m", command)
+	logging.Logger.Infof("local: \033[33m%s\033[0m", utils.FilterSecrets(command))
 
 	cmd := exec.Command("sh", "-c", command)
 

@@ -1,6 +1,7 @@
 package containers
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/bluetongueai/uberbase/uberbase/pkg/core"
@@ -11,6 +12,7 @@ import (
 type ComposeServiceOverride struct {
 	Hostname string `yaml:"hostname"`
 	Image    string `yaml:"image"`
+	EnvFile  string `yaml:"env_file"`
 	Name     string `yaml:"-"`
 	RefName  string `yaml:"-"`
 }
@@ -31,6 +33,7 @@ func NewComposeOverride(compose *ComposeProject, containerTag ContainerTag) *Com
 				Name:     service.Name + "-" + string(containerTag),
 				Hostname: service.Hostname + "-" + string(containerTag),
 				Image:    utils.StripTag(service.Image) + ":" + string(containerTag),
+				EnvFile:  fmt.Sprintf("%s.env", string(containerTag)),
 			}
 		}
 	}

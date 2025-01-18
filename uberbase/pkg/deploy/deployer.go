@@ -9,6 +9,7 @@ import (
 
 	"github.com/bluetongueai/uberbase/uberbase/pkg/containers"
 	"github.com/bluetongueai/uberbase/uberbase/pkg/core"
+	"github.com/bluetongueai/uberbase/uberbase/pkg/environment"
 	git "github.com/bluetongueai/uberbase/uberbase/pkg/git"
 	"github.com/bluetongueai/uberbase/uberbase/pkg/health"
 	"github.com/bluetongueai/uberbase/uberbase/pkg/loadbalancer"
@@ -25,6 +26,7 @@ type Deployer struct {
 	stateManager       *state.StateManager
 	healthChecker      *health.HealthChecker
 	trafficManager     *loadbalancer.TrafficManager
+	environmentManager *environment.EnvironmentManager
 	localExecutor      core.Executor
 	remoteExecutor     core.Executor
 	localWorkDir       string
@@ -65,6 +67,8 @@ func NewDeployer(localExecutor core.Executor, remoteExecutor core.Executor, comp
 		return nil, fmt.Errorf("failed to create traffic manager: %w", err)
 	}
 
+	environmentManager := environment.NewEnvironmentManager(remoteExecutor.(*core.RemoteExecutor))
+
 	logging.Logger.Debug("Deployment components initialized successfully")
 	return &Deployer{
 		compose:            compose,
@@ -74,6 +78,7 @@ func NewDeployer(localExecutor core.Executor, remoteExecutor core.Executor, comp
 		stateManager:       stateManager,
 		healthChecker:      healthChecker,
 		trafficManager:     trafficManager,
+		environmentManager: environmentManager,
 		localExecutor:      localExecutor,
 		remoteExecutor:     remoteExecutor,
 		localWorkDir:       localWorkDir,
@@ -126,6 +131,21 @@ func (d *Deployer) DeployProject() (err error) {
 	if err != nil {
 		return fmt.Errorf("failed to load current state: %w", err)
 	}
+
+	// TODO: sync secrets from the environment into the remote environment
+	if err := d.environmentManager.DeployEnv(containerTag); err != nil {
+		return fmt.Errorf("failed to deploy environment: %w", err)
+	}
+
+	rm.AddRollbackStep(
+		"rollback-env",
+		func(ctx context.Context) error {
+			return d.environmentManager.DeployEnv(currentState.Tag)
+		},
+		func(ctx context.Context) error {
+			return fmt.Errorf("failed to rollback environment file")
+		},
+	)
 
 	if err := d.remoteExecutor.SendFile(d.compose.LocalFilePath, filepath.Join(d.remoteWorkDir, "docker-compose.yml")); err != nil {
 		return fmt.Errorf("failed to send docker-compose.yml to remote server: %w", err)
@@ -264,6 +284,11 @@ func (d *Deployer) DeployProject() (err error) {
 
 	if _, err := d.remoteContainerMgr.Down(oldContainers, overrideFilePath); err != nil {
 		return fmt.Errorf("failed to bring down old containers, environment may be inconsistent: %w, %v", err, oldContainers)
+	}
+
+	logging.Logger.Info("Cleaning up old environment")
+	if err := d.environmentManager.CommitEnv(currentState.Tag); err != nil {
+		return fmt.Errorf("failed to commit environment: %w", err)
 	}
 
 	logging.Logger.Info("Updating deployment state")

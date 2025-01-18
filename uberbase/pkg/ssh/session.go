@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/bluetongueai/uberbase/uberbase/pkg/logging"
+	"github.com/bluetongueai/uberbase/uberbase/pkg/utils"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
@@ -81,7 +82,7 @@ func (c *SSHSession) ExecuteCommand(cmd string) (string, error) {
 	}
 	defer session.Close()
 
-	logging.Logger.Infof("%s: \033[33m%s\033[0m", c.addr, cmd)
+	logging.Logger.Infof("%s: \033[33m%s\033[0m", c.addr, utils.FilterSecrets(cmd))
 
 	// Create buffers for stdout and stderr
 	var stdout, stderr bytes.Buffer

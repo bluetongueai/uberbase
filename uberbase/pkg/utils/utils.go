@@ -44,3 +44,31 @@ func ExpandTildeLocal(relPath string) (string, error) {
 	}
 	return absPath, nil
 }
+
+func FilterSecrets(val string) string {
+	p := strings.Split(val, " ")
+	secrets := []string{}
+	for _, k := range p {
+		key := strings.TrimSpace(strings.Split(k, "=")[0])
+		if isLocalSecret(key) {
+			secrets = append(secrets, k)
+		}
+	}
+	for _, k := range secrets {
+		replacement := ""
+		for range k {
+			replacement += "*"
+		}
+		val = strings.ReplaceAll(val, k, replacement)
+	}
+	return val
+}
+
+func isLocalSecret(key string) bool {
+	if os.Getenv(key) != "" {
+		if strings.Contains(key, "KEY") || strings.Contains(key, "SECRET") {
+			return true
+		}
+	}
+	return false
+}
